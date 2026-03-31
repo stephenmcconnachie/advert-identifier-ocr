@@ -1,0 +1,600 @@
+<!DOCTYPE html><html><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;"><meta http-equiv="x-dns-prefetch-control" content="off"><script src="https://puc.poecdn.net/authenticated_preview_page/standard.3ef2c256959faf5a756d.js"></script>
+    <meta charset="utf-8">
+    <title>Advert Identifier - Technical Architecture</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+  <script src="https://puc.poecdn.net/authenticated_preview_page/disableWebRTC.9710cebe07429a9e8e06.js"></script><meta name="x-poe-allow-downloads" content="true"><meta name="x-poe-datastore-behavior" content="disabled"><script src="https://puc.poecdn.net/authenticated_preview_page/tw.b9024aecac666455e183.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/deps.faccd16000d314dc16d5.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/exports.b0f0f482cdeb5302b0b9.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/renderer.75c73ae6b4235f62945a.js"></script><script>Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _react = require('react'); var _react2 = _interopRequireDefault(_react);
+var _framermotion = require('framer-motion');
+var _lucidereact = require('lucide-react');
+
+const SectionHeader = ({ icon: Icon, title, color }) => (
+  _react2.default.createElement('div', { className: `flex items-center gap-2 mb-3 pb-2 border-b ${color}`,}
+    , _react2.default.createElement(Icon, { className: "w-4 h-4" ,} )
+    , _react2.default.createElement('h3', { className: "font-bold text-sm" ,}, title)
+  )
+);
+
+const PipelineNode = ({ label, sublabel, color, icon: Icon, border }) => (
+  _react2.default.createElement('div', { className: `rounded-lg ${color} ${border || ''} p-2 text-center min-w-max`,}
+    , Icon && _react2.default.createElement(Icon, { className: "w-3.5 h-3.5 mx-auto mb-0.5"   ,} )
+    , _react2.default.createElement('p', { className: "text-xs font-bold" ,}, label)
+    , sublabel && _react2.default.createElement('p', { className: "text-xs opacity-70 leading-tight"  ,}, sublabel)
+  )
+);
+
+const PipelineArrow = ({ label }) => (
+  _react2.default.createElement('div', { className: "flex flex-col items-center justify-center px-0.5 shrink-0"     ,}
+    , _react2.default.createElement(_lucidereact.ArrowRight, { className: "w-3.5 h-3.5 text-gray-500"  ,} )
+    , label && _react2.default.createElement('span', { className: "text-xs text-gray-500" ,}, label)
+  )
+);
+
+const DownArrow = ({ label }) => (
+  _react2.default.createElement('div', { className: "flex flex-col items-center py-1"   ,}
+    , _react2.default.createElement(_lucidereact.ArrowDown, { className: "w-4 h-4 text-gray-500"  ,} )
+    , label && _react2.default.createElement('span', { className: "text-xs text-gray-500" ,}, label)
+  )
+);
+
+const ParamRow = ({ name, value, note }) => (
+  _react2.default.createElement('div', { className: "flex items-baseline gap-2 py-1 border-b border-gray-800"     ,}
+    , _react2.default.createElement('code', { className: "text-xs bg-gray-800 px-1.5 py-0.5 rounded text-gray-400 shrink-0"      ,}, name)
+    , _react2.default.createElement('span', { className: "text-xs font-semibold text-gray-200"  ,}, value)
+    , note && _react2.default.createElement('span', { className: "text-xs text-gray-500 ml-auto"  ,}, note)
+  )
+);
+
+const CommandCard = ({ name, desc, args, color }) => (
+  _react2.default.createElement('div', { className: `bg-gray-800 rounded-xl p-3 border-l-2 ${color}`,}
+    , _react2.default.createElement('code', { className: "text-xs font-bold text-gray-100"  ,}, name)
+    , _react2.default.createElement('p', { className: "text-xs text-gray-400 mt-1 mb-2"   ,}, desc)
+    , _react2.default.createElement('div', { className: "flex flex-wrap gap-1"  ,}
+      , args.map((a, i) => (
+        _react2.default.createElement('span', { key: i, className: "bg-gray-700 text-gray-300 text-xs px-1.5 py-0.5 rounded font-mono"      ,}, a)
+      ))
+    )
+  )
+);
+
+const tabs = [
+  { id: 'pipeline', label: 'Pipeline Overview', icon: _lucidereact.Layers },
+  { id: 'metadata', label: 'Step 1: Metadata', icon: _lucidereact.FileSpreadsheet },
+  { id: 'clip', label: 'Step 2: Clip Extraction', icon: _lucidereact.Scissors },
+  { id: 'identify', label: 'Step 3: AI Identification', icon: _lucidereact.Eye },
+  { id: 'automation', label: 'Full Automation', icon: _lucidereact.FolderOpen },
+];
+
+ function TechnicalExplanation() {
+  const [activeTab, setActiveTab] = _react.useState.call(void 0, 'pipeline');
+
+  return (
+    _react2.default.createElement('div', { className: "min-h-screen bg-gradient-to-br from-gray-950 to-slate-900 text-gray-100 p-4 md:p-8"      ,}
+      , _react2.default.createElement('div', { className: "max-w-3xl mx-auto" ,}
+        /* Header */
+        , _react2.default.createElement(_framermotion.motion.div, { initial: { opacity: 0, y: -20 }, animate: { opacity: 1, y: 0 }, className: "text-center mb-8" ,}
+          , _react2.default.createElement('div', { className: "inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full text-xs font-bold mb-4 tracking-wide"           ,}
+            , _react2.default.createElement(_lucidereact.Cpu, { className: "w-3.5 h-3.5" ,} ), "ADVERT IDENTIFIER — TECHNICAL ARCHITECTURE"
+
+          )
+          , _react2.default.createElement('h1', { className: "text-2xl md:text-3xl font-extrabold mb-2"   ,}, "Detection Pipeline Architecture"  )
+          , _react2.default.createElement('p', { className: "text-gray-400 text-sm max-w-lg mx-auto"   ,}, "Three-stage pipeline: CSV metadata extraction → FFmpeg clip extraction → VLM ad identification with ensemble voting. Designed for batch processing of TV broadcast archives."
+
+          )
+        )
+
+        /* System context */
+        , _react2.default.createElement(_framermotion.motion.div, { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { delay: 0.1 },
+          className: "bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-6"     ,}
+          , _react2.default.createElement(SectionHeader, { icon: _lucidereact.Settings, title: "System Context" , color: "border-gray-700 text-gray-300" ,} )
+          , _react2.default.createElement('div', { className: "grid grid-cols-2 md:grid-cols-5 gap-2"   ,}
+            , [
+              { label: 'Model', value: 'Qwen3.5-4B', sub: 'Vision model' },
+              { label: 'API', value: 'vLLM serve API', sub: 'chat/completions' },
+              { label: 'Video', value: 'FFmpeg', sub: 'clip + overlay' },
+              { label: 'Schedule', value: 'CSV Parse', sub: 'BFIExport format' },
+              { label: 'Output', value: 'JSON', sub: 'per ad break' },
+            ].map((item, i) => (
+              _react2.default.createElement('div', { key: i, className: "bg-gray-800 rounded-xl p-2.5 text-center"   ,}
+                , _react2.default.createElement('p', { className: "text-xs text-gray-500" ,}, item.label)
+                , _react2.default.createElement('p', { className: "text-xs font-bold text-blue-400"  ,}, item.value)
+                , _react2.default.createElement('p', { className: "text-xs text-gray-600" ,}, item.sub)
+              )
+            ))
+          )
+        )
+
+        /* Tabs */
+        , _react2.default.createElement('div', { className: "flex gap-1 mb-4 bg-gray-900 rounded-xl p-1 overflow-x-auto"      ,}
+          , tabs.map(tab => (
+            _react2.default.createElement('button', {
+              key: tab.id,
+              onClick: () => setActiveTab(tab.id),
+              className: `flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                activeTab === tab.id
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+              }`,}
+
+              , _react2.default.createElement(tab.icon, { className: "w-3.5 h-3.5" ,} )
+              , tab.label
+            )
+          ))
+        )
+
+        , _react2.default.createElement(_framermotion.AnimatePresence, { mode: "wait",}
+          /* Pipeline Overview */
+          , activeTab === 'pipeline' && (
+            _react2.default.createElement(_framermotion.motion.div, { key: "pipeline", initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -10 },
+              className: "space-y-4",}
+              , _react2.default.createElement('div', { className: "bg-gray-900 border border-gray-800 rounded-2xl p-5"    ,}
+                , _react2.default.createElement(SectionHeader, { icon: _lucidereact.Layers, title: "End-to-End Pipeline" , color: "border-blue-800 text-blue-400" ,} )
+                , _react2.default.createElement('p', { className: "text-xs text-gray-400 mb-4"  ,}, "Three discrete stages, each with its own CLI command. Each stage produces an artifact consumed by the next. Stages can be run independently or chained via the automation command."                            )
+
+                /* Full pipeline flow */
+                , _react2.default.createElement('div', { className: "space-y-2",}
+                  /* Stage 1 */
+                  , _react2.default.createElement('div', { className: "bg-amber-950 border border-amber-800 rounded-xl p-3"    ,}
+                    , _react2.default.createElement('div', { className: "flex items-center gap-2 mb-2"   ,}
+                      , _react2.default.createElement('span', { className: "bg-amber-700 text-amber-100 text-xs font-bold px-2 py-0.5 rounded"      ,}, "1")
+                      , _react2.default.createElement('p', { className: "text-xs font-bold text-amber-400"  ,}, "Metadata Extraction" )
+                      , _react2.default.createElement('code', { className: "text-xs text-amber-600 ml-auto font-mono"   ,}, "advert-identifier-metadata-extract")
+                    )
+                    , _react2.default.createElement('div', { className: "flex items-center gap-1 overflow-x-auto text-xs"    ,}
+                      , _react2.default.createElement('span', { className: "bg-gray-800 px-2 py-1 rounded text-gray-300"    ,}, "Video filename" )
+                      , _react2.default.createElement(_lucidereact.ArrowRight, { className: "w-3 h-3 text-gray-600 shrink-0"   ,} )
+                      , _react2.default.createElement('span', { className: "bg-gray-800 px-2 py-1 rounded text-gray-300"    ,}, "CSV lookup" )
+                      , _react2.default.createElement(_lucidereact.ArrowRight, { className: "w-3 h-3 text-gray-600 shrink-0"   ,} )
+                      , _react2.default.createElement('span', { className: "bg-gray-800 px-2 py-1 rounded text-gray-300"    ,}, "Parse schedule" )
+                      , _react2.default.createElement(_lucidereact.ArrowRight, { className: "w-3 h-3 text-gray-600 shrink-0"   ,} )
+                      , _react2.default.createElement('span', { className: "bg-amber-800 px-2 py-1 rounded text-amber-200 font-bold"     ,}, "_metadata.json")
+                    )
+                  )
+
+                  , _react2.default.createElement(DownArrow, { label: "JSON metadata" ,} )
+
+                  /* Stage 2 */
+                  , _react2.default.createElement('div', { className: "bg-rose-950 border border-rose-800 rounded-xl p-3"    ,}
+                    , _react2.default.createElement('div', { className: "flex items-center gap-2 mb-2"   ,}
+                      , _react2.default.createElement('span', { className: "bg-rose-700 text-rose-100 text-xs font-bold px-2 py-0.5 rounded"      ,}, "2")
+                      , _react2.default.createElement('p', { className: "text-xs font-bold text-rose-400"  ,}, "Clip Extraction" )
+                      , _react2.default.createElement('code', { className: "text-xs text-rose-600 ml-auto font-mono"   ,}, "advert-identifier-clip")
+                    )
+                    , _react2.default.createElement('div', { className: "flex items-center gap-1 overflow-x-auto text-xs"    ,}
+                      , _react2.default.createElement('span', { className: "bg-gray-800 px-2 py-1 rounded text-gray-300"    ,}, "_metadata.json")
+                      , _react2.default.createElement(_lucidereact.ArrowRight, { className: "w-3 h-3 text-gray-600 shrink-0"   ,} )
+                      , _react2.default.createElement('span', { className: "bg-gray-800 px-2 py-1 rounded text-gray-300"    ,}, "FFmpeg seek" )
+                      , _react2.default.createElement(_lucidereact.ArrowRight, { className: "w-3 h-3 text-gray-600 shrink-0"   ,} )
+                      , _react2.default.createElement('span', { className: "bg-gray-800 px-2 py-1 rounded text-gray-300"    ,}, "-60s / +360s window"   )
+                      , _react2.default.createElement(_lucidereact.ArrowRight, { className: "w-3 h-3 text-gray-600 shrink-0"   ,} )
+                      , _react2.default.createElement('span', { className: "bg-rose-800 px-2 py-1 rounded text-rose-200 font-bold"     ,}, "_CLIP.mp4 per break"  )
+                    )
+                  )
+
+                  , _react2.default.createElement(DownArrow, { label: "video clips" ,} )
+
+                  /* Stage 3 */
+                  , _react2.default.createElement('div', { className: "bg-violet-950 border border-violet-800 rounded-xl p-3"    ,}
+                    , _react2.default.createElement('div', { className: "flex items-center gap-2 mb-2"   ,}
+                      , _react2.default.createElement('span', { className: "bg-violet-700 text-violet-100 text-xs font-bold px-2 py-0.5 rounded"      ,}, "3")
+                      , _react2.default.createElement('p', { className: "text-xs font-bold text-violet-400"  ,}, "AI Identification" )
+                      , _react2.default.createElement('code', { className: "text-xs text-violet-600 ml-auto font-mono"   ,}, "advert-identifier")
+                    )
+                    , _react2.default.createElement('div', { className: "flex items-center gap-1 overflow-x-auto text-xs"    ,}
+                      , _react2.default.createElement('span', { className: "bg-gray-800 px-2 py-1 rounded text-gray-300"    ,}, "Clip + metadata"  )
+                      , _react2.default.createElement(_lucidereact.ArrowRight, { className: "w-3 h-3 text-gray-600 shrink-0"   ,} )
+                      , _react2.default.createElement('span', { className: "bg-gray-800 px-2 py-1 rounded text-gray-300"    ,}, "VLM analysis" )
+                      , _react2.default.createElement(_lucidereact.ArrowRight, { className: "w-3 h-3 text-gray-600 shrink-0"   ,} )
+                      , _react2.default.createElement('span', { className: "bg-gray-800 px-2 py-1 rounded text-gray-300"    ,}, "Ensemble + vote"  )
+                      , _react2.default.createElement(_lucidereact.ArrowRight, { className: "w-3 h-3 text-gray-600 shrink-0"   ,} )
+                      , _react2.default.createElement('span', { className: "bg-emerald-800 px-2 py-1 rounded text-emerald-200 font-bold"     ,}, "Identified adverts" )
+                    )
+                  )
+                )
+
+                /* File naming */
+                , _react2.default.createElement('div', { className: "mt-4 bg-gray-800 rounded-xl p-3"   ,}
+                  , _react2.default.createElement('p', { className: "text-xs font-bold text-gray-300 mb-2"   ,}, "File Naming Convention"  )
+                  , _react2.default.createElement('div', { className: "space-y-1 text-xs font-mono"  ,}
+                    , _react2.default.createElement('div', { className: "flex items-baseline gap-2"  ,}
+                      , _react2.default.createElement('span', { className: "text-gray-400",}, "Video:")
+                      , _react2.default.createElement('span', { className: "text-blue-400",}, "YYYY-MM-DD_CHANNEL_HH:MM:SS.mp4")
+                    )
+                    , _react2.default.createElement('div', { className: "flex items-baseline gap-2"  ,}
+                      , _react2.default.createElement('span', { className: "text-gray-400",}, "CSV:")
+                      , _react2.default.createElement('span', { className: "text-amber-400",}, "YYYY-MM-DD_BFIExport.csv")
+                    )
+                    , _react2.default.createElement('div', { className: "flex items-baseline gap-2"  ,}
+                      , _react2.default.createElement('span', { className: "text-gray-400",}, "Metadata:")
+                      , _react2.default.createElement('span', { className: "text-amber-400",}, "YYYY-MM-DD_CHANNEL_HH:MM:SS_metadata.json")
+                    )
+                    , _react2.default.createElement('div', { className: "flex items-baseline gap-2"  ,}
+                      , _react2.default.createElement('span', { className: "text-gray-400",}, "Clip:")
+                      , _react2.default.createElement('span', { className: "text-rose-400",}, "YYYY-MM-DD_CHANNEL_HH:MM:SS_HH-MM-SS.mmm_CLIP.mp4")
+                    )
+                  )
+                  , _react2.default.createElement('p', { className: "text-xs text-gray-500 mt-2"  ,}, "The system auto-resolves date and channel from the video filename to locate matching CSV data"              )
+                )
+              )
+
+              /* CLI commands */
+              , _react2.default.createElement('div', { className: "bg-gray-900 border border-gray-800 rounded-2xl p-5"    ,}
+                , _react2.default.createElement(SectionHeader, { icon: _lucidereact.Terminal, title: "CLI Commands" , color: "border-gray-700 text-gray-300" ,} )
+                , _react2.default.createElement('div', { className: "space-y-2",}
+                  , _react2.default.createElement(CommandCard, { name: "advert-identifier", desc: "Core identification: VLM analysis of clips with ensemble voting"        , color: "border-violet-500",
+                    args: ['--mode timecode|frame', '--ad-break-index N', '--verbose', '--debug'],} )
+                  , _react2.default.createElement(CommandCard, { name: "advert-identifier-pipeline", desc: "Full automation: processes entire folders end-to-end"     , color: "border-blue-500",
+                    args: ['--input-folder', '--csv-folder', '--video-server-url'],} )
+                  , _react2.default.createElement(CommandCard, { name: "advert-identifier-metadata-extract", desc: "Parses video filenames → matches CSV → produces metadata JSON"         , color: "border-amber-500",
+                    args: ['--video', '--csv-folder', '--output-dir'],} )
+                  , _react2.default.createElement(CommandCard, { name: "advert-identifier-clip", desc: "FFmpeg clip extraction centered on ad break timestamps"       , color: "border-rose-500",
+                    args: ['--json-file', '--before-secs 60', '--after-secs 360'],} )
+                  , _react2.default.createElement(CommandCard, { name: "advert-identifier-benchmark", desc: "Accuracy testing against ground truth timecodes"     , color: "border-emerald-500",
+                    args: ['--ground-truth-first', '-n 10'],} )
+                  , _react2.default.createElement(CommandCard, { name: "advert-identifier-describe", desc: "General video description via VLM (debugging / exploration)"       , color: "border-gray-500",
+                    args: ['--video', '--prompt'],} )
+                )
+              )
+            )
+          )
+
+          /* Step 1: Metadata */
+          , activeTab === 'metadata' && (
+            _react2.default.createElement(_framermotion.motion.div, { key: "metadata", initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -10 },
+              className: "space-y-4",}
+              , _react2.default.createElement('div', { className: "bg-gray-900 border border-gray-800 rounded-2xl p-5"    ,}
+                , _react2.default.createElement(SectionHeader, { icon: _lucidereact.FileSpreadsheet, title: "Stage 1 — Metadata Extraction"    , color: "border-amber-800 text-amber-400" ,} )
+                , _react2.default.createElement('p', { className: "text-xs text-gray-400 mb-4"  ,}, "Parses the video filename to extract date and channel, locates the corresponding CSV scheduling file, and filters it to the relevant broadcast window. Outputs a structured JSON with ad break timestamps, advert IDs, brands, and durations."                                   )
+
+                , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-4 mb-3"   ,}
+                  , _react2.default.createElement('p', { className: "text-xs font-bold text-amber-400 mb-2"   ,}, "Processing Flow" )
+                  , _react2.default.createElement('div', { className: "flex items-center gap-1 overflow-x-auto pb-1"    ,}
+                    , _react2.default.createElement(PipelineNode, { label: "Video filename" , sublabel: "date + channel + time"    , color: "bg-gray-700 text-gray-300" , icon: _lucidereact.Tv,} )
+                    , _react2.default.createElement(PipelineArrow, null )
+                    , _react2.default.createElement(PipelineNode, { label: "Locate CSV" , sublabel: "YYYY-MM-DD_BFIExport", color: "bg-gray-700 text-gray-300" , icon: _lucidereact.Search,} )
+                    , _react2.default.createElement(PipelineArrow, null )
+                    , _react2.default.createElement(PipelineNode, { label: "Filter by channel"  , sublabel: "+ time window"  , color: "bg-amber-900 text-amber-200" , border: "border border-amber-700" , icon: _lucidereact.Filter,} )
+                    , _react2.default.createElement(PipelineArrow, null )
+                    , _react2.default.createElement(PipelineNode, { label: "Group ad breaks"  , sublabel: "consecutive ads" , color: "bg-amber-900 text-amber-200" , icon: _lucidereact.Database,} )
+                    , _react2.default.createElement(PipelineArrow, null )
+                    , _react2.default.createElement(PipelineNode, { label: "_metadata.json", color: "bg-amber-800 text-amber-100" , border: "border border-amber-600" , icon: _lucidereact.CheckCircle,} )
+                  )
+                )
+
+                , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-3"  ,}
+                  , _react2.default.createElement('p', { className: "text-xs font-bold text-gray-300 mb-2"   ,}, "Output Structure (per ad break)"    )
+                  , _react2.default.createElement('pre', { className: "bg-gray-950 rounded-lg p-3 text-xs text-gray-300 overflow-x-auto"     ,}, `{
+  "ad_breaks": [
+    {
+      "start_timecode": "13:52:05",
+      "adverts": [
+        {
+          "advert_id": "BBHTCPT536010",
+          "brand": "Tesco",
+          "duration_seconds": 10,
+          "timecode": "13:52:05"
+        },
+        {
+          "advert_id": "SKYMO2394030",
+          "brand": "Sky Mobile",
+          "duration_seconds": 30,
+          "timecode": "13:52:15"
+        }
+      ]
+    }
+  ]
+}`)
+                )
+
+                , _react2.default.createElement('div', { className: "mt-3 bg-gray-800 rounded-xl p-3"   ,}
+                  , _react2.default.createElement('p', { className: "text-xs font-bold text-gray-300 mb-2"   ,}, "Key Parameters" )
+                  , _react2.default.createElement(ParamRow, { name: "--video", value: "path/to/video.mp4", note: "filename parsed for date/channel"   ,} )
+                  , _react2.default.createElement(ParamRow, { name: "--csv-folder", value: "path/to/csv/", note: "defaults to video directory"   ,} )
+                  , _react2.default.createElement(ParamRow, { name: "--output-dir", value: "path/to/output/", note: "where _metadata.json is written"   ,} )
+                )
+              )
+            )
+          )
+
+          /* Step 2: Clip */
+          , activeTab === 'clip' && (
+            _react2.default.createElement(_framermotion.motion.div, { key: "clip", initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -10 },
+              className: "space-y-4",}
+              , _react2.default.createElement('div', { className: "bg-gray-900 border border-gray-800 rounded-2xl p-5"    ,}
+                , _react2.default.createElement(SectionHeader, { icon: _lucidereact.Scissors, title: "Stage 2 — Clip Extraction"    , color: "border-rose-800 text-rose-400" ,} )
+                , _react2.default.createElement('p', { className: "text-xs text-gray-400 mb-4"  ,}, "Reads the metadata JSON, iterates over each ad break, and uses FFmpeg to extract a clip from the source video centered on the ad break's start timecode. The window is configurable (default: 60s before, 360s after)."                                   )
+
+                , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-4 mb-3"   ,}
+                  , _react2.default.createElement('p', { className: "text-xs font-bold text-rose-400 mb-2"   ,}, "Extraction Window" )
+                  , _react2.default.createElement('div', { className: "relative bg-gray-700 rounded-lg p-4"   ,}
+                    , _react2.default.createElement('div', { className: "flex items-end gap-px h-16"   ,}
+                      , [...Array(30)].map((_, i) => {
+                        const isBeforeWindow = i >= 3 && i < 6;
+                        const isAdBreak = i >= 6 && i <= 24;
+                        const isAfterWindow = i > 24 && i <= 27;
+                        const isWindow = isBeforeWindow || isAdBreak || isAfterWindow;
+                        let bg = 'bg-gray-600';
+                        let h = 'h-6';
+                        if (isAdBreak) { bg = 'bg-rose-500'; h = 'h-12'; }
+                        else if (isWindow) { bg = 'bg-rose-300'; h = 'h-8'; }
+                        return _react2.default.createElement('div', { key: i, className: `flex-1 ${bg} ${h} rounded-sm`,} );
+                      })
+                    )
+                    , _react2.default.createElement('div', { className: "flex items-center gap-2 mt-2 text-xs"    ,}
+                      , _react2.default.createElement('div', { className: "flex items-center gap-1"  ,}, _react2.default.createElement('div', { className: "w-2.5 h-2.5 bg-gray-600 rounded-sm"   ,} ), _react2.default.createElement('span', { className: "text-gray-400",}, "Programme"))
+                      , _react2.default.createElement('div', { className: "flex items-center gap-1"  ,}, _react2.default.createElement('div', { className: "w-2.5 h-2.5 bg-rose-300 rounded-sm"   ,} ), _react2.default.createElement('span', { className: "text-rose-300",}, "Buffer (before/after)" ))
+                      , _react2.default.createElement('div', { className: "flex items-center gap-1"  ,}, _react2.default.createElement('div', { className: "w-2.5 h-2.5 bg-rose-500 rounded-sm"   ,} ), _react2.default.createElement('span', { className: "text-rose-400",}, "Ad break" ))
+                    )
+                  )
+                )
+
+                , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-4 mb-3"   ,}
+                  , _react2.default.createElement('p', { className: "text-xs font-bold text-rose-400 mb-2"   ,}, "FFmpeg Command (simplified)"  )
+                  , _react2.default.createElement('pre', { className: "bg-gray-950 rounded-lg p-3 text-xs text-green-400 overflow-x-auto"     ,}, `ffmpeg -ss <start - before_secs> \\
+  -i source_video.mp4 \\
+  -t <before_secs + after_secs> \\
+  -c copy \\
+  output_CLIP.mp4`)
+                  , _react2.default.createElement('p', { className: "text-xs text-gray-500 mt-2"  ,}, "Uses stream copy ("   , _react2.default.createElement('code', { className: "bg-gray-700 px-1 rounded"  ,}, "-c copy" ), ") for fast extraction without re-encoding. One clip per ad break."          )
+                )
+
+                , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-3"  ,}
+                  , _react2.default.createElement('p', { className: "text-xs font-bold text-gray-300 mb-2"   ,}, "Key Parameters" )
+                  , _react2.default.createElement(ParamRow, { name: "--json-file", value: "_metadata.json", note: "produced by Stage 1"   ,} )
+                  , _react2.default.createElement(ParamRow, { name: "--before-secs", value: "60", note: "buffer before ad break start"    ,} )
+                  , _react2.default.createElement(ParamRow, { name: "--after-secs", value: "360", note: "buffer after ad break start"    ,} )
+                )
+              )
+            )
+          )
+
+          /* Step 3: AI Identification */
+          , activeTab === 'identify' && (
+            _react2.default.createElement(_framermotion.motion.div, { key: "identify", initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -10 },
+              className: "space-y-4",}
+              , _react2.default.createElement('div', { className: "bg-gray-900 border border-gray-800 rounded-2xl p-5"    ,}
+                , _react2.default.createElement(SectionHeader, { icon: _lucidereact.Eye, title: "Stage 3 — AI Identification"    , color: "border-violet-800 text-violet-400" ,} )
+                , _react2.default.createElement('p', { className: "text-xs text-gray-400 mb-4"  ,}, "The core detection stage. Sends the clip to a vision-language model (Qwen3.5-4B via vLLM) along with the expected advert list from metadata. The model identifies the last frame of each advert. Three overlay modes available: timecode, frame, none."
+
+                )
+
+                /* Detection modes */
+                , _react2.default.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-3 mb-4"    ,}
+                  , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-3 border-l-2 border-blue-500"    ,}
+                    , _react2.default.createElement('p', { className: "text-xs font-bold text-blue-400 mb-1"   ,}, "Timecode Mode" )
+                    , _react2.default.createElement('p', { className: "text-xs text-gray-400" ,}, "Model reads burnt-in timecodes and reports HH:MM:SS.mmm for each advert's last frame."                   )
+                    , _react2.default.createElement('code', { className: "text-xs text-gray-500 mt-2 block"   ,}, "--mode timecode" )
+                  )
+                  , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-3 border-l-2 border-purple-500"    ,}
+                    , _react2.default.createElement('p', { className: "text-xs font-bold text-purple-400 mb-1"   ,}, "Frame Mode" )
+                    , _react2.default.createElement('p', { className: "text-xs text-gray-400" ,}, "Model reads burnt-in frame number and reports frame number for each advert's last frame."               )
+                    , _react2.default.createElement('code', { className: "text-xs text-gray-500 mt-2 block"   ,}, "--mode frame" )
+                  )
+                  , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-3 border-l-2 border-purple-500"    ,}
+                    , _react2.default.createElement('p', { className: "text-xs font-bold text-purple-400 mb-1"   ,}, "None Mode" )
+                    , _react2.default.createElement('p', { className: "text-xs text-gray-400" ,}, "Model infers timecode from its own frame sequence, and reports MM:SS for each advert's last frame."               )
+                    , _react2.default.createElement('code', { className: "text-xs text-gray-500 mt-2 block"   ,}, "--mode none" )
+                  )
+                )
+
+                /* Pipeline */
+                , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-4 mb-3"   ,}
+                  , _react2.default.createElement('p', { className: "text-xs font-bold text-violet-400 mb-2"   ,}, "Detection Pipeline" )
+                  , _react2.default.createElement('div', { className: "space-y-2",}
+                    , _react2.default.createElement('div', { className: "flex items-center gap-1 overflow-x-auto pb-1"    ,}
+                      , _react2.default.createElement(PipelineNode, { label: "Clip URL" , sublabel: "via HTTP" , color: "bg-gray-700 text-gray-300" , icon: _lucidereact.Play,} )
+                      , _react2.default.createElement(PipelineArrow, null )
+                      , _react2.default.createElement(PipelineNode, { label: "Load metadata" , sublabel: "ad break N"  , color: "bg-gray-700 text-gray-300" , icon: _lucidereact.Database,} )
+                      , _react2.default.createElement(PipelineArrow, null )
+                      , _react2.default.createElement(PipelineNode, { label: "Build prompt" , sublabel: "expected ads list"  , color: "bg-violet-900 text-violet-200" , border: "border border-violet-700" , icon: _lucidereact.FileSpreadsheet,} )
+                      , _react2.default.createElement(PipelineArrow, null )
+                      , _react2.default.createElement(PipelineNode, { label: "VLM API" , sublabel: "Qwen3.5-4B", color: "bg-violet-900 text-violet-200" , icon: _lucidereact.Cpu,} )
+                    )
+                    , _react2.default.createElement(DownArrow, null )
+                    , _react2.default.createElement('div', { className: "flex items-center gap-1 overflow-x-auto pb-1"    ,}
+                      , _react2.default.createElement('div', { className: "bg-indigo-900 border border-indigo-700 rounded-lg p-2 text-center min-w-max"      ,}
+                        , _react2.default.createElement('p', { className: "text-xs font-bold text-indigo-200"  ,}, "N× Ensemble Calls"  )
+                        , _react2.default.createElement('div', { className: "flex gap-0.5 mt-1 justify-center"   ,}
+                          , [1,2,3,4,5].map(i => (
+                            _react2.default.createElement('div', { key: i, className: "w-5 h-5 bg-indigo-700 rounded text-xs flex items-center justify-center text-indigo-200 font-bold"         ,}, i)
+                          ))
+                        )
+                      )
+                      , _react2.default.createElement(PipelineArrow, null )
+                      , _react2.default.createElement(PipelineNode, { label: "Parse responses" , sublabel: "per-advert TCs" , color: "bg-gray-700 text-gray-300" , icon: _lucidereact.Search,} )
+                      , _react2.default.createElement(PipelineArrow, null )
+                      , _react2.default.createElement(PipelineNode, { label: "Median voting" , sublabel: "per advert" , color: "bg-blue-900 text-blue-200" , border: "border border-blue-700" , icon: _lucidereact.GitMerge,} )
+                      , _react2.default.createElement(PipelineArrow, null )
+                      , _react2.default.createElement(PipelineNode, { label: "Results JSON" , color: "bg-emerald-900 text-emerald-200" , border: "border border-emerald-700" , icon: _lucidereact.CheckCircle,} )
+                    )
+                  )
+                )
+
+                /* Ensemble detail */
+                , _react2.default.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-3 mb-3"    ,}
+                  , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-3"  ,}
+                    , _react2.default.createElement('p', { className: "text-xs font-bold text-indigo-400 mb-2"   ,}, "📊 Ensemble Voting"  )
+                    , _react2.default.createElement('p', { className: "text-xs text-gray-400 mb-2"  ,}, "Multiple independent API calls per clip. For each expected advert, the median timecode across ensemble members is selected as the final result."                     )
+                    , _react2.default.createElement('div', { className: "flex gap-1 items-center text-xs font-mono mt-2"     ,}
+                      , _react2.default.createElement('span', { className: "bg-gray-700 px-1.5 py-0.5 rounded text-gray-300"    ,}, "52:14")
+                      , _react2.default.createElement('span', { className: "bg-gray-700 px-1.5 py-0.5 rounded text-gray-300"    ,}, "52:15")
+                      , _react2.default.createElement('span', { className: "bg-indigo-700 px-1.5 py-0.5 rounded text-indigo-200 font-bold ring-2 ring-indigo-500"       ,}, "52:15")
+                      , _react2.default.createElement('span', { className: "bg-gray-700 px-1.5 py-0.5 rounded text-gray-300"    ,}, "52:16")
+                    )
+                    , _react2.default.createElement('p', { className: "text-xs text-gray-500 mt-1"  ,}, "↑ median selected"  )
+                  )
+                  , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-3"  ,}
+                    , _react2.default.createElement('p', { className: "text-xs font-bold text-violet-400 mb-2"   ,}, "🎯 Prompt Design"  )
+                    , _react2.default.createElement('p', { className: "text-xs text-gray-400 mb-2"  ,}, "The prompt provides the model with the full expected advert list (brand, ID, duration, timecode) and instructs it to find the "                     , _react2.default.createElement('strong', null, "last frame" ), " of each advert — not the first frame or the ad break boundary."             )
+                    , _react2.default.createElement('p', { className: "text-xs text-gray-500" ,}, "Uses " , _react2.default.createElement('code', { className: "bg-gray-700 px-1 rounded"  ,}, "--ad-break-index"), " to select which ad break from the metadata to process."          )
+                  )
+                )
+
+                /* Output */
+                , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-3"  ,}
+                  , _react2.default.createElement('p', { className: "text-xs font-bold text-gray-300 mb-2"   ,}, "Output Structure" )
+                  , _react2.default.createElement('pre', { className: "bg-gray-950 rounded-lg p-3 text-xs text-gray-300 overflow-x-auto"     ,}, `{
+  "success": true,
+  "adverts": [
+    {
+      "timecode": "13:52:05",
+      "advert_id": "BBHTCPT536010",
+      "brand": "Tesco",
+      "duration_seconds": 10,
+      "description": "Tesco logo visible in final frame"
+    }
+  ],
+  "total_found": 1,
+  "total_expected": 1
+}`)
+                )
+
+                , _react2.default.createElement('div', { className: "mt-3 bg-gray-800 rounded-xl p-3"   ,}
+                  , _react2.default.createElement('p', { className: "text-xs font-bold text-gray-300 mb-2"   ,}, "Key Parameters" )
+                  , _react2.default.createElement(ParamRow, { name: "--video", value: "http://server/clip.mp4", note: "clip URL via HTTP"   ,} )
+                  , _react2.default.createElement(ParamRow, { name: "--metadata-file", value: "_metadata.json", note: "from Stage 1"  ,} )
+                  , _react2.default.createElement(ParamRow, { name: "--ad-break-index", value: "0", note: "which ad break to process"    ,} )
+                  , _react2.default.createElement(ParamRow, { name: "--mode", value: "timecode | frame"  , note: "detection strategy" ,} )
+                  , _react2.default.createElement(ParamRow, { name: "--verbose", value: "", note: "real-time step progress"  ,} )
+                  , _react2.default.createElement(ParamRow, { name: "--debug", value: "", note: "saves raw API responses to debug.json"     ,} )
+                )
+              )
+
+              /* Debugging */
+              , _react2.default.createElement('div', { className: "bg-gray-900 border border-gray-800 rounded-2xl p-5"    ,}
+                , _react2.default.createElement(SectionHeader, { icon: _lucidereact.Search, title: "Verbose / Debug Output"   , color: "border-gray-700 text-gray-300" ,} )
+                , _react2.default.createElement('p', { className: "text-xs text-gray-400 mb-3"  ,}, "Progressive status output helps diagnose issues in long-running API calls:"         )
+                , _react2.default.createElement('pre', { className: "bg-gray-950 rounded-lg p-3 text-xs text-gray-400 overflow-x-auto"     ,}, `Step 1/5: Loading metadata...
+Step 2/5: Building prompt (ad break 0, 5 adverts expected)
+Step 3/5: Initializing API client (Qwen/Qwen3.5-VL)
+Step 4/5: Making API call 1/5...
+Step 4/5: Making API call 2/5...
+...
+Step 5/5: Aggregating ensemble results (median voting)`)
+                , _react2.default.createElement('p', { className: "text-xs text-gray-500 mt-2"  ,}, _react2.default.createElement('code', { className: "bg-gray-800 px-1 rounded"  ,}, "--debug"), " additionally writes the full raw API response to "         , _react2.default.createElement('code', { className: "bg-gray-800 px-1 rounded"  ,}, "debug.json"), " for inspection."  )
+              )
+            )
+          )
+
+          /* Full Automation */
+          , activeTab === 'automation' && (
+            _react2.default.createElement(_framermotion.motion.div, { key: "automation", initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: -10 },
+              className: "space-y-4",}
+              , _react2.default.createElement('div', { className: "bg-gray-900 border border-gray-800 rounded-2xl p-5"    ,}
+                , _react2.default.createElement(SectionHeader, { icon: _lucidereact.FolderOpen, title: "Full Automation Pipeline"  , color: "border-blue-800 text-blue-400" ,} )
+                , _react2.default.createElement('p', { className: "text-xs text-gray-400 mb-4"  ,}, "The "
+                   , _react2.default.createElement('code', { className: "bg-gray-800 px-1 rounded"  ,}, "advert-identifier-pipeline"), " command chains all three stages automatically. Point it at a folder of video files and a folder of CSV scheduling data, and it processes everything end-to-end."
+                )
+
+                , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-4 mb-3"   ,}
+                  , _react2.default.createElement('p', { className: "text-xs font-bold text-blue-400 mb-2"   ,}, "Automation Flow" )
+                  , _react2.default.createElement('div', { className: "space-y-1",}
+                    , [
+                      { step: '1', text: 'Scan input folder for video files matching YYYY-MM-DD_CHANNEL_HH:MM:SS.mp4 pattern', color: 'text-amber-400' },
+                      { step: '2', text: 'For each video, run metadata extraction against CSV folder', color: 'text-amber-400' },
+                      { step: '3', text: 'For each ad break in metadata, extract clip with FFmpeg', color: 'text-rose-400' },
+                      { step: '4', text: 'For each clip, run AI identification (serve clip via --video-server-url)', color: 'text-violet-400' },
+                      { step: '5', text: 'Aggregate all results into per-video output JSON', color: 'text-emerald-400' },
+                    ].map((item, i) => (
+                      _react2.default.createElement('div', { key: i, className: "flex items-start gap-2 py-1.5 border-b border-gray-700"     ,}
+                        , _react2.default.createElement('span', { className: "bg-gray-700 text-gray-300 text-xs font-bold px-1.5 py-0.5 rounded shrink-0"       ,}, item.step)
+                        , _react2.default.createElement('p', { className: `text-xs ${item.color}`,}, item.text)
+                      )
+                    ))
+                  )
+                )
+
+                , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-3 mb-3"   ,}
+                  , _react2.default.createElement('p', { className: "text-xs font-bold text-gray-300 mb-2"   ,}, "Example Invocation" )
+                  , _react2.default.createElement('pre', { className: "bg-gray-950 rounded-lg p-3 text-xs text-green-400 overflow-x-auto"     ,}, `advert-identifier-pipeline \\
+  --input-folder /path/to/videos \\
+  --csv-folder /path/to/csv/files \\
+  --before-secs 60 \\
+  --after-secs 360 \\
+  --video-server-url http://your-server:1100`)
+                )
+
+                , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-3"  ,}
+                  , _react2.default.createElement('p', { className: "text-xs font-bold text-gray-300 mb-2"   ,}, "Key Parameters" )
+                  , _react2.default.createElement(ParamRow, { name: "--input-folder", value: "/path/to/videos", note: "scans for .mp4 files"   ,} )
+                  , _react2.default.createElement(ParamRow, { name: "--csv-folder", value: "/path/to/csv", note: "BFIExport CSV location"  ,} )
+                  , _react2.default.createElement(ParamRow, { name: "--before-secs", value: "60", note: "clip extraction window"  ,} )
+                  , _react2.default.createElement(ParamRow, { name: "--after-secs", value: "360", note: "clip extraction window"  ,} )
+                  , _react2.default.createElement(ParamRow, { name: "--video-server-url", value: "http://host:port", note: "where clips are served via HTTP"     ,} )
+                )
+              )
+
+              /* Requirements */
+              , _react2.default.createElement('div', { className: "bg-gray-900 border border-gray-800 rounded-2xl p-5"    ,}
+                , _react2.default.createElement(SectionHeader, { icon: _lucidereact.Cog, title: "Requirements", color: "border-gray-700 text-gray-300" ,} )
+                , _react2.default.createElement('div', { className: "grid grid-cols-1 md:grid-cols-2 gap-3"   ,}
+                  , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-3"  ,}
+                    , _react2.default.createElement('p', { className: "text-xs font-bold text-gray-300 mb-2"   ,}, "Runtime")
+                    , _react2.default.createElement('div', { className: "space-y-1",}
+                      , _react2.default.createElement(ParamRow, { name: "Python", value: "3.10+",} )
+                      , _react2.default.createElement(ParamRow, { name: "FFmpeg", value: "installed in PATH"  ,} )
+                      , _react2.default.createElement(ParamRow, { name: "vLLM", value: "server with VLM loaded"   ,} )
+                      , _react2.default.createElement(ParamRow, { name: "Model", value: "Qwen3.5-4B recommended" ,} )
+                    )
+                  )
+                  , _react2.default.createElement('div', { className: "bg-gray-800 rounded-xl p-3"  ,}
+                    , _react2.default.createElement('p', { className: "text-xs font-bold text-gray-300 mb-2"   ,}, "Data")
+                    , _react2.default.createElement('div', { className: "space-y-1",}
+                      , _react2.default.createElement(ParamRow, { name: "Videos", value: "YYYY-MM-DD_CHANNEL_HH:MM:SS.mp4",} )
+                      , _react2.default.createElement(ParamRow, { name: "CSV", value: "YYYY-MM-DD_BFIExport.csv",} )
+                      , _react2.default.createElement(ParamRow, { name: "Overlays", value: "timecode or frame burn-in"   ,} )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+
+        /* Comparison with old approach */
+        , _react2.default.createElement(_framermotion.motion.div, { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { delay: 0.3 },
+          className: "bg-gray-900 border border-gray-800 rounded-2xl p-5 mt-6"     ,}
+          , _react2.default.createElement(SectionHeader, { icon: _lucidereact.RefreshCw, title: "What Changed from the Previous Approach"     , color: "border-gray-700 text-gray-300" ,} )
+          , _react2.default.createElement('div', { className: "overflow-x-auto",}
+            , _react2.default.createElement('table', { className: "w-full text-xs" ,}
+              , _react2.default.createElement('thead', null
+                , _react2.default.createElement('tr', { className: "border-b border-gray-700" ,}
+                  , _react2.default.createElement('th', { className: "text-left py-2 text-gray-400 font-semibold"   ,}, "Aspect")
+                  , _react2.default.createElement('th', { className: "text-left py-2 text-red-400 font-semibold"   ,}, "Previous (Advert Identifier)"  )
+                  , _react2.default.createElement('th', { className: "text-left py-2 text-emerald-400 font-semibold"   ,}, "New (Ad Break Identifier)"   )
+                )
+              )
+              , _react2.default.createElement('tbody', { className: "text-gray-300",}
+                , [
+                  ['Scope', 'Find one advert\'s start frame', 'Identify all adverts in an ad break'],
+                  ['Input knowledge', 'Programme name + advert name (manual)', 'Full schedule from CSV (automated)'],
+                  ['Target frame', 'First frame of advert', 'Last frame of each advert'],
+                  ['Pipeline', 'Monolithic script with modes', 'Three discrete CLI stages'],
+                  ['Batch processing', 'Single video at a time', 'Entire folder automation'],
+                  ['Metadata', 'Hardcoded or CLI params', 'Structured JSON from CSV parsing'],
+                  ['Multi-ad support', 'One advert per run', 'All adverts in a break per run'],
+                  ['Ad break selection', 'N/A', '--ad-break-index N'],
+                  ['Detection modes', '3 modes (single, ensemble, two-pass)', '2 modes (timecode, frame)'],
+                  ['Clip extraction', 'Optional (Pass 2 only)', 'Required stage in pipeline'],
+                ].map(([aspect, old, curr], i) => (
+                  _react2.default.createElement('tr', { key: i, className: "border-b border-gray-800" ,}
+                    , _react2.default.createElement('td', { className: "py-1.5 text-gray-400 font-semibold pr-3"   ,}, aspect)
+                    , _react2.default.createElement('td', { className: "py-1.5 pr-3 text-red-300"  ,}, old)
+                    , _react2.default.createElement('td', { className: "py-1.5 text-emerald-300" ,}, curr)
+                  )
+                ))
+              )
+            )
+          )
+        )
+
+        , _react2.default.createElement('p', { className: "text-center text-xs text-gray-600 mt-8 mb-4"    ,}, "Qwen3.5-4B · FFmpeg · vLLM Serve API · Built at BFI National Archive"
+
+        )
+      )
+    )
+  );
+} exports.default = TechnicalExplanation;
+</script></head>
+  <body>
+  
+
+<div id="preview-app"></div></body></html>

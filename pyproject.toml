@@ -1,0 +1,16 @@
+[project]
+name = "advert-identifier"
+version = "0.1.0"
+description = "AI-powered ad break sequence identification in TV broadcast videos"
+requires-python = ">=3.10"
+dependencies = [
+    "openai>=1.0.0",
+]
+
+[project.scripts]
+advert-identifier = "ad_break_identifier.cli:identifier_main"
+advert-identifier-pipeline = "ad_break_identifier.cli:pipeline_main"
+advert-identifier-metadata-extract = "ad_break_identifier.cli:extractor_main"
+advert-identifier-clip = "ad_break_identifier.cli:clipper_main"
+advert-identifier-benchmark = "ad_break_identifier.cli:benchmark_main"
+advert-identifier-describe = "ad_break_identifier.cli:describer_main"

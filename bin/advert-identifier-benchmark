@@ -1,0 +1,526 @@
+#!/usr/bin/env python3
+"""Benchmark script for ad break identifier - runs multiple detections and analyzes accuracy.
+
+This benchmark runs the ad break detection pipeline and analyzes accuracy against
+ground truth for the LAST advert in the sequence.
+"""
+
+import sys
+import csv
+import time
+import argparse
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+
+from ad_break_identifier.config import load_config, load_metadata_from_file, AdBreakConfig
+from ad_break_identifier.main import run_ad_break_analysis
+
+
+def mmss_to_seconds(timecode: str) -> float:
+    """Convert MM:SS format to total seconds.
+    
+    Args:
+        timecode: Timecode string in MM:SS format (e.g., "09:30").
+        
+    Returns:
+        Total seconds as float.
+    """
+    parts = timecode.split(":")
+    if len(parts) != 2:
+        raise ValueError(f"Invalid MM:SS format: {timecode}")
+    minutes = int(parts[0])
+    seconds = int(parts[1])
+    return minutes * 60 + seconds
+
+
+def seconds_to_mmss(total_seconds: float) -> str:
+    """Convert total seconds to MM:SS format.
+    
+    Args:
+        total_seconds: Total seconds to convert.
+        
+    Returns:
+        Timecode string in MM:SS format.
+    """
+    minutes = int(total_seconds // 60)
+    seconds = int(total_seconds % 60)
+    return f"{minutes:02d}:{seconds:02d}"
+
+
+def validate_ground_truth(value: str, mode: str) -> bool:
+    """Validate ground truth value based on mode.
+    
+    Args:
+        value: Ground truth value to validate.
+        mode: Analysis mode - "timecode" or "frame".
+        
+    Returns:
+        True if valid, False otherwise.
+    """
+    if mode == "frame":
+        try:
+            int(value)
+            return True
+        except ValueError:
+            return False
+    else:
+        # Timecode mode: MM:SS
+        try:
+            mmss_to_seconds(value)
+            return True
+        except ValueError:
+            return False
+
+
+def run_detection_benchmark(config: AdBreakConfig, metadata) -> dict:
+    """Run detection benchmark and return detailed results.
+    
+    Args:
+        config: Application configuration.
+        metadata: Ad break metadata.
+        
+    Returns:
+        Dict with ensemble results, timing, and last advert detection.
+    """
+    total_start = time.time()
+    
+    try:
+        # Run the detection with ensemble
+        result, ensemble_stats, prompt, raw_responses = run_ad_break_analysis(
+            config, 
+            debug_mode=False
+        )
+        total_elapsed = time.time() - total_start
+        
+        # Extract first advert if available
+        first_advert = None
+        if result.success and result.adverts:
+            first_advert = result.adverts[0]
+        
+        # Build result dict
+        result_dict = {
+            "success": result.success,
+            "error": result.error,
+            "total_time_seconds": round(total_elapsed, 3),
+            "total_found": result.total_found,
+            "total_expected": result.total_expected,
+            "ensemble_stats": {
+                "total_responses": ensemble_stats.total_responses if ensemble_stats else 0,
+                "valid_responses": ensemble_stats.valid_responses if ensemble_stats else 0,
+                "invalid_responses": ensemble_stats.invalid_responses if ensemble_stats else 0,
+                "voting_method": ensemble_stats.voting_method if ensemble_stats else "N/A",
+            } if ensemble_stats else None,
+        }
+        
+        # Add first advert details
+        if first_advert:
+            result_dict["first_advert"] = {
+                "advert_id": first_advert.advert_id,
+                "brand": first_advert.brand,
+                "frame": first_advert.frame,
+                "timecode": first_advert.timecode,
+                "duration_seconds": first_advert.duration_seconds,
+                "description": first_advert.description,
+            }
+        
+        return result_dict
+    
+    except Exception as e:
+        total_elapsed = time.time() - total_start
+        return {
+            "success": False,
+            "error": str(e),
+            "total_time_seconds": round(total_elapsed, 3),
+        }
+
+
+def calculate_accuracy_stats(
+    results: list[dict], 
+    ground_truth: str, 
+    mode: str
+) -> dict:
+    """Calculate accuracy statistics against ground truth for first advert.
+    
+    Args:
+        results: List of successful detection results.
+        ground_truth: Ground truth value (frame number or MM:SS timecode).
+        mode: Analysis mode - "timecode" or "frame".
+        
+    Returns:
+        Dict with accuracy metrics.
+    """
+    # Parse ground truth
+    if mode == "frame":
+        truth_value = int(ground_truth)
+        unit = "frames"
+    else:
+        truth_value = mmss_to_seconds(ground_truth)
+        unit = "seconds"
+    
+    # Filter successful runs with first advert detected
+    successful = [
+        r for r in results 
+        if r.get("success") and r.get("first_advert")
+    ]
+    
+    if not successful:
+        return {"error": "No successful runs with first advert detected"}
+    
+    # Calculate differences
+    differences = []
+    for i, result in enumerate(successful, 1):
+        first_advert = result["first_advert"]
+        
+        if mode == "frame":
+            detected_value = first_advert.get("frame")
+            if detected_value is None:
+                continue
+        else:
+            timecode = first_advert.get("timecode")
+            if not timecode:
+                continue
+            try:
+                detected_value = mmss_to_seconds(timecode)
+            except ValueError:
+                continue
+        
+        diff = abs(detected_value - truth_value)
+        differences.append({
+            "run": i,
+            "detected": detected_value,
+            "difference": diff,
+        })
+    
+    if not differences:
+        return {"error": "No valid detections to analyze"}
+    
+    # Calculate statistics
+    detected_values = [d["detected"] for d in differences]
+    diffs = [d["difference"] for d in differences]
+    
+    mean_detected = sum(detected_values) / len(detected_values)
+    mean_diff = sum(diffs) / len(diffs)
+    median_diff = sorted(diffs)[len(diffs) // 2]
+    min_diff = min(diffs)
+    max_diff = max(diffs)
+    
+    # Find closest and furthest
+    sorted_by_diff = sorted(differences, key=lambda x: x["difference"])
+    closest = sorted_by_diff[0]
+    furthest = sorted_by_diff[-1]
+    
+    stats = {
+        "ground_truth": ground_truth,
+        "unit": unit,
+        "successful_runs": len(successful),
+        "total_runs": len(results),
+        "mean_difference": round(mean_diff, 3),
+        "median_difference": round(median_diff, 3),
+        "min_difference": round(min_diff, 3),
+        "max_difference": round(max_diff, 3),
+        "closest_run": closest["run"],
+        "closest_difference": round(closest["difference"], 3),
+        "furthest_run": furthest["run"],
+        "furthest_difference": round(furthest["difference"], 3),
+    }
+    
+    # Format mean detected value
+    if mode == "timecode":
+        stats["mean_detected"] = seconds_to_mmss(mean_detected)
+    else:
+        stats["mean_detected"] = round(mean_detected, 1)
+    
+    return stats
+
+
+def write_csv_output(
+    output_path: str,
+    total_time: float,
+    avg_time: float,
+    num_runs: int,
+    successful_runs: int,
+    results: list[dict],
+    mode: str,
+    ground_truth: str | None = None,
+    accuracy_stats: dict | None = None,
+) -> None:
+    """Write benchmark results to CSV file."""
+    with open(output_path, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        
+        # Row 1-6: Summary metrics
+        writer.writerow(["metric", "value"])
+        writer.writerow(["mode", mode])
+        writer.writerow(["total_time_seconds", round(total_time, 2)])
+        writer.writerow(["average_time_per_run", round(avg_time, 2)])
+        writer.writerow(["number_of_runs", num_runs])
+        writer.writerow(["successful_runs", successful_runs])
+        writer.writerow(["failed_runs", num_runs - successful_runs])
+        
+        # Ground truth if provided
+        if ground_truth:
+            writer.writerow(["ground_truth", ground_truth])
+        
+        # Row 7+: Results header
+        value_column = "first_frame" if mode == "frame" else "first_timecode"
+        writer.writerow([
+            "run", 
+            value_column, 
+            "detected_brand",
+            "detected_advert_id",
+            "duration_seconds",
+            "total_adverts_found",
+            "total_adverts_expected",
+            "ensemble_total",
+            "ensemble_valid",
+            "ensemble_invalid",
+            "voting_method",
+            "total_time_seconds",
+            "error"
+        ])
+        
+        # Individual results
+        for i, result in enumerate(results, 1):
+            first_advert = result.get("first_advert", {})
+            ensemble = result.get("ensemble_stats", {})
+            
+            if mode == "frame":
+                value = first_advert.get("frame", "")
+            else:
+                value = first_advert.get("timecode", "")
+            
+            writer.writerow([
+                i,
+                value,
+                first_advert.get("brand", ""),
+                first_advert.get("advert_id", ""),
+                first_advert.get("duration_seconds", ""),
+                result.get("total_found", ""),
+                result.get("total_expected", ""),
+                ensemble.get("total_responses", "") if ensemble else "",
+                ensemble.get("valid_responses", "") if ensemble else "",
+                ensemble.get("invalid_responses", "") if ensemble else "",
+                ensemble.get("voting_method", "") if ensemble else "",
+                result.get("total_time_seconds", ""),
+                result.get("error", ""),
+            ])
+        
+        # Accuracy stats if provided
+        if accuracy_stats and "error" not in accuracy_stats:
+            writer.writerow([])
+            writer.writerow(["section", "ACCURACY ANALYSIS"])
+            writer.writerow(["ground_truth", accuracy_stats.get("ground_truth", "")])
+            writer.writerow(["unit", accuracy_stats.get("unit", "")])
+            writer.writerow(["successful_runs", accuracy_stats.get("successful_runs", "")])
+            writer.writerow(["mean_difference", accuracy_stats.get("mean_difference", "")])
+            writer.writerow(["median_difference", accuracy_stats.get("median_difference", "")])
+            writer.writerow(["min_difference", accuracy_stats.get("min_difference", "")])
+            writer.writerow(["max_difference", accuracy_stats.get("max_difference", "")])
+            writer.writerow(["mean_detected", accuracy_stats.get("mean_detected", "")])
+            writer.writerow(["closest_run", accuracy_stats.get("closest_run", "")])
+            writer.writerow(["closest_difference", accuracy_stats.get("closest_difference", "")])
+            writer.writerow(["furthest_run", accuracy_stats.get("furthest_run", "")])
+            writer.writerow(["furthest_difference", accuracy_stats.get("furthest_difference", "")])
+
+
+def create_parser() -> argparse.ArgumentParser:
+    """Create argument parser with benchmark options."""
+    parser = argparse.ArgumentParser(
+        description="Benchmark ad break identifier - run multiple detections and analyze accuracy"
+    )
+    
+    # Required arguments
+    parser.add_argument(
+        "-v", "--video-url",
+        type=str,
+        required=True,
+        help="Video URL to analyze"
+    )
+    
+    parser.add_argument(
+        "-m", "--metadata-file",
+        type=str,
+        required=True,
+        help="Path to JSON file with ad break metadata"
+    )
+    
+    # Mode selection
+    parser.add_argument(
+        "--mode",
+        type=str,
+        choices=["timecode", "frame"],
+        default="timecode",
+        help="Analysis mode: timecode (MM:SS) or frame (default: timecode)"
+    )
+    
+    # Benchmark-specific arguments
+    parser.add_argument(
+        "-n", "--num-runs",
+        type=int,
+        default=10,
+        help="Number of benchmark runs (default: 10)"
+    )
+    
+    parser.add_argument(
+        "--ground-truth-first",
+        type=str,
+        help="Ground truth for FIRST advert: frame number (frame mode) or MM:SS timecode (timecode mode)"
+    )
+    
+    parser.add_argument(
+        "-o", "--output-csv",
+        type=str,
+        help="Output CSV file path (default: benchmark_results_YYYYMMDD_HHMMSS.csv)"
+    )
+    
+    # Ensemble arguments
+    parser.add_argument(
+        "--ensemble-size",
+        type=int,
+        default=5,
+        help="Number of ensemble members (default: 5)"
+    )
+    
+    parser.add_argument(
+        "--ensemble-delay",
+        type=float,
+        default=10.0,
+        help="Delay in seconds between ensemble member requests (default: 10.0)"
+    )
+    
+    # Other settings
+    parser.add_argument(
+        "-f", "--fps",
+        type=float,
+        default=1.0,
+        help="Frames per second for video sampling (default: 1.0)"
+    )
+    
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug mode (saves debug.json and debug.md)"
+    )
+    
+    return parser
+
+
+def main():
+    """Main benchmark entry point."""
+    parser = create_parser()
+    args = parser.parse_args()
+    
+    # Validate ground truth if provided
+    if args.ground_truth_first:
+        if not validate_ground_truth(args.ground_truth_first, args.mode):
+            print(f"Error: Invalid ground truth format for {args.mode} mode: {args.ground_truth_first}")
+            if args.mode == "frame":
+                print("Expected: integer frame number (e.g., 324)")
+            else:
+                print("Expected: MM:SS format (e.g., 09:30)")
+            sys.exit(1)
+    
+    # Load metadata
+    try:
+        metadata = load_metadata_from_file(args.metadata_file)
+    except Exception as e:
+        print(f"Error loading metadata: {e}")
+        sys.exit(1)
+    
+    # Build config
+    config = AdBreakConfig(
+        video_url=args.video_url,
+        ad_break_metadata=metadata,
+        fps=args.fps,
+        mode=args.mode,
+        enable_ensemble=True,
+        ensemble_size=args.ensemble_size,
+        ensemble_delay=args.ensemble_delay,
+        output_format="json",
+    )
+    
+    # Generate output filename with timestamp if not provided
+    if not args.output_csv:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        mode_suffix = args.mode
+        args.output_csv = f"benchmark_results_{mode_suffix}_{timestamp}.csv"
+    
+    # Print startup info
+    print(f"Starting benchmark: {args.num_runs} runs")
+    print(f"Mode: {args.mode}")
+    print(f"Video: {config.video_url}")
+    print(f"Adverts: {len(metadata.adverts)} expected")
+    print(f"Ensemble: {args.ensemble_size} members, {args.ensemble_delay}s delay")
+    if args.ground_truth_first:
+        print(f"Ground truth (first advert): {args.ground_truth_first}")
+    print(f"Output: {args.output_csv}")
+    print()
+    
+    # Run benchmark
+    results = []
+    total_start = time.time()
+    
+    for i in range(args.num_runs):
+        print(f"Run {i + 1}/{args.num_runs}...")
+        result = run_detection_benchmark(config, metadata)
+        results.append(result)
+        
+        if result.get("success"):
+            first_advert = result.get("first_advert", {})
+            value = first_advert.get("frame") if args.mode == "frame" else first_advert.get("timecode")
+            print(f"  → First advert: {value} ({first_advert.get('brand', 'N/A')})")
+            print(f"    Found: {result['total_found']}/{result['total_expected']} adverts")
+            if result.get("ensemble_stats"):
+                es = result["ensemble_stats"]
+                print(f"    Ensemble: {es['valid_responses']}/{es['total_responses']} valid")
+        else:
+            print(f"  → ERROR: {result.get('error', 'Unknown')}")
+    
+    total_time = time.time() - total_start
+    successful_runs = sum(1 for r in results if r.get("success"))
+    avg_time = total_time / args.num_runs
+    
+    print()
+    print(f"Benchmark complete: {successful_runs}/{args.num_runs} successful")
+    print(f"Total time: {total_time:.2f}s, Average: {avg_time:.2f}s/run")
+    
+    # Calculate accuracy stats if ground truth provided
+    accuracy_stats = None
+    if args.ground_truth_first:
+        print(f"\nCalculating accuracy against ground truth: {args.ground_truth_first}...")
+        accuracy_stats = calculate_accuracy_stats(results, args.ground_truth_first, args.mode)
+        
+        if "error" not in accuracy_stats:
+            unit = accuracy_stats.get("unit", "units")
+            print(f"\nAccuracy Analysis:")
+            print(f"  Successful runs: {accuracy_stats['successful_runs']}/{accuracy_stats['total_runs']}")
+            print(f"  Mean detected: {accuracy_stats['mean_detected']}")
+            print(f"  Mean difference: {accuracy_stats['mean_difference']} {unit}")
+            print(f"  Median difference: {accuracy_stats['median_difference']} {unit}")
+            print(f"  Min difference: {accuracy_stats['min_difference']} {unit}")
+            print(f"  Max difference: {accuracy_stats['max_difference']} {unit}")
+            print(f"  Closest run: #{accuracy_stats['closest_run']} ({accuracy_stats['closest_difference']} {unit})")
+            print(f"  Furthest run: #{accuracy_stats['furthest_run']} ({accuracy_stats['furthest_difference']} {unit})")
+        else:
+            print(f"  Error: {accuracy_stats['error']}")
+    
+    # Write CSV
+    write_csv_output(
+        args.output_csv,
+        total_time,
+        avg_time,
+        args.num_runs,
+        successful_runs,
+        results,
+        args.mode,
+        args.ground_truth_first,
+        accuracy_stats,
+    )
+    print(f"\nResults written to: {args.output_csv}")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,513 @@
+#!/usr/bin/env python3
+import subprocess
+import re
+import os
+import sys
+import json
+import tempfile
+import logging
+import time
+import argparse
+from pathlib import Path
+from typing import Tuple
+
+logger = logging.getLogger(__name__)
+
+
+def normalize_timecode(timecode: str) -> str:
+    """Normalize timecode to HH:MM:SS.mmm format.
+    
+    Args:
+        timecode: Timecode in HH:MM:SS or HH:MM:SS.mmm format.
+        
+    Returns:
+        Timecode in HH:MM:SS.mmm format.
+    """
+    if '.' not in timecode:
+        return f"{timecode}.000"
+    return timecode
+
+
+def load_ad_break_json(json_path: str) -> dict:
+    """Load and validate ad break JSON file.
+    
+    Args:
+        json_path: Path to JSON file.
+        
+    Returns:
+        Parsed JSON dictionary.
+        
+    Raises:
+        FileNotFoundError: If JSON file doesn't exist.
+        json.JSONDecodeError: If JSON is invalid.
+        ValueError: If required fields are missing.
+    """
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+    
+    if 'video_info' not in data:
+        raise ValueError("Missing 'video_info' in JSON")
+    if 'filepath' not in data['video_info']:
+        raise ValueError("Missing 'video_info.filepath' in JSON")
+    if 'ad_breaks' not in data:
+        raise ValueError("Missing 'ad_breaks' in JSON")
+    if len(data['ad_breaks']) == 0:
+        raise ValueError("No ad breaks found in JSON")
+    
+    return data
+
+
+def setup_logging(log_level: str = "INFO") -> None:
+    """Configure logging to console.
+    
+    Args:
+        log_level: Logging level (DEBUG, INFO, WARNING, ERROR).
+    """
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper()),
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
+
+
+def create_parser() -> argparse.ArgumentParser:
+    """Create CLI argument parser."""
+    parser = argparse.ArgumentParser(
+        description="Extract video clips for ad breaks from JSON metadata"
+    )
+    
+    parser.add_argument(
+        "--json-file",
+        required=True,
+        help="Path to JSON file with ad break metadata"
+    )
+    parser.add_argument(
+        "--video-path",
+        type=str,
+        help="Override video path from JSON"
+    )
+    parser.add_argument(
+        "--overlay-type",
+        type=str,
+        choices=["none", "timecode", "frame"],
+        default="none",
+        help="Type of overlay to display: none, timecode (HH:MM:SS.mmm) or frame count (default: none)"
+    )
+    parser.add_argument(
+        "--clip-prefix",
+        type=str,
+        default="advert",
+        help="Prefix for output filenames (default: advert)"
+    )
+    parser.add_argument(
+        "--before-secs",
+        type=float,
+        default=10.0,
+        help="Seconds before timecode (default: 10.0)"
+    )
+    parser.add_argument(
+        "--after-secs",
+        type=float,
+        default=360.0,
+        help="Seconds after timecode (default: 360.0)"
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Logging level (default: INFO)"
+    )
+    
+    return parser
+
+
+def timecode_to_seconds(timecode: str) -> float:
+    """Convert timecode string HH:MM:SS.mmm to seconds.
+    
+    Args:
+        timecode: Timecode in HH:MM:SS.mmm format.
+        
+    Returns:
+        Time in seconds as float.
+        
+    Raises:
+        ValueError: If timecode format is invalid.
+    """
+    pattern = r"^(\d{2}):(\d{2}):(\d{2})\.(\d{3})$"
+    match = re.match(pattern, timecode)
+    if not match:
+        raise ValueError(f"Invalid timecode format: {timecode}. Expected HH:MM:SS.mmm")
+    
+    hours = int(match.group(1))
+    minutes = int(match.group(2))
+    seconds = int(match.group(3))
+    millis = int(match.group(4))
+    
+    return hours * 3600 + minutes * 60 + seconds + millis / 1000.0
+
+
+def seconds_to_timecode(total_seconds: float) -> str:
+    """Convert seconds to timecode string HH:MM:SS.mmm.
+    
+    Args:
+        total_seconds: Time in seconds.
+        
+    Returns:
+        Timecode in HH:MM:SS.mmm format.
+    """
+    hours = int(total_seconds // 3600)
+    remaining = total_seconds % 3600
+    minutes = int(remaining // 60)
+    seconds = int(remaining % 60)
+    millis = int((total_seconds - int(total_seconds)) * 1000)
+    
+    return f"{hours:02d}:{minutes:02d}:{seconds:02d}.{millis:03d}"
+
+
+def download_video_to_temp(video_url: str, max_retries: int = 3) -> str:
+    """Download video from URL to temporary file using curl with retry logic.
+    
+    Args:
+        video_url: URL to download.
+        max_retries: Maximum number of retry attempts (default: 3).
+        
+    Returns:
+        Path to downloaded temporary file.
+        
+    Raises:
+        RuntimeError: If all download attempts fail.
+    """
+    temp_file = None
+    
+    for attempt in range(max_retries):
+        try:
+            # Create temp file with .mp4 suffix
+            temp_fd, temp_path = tempfile.mkstemp(suffix=".mp4")
+            os.close(temp_fd)
+            temp_file = temp_path
+            
+            logger.info(f"Downloading video from {video_url} to temp file (attempt {attempt + 1}/{max_retries})")
+            
+            # Download using curl
+            cmd = [
+                "curl",
+                "-L",  # Follow redirects
+                "-o", temp_file,
+                "--fail",  # Return error on HTTP error status
+                "--silent",
+                "--show-error",
+                video_url
+            ]
+            
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            logger.info(f"Successfully downloaded video to {temp_file}")
+            return temp_file
+            
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"Download attempt {attempt + 1} failed: {e.stderr}")
+            if temp_file and os.path.exists(temp_file):
+                os.unlink(temp_file)
+                temp_file = None
+            
+            if attempt < max_retries - 1:
+                wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                logger.info(f"Retrying in {wait_time}s...")
+                time.sleep(wait_time)
+            else:
+                logger.error(f"Failed to download video after {max_retries} attempts")
+                raise RuntimeError(f"Failed to download video from {video_url} after {max_retries} attempts: {e.stderr}")
+        
+        except Exception as e:
+            logger.error(f"Unexpected error during download: {e}")
+            if temp_file and os.path.exists(temp_file):
+                os.unlink(temp_file)
+            raise
+    
+    # This should never be reached, but satisfies type checker
+    raise RuntimeError("Unexpected code path reached in download_video_to_temp")
+
+
+def extract_clip_with_timecode(
+    video_path: str,
+    center_timecode: str,
+    output_dir: str,
+    clip_prefix: str,
+    before_secs: float = 3.0,
+    after_secs: float = 1.0,
+    video_start_time: str | None = None,
+    use_video_name: bool = False,
+    overlay_timecode: bool = True,
+    overlay_type: str = "timecode",
+) -> str:
+    """Extract a video clip with timecode overlay using FFmpeg.
+    
+    The clip starts 'before_secs' seconds before the center_timecode
+    and ends 'after_secs' seconds after it, for a total duration of
+    (before_secs + after_secs) seconds.
+    
+    Args:
+        video_path: Path to source video file.
+        center_timecode: Timecode around which to center the clip (HH:MM:SS.mmm).
+        output_dir: Directory where clip will be saved.
+        clip_prefix: Prefix for the output filename (ignored if use_video_name=True).
+        before_secs: Seconds to include before the center timecode (default: 3.0).
+        after_secs: Seconds to include after the center timecode (default: 1.0).
+        video_start_time: Video's start time if timecode is time-of-day (HH:MM:SS).
+                          If provided, center_timecode is treated as time-of-day and
+                          offset is calculated relative to video_start_time.
+                          If None, center_timecode is treated as direct offset.
+        use_video_name: If True, use video filename as base for clip name.
+                        If False, use clip_prefix + timecode format.
+        overlay_timecode: If True and video_start_time is available, overlay
+                          metadata on each frame using FFmpeg drawtext.
+        overlay_type: Type of overlay - "timecode" for HH:MM:SS.mmm or "frame" for frame count.
+        
+    Returns:
+        Absolute path to the generated clip file.
+        
+    Raises:
+        ValueError: If timecode format is invalid or video path doesn't exist.
+        RuntimeError: If FFmpeg command fails.
+    """
+    temp_downloaded_file = None
+    
+    try:
+        # Check if video_path is a URL
+        is_url = video_path.startswith(("http://", "https://"))
+        
+        if is_url:
+            # Download video to temp file
+            logger.info(f"URL detected, downloading video to temp file for clip extraction")
+            temp_downloaded_file = download_video_to_temp(video_path)
+            video_input = temp_downloaded_file
+            logger.info(f"Using downloaded temp file for FFmpeg: {video_input}")
+        else:
+            # Local file path
+            video_file = Path(video_path)
+            if not video_file.exists():
+                raise ValueError(f"Video file not found: {video_path}")
+            video_input = str(video_file)
+        
+        output_path = Path(output_dir).resolve()
+        output_path.mkdir(parents=True, exist_ok=True)
+        
+        # Calculate center offset in seconds
+        if video_start_time is not None:
+            # Timecode is time-of-day, calculate offset from video start
+            center_time_secs = timecode_to_seconds(center_timecode)
+            video_start_secs = timecode_to_seconds(normalize_timecode(video_start_time))
+            center_seconds = center_time_secs - video_start_secs
+            logger.info(f"Time-of-day mode: {center_timecode} - {video_start_time} = {center_seconds}s offset")
+        else:
+            # Timecode is direct offset
+            center_seconds = timecode_to_seconds(center_timecode)
+        
+        start_seconds = max(0.0, center_seconds - before_secs)
+        duration = before_secs + after_secs
+        
+        if use_video_name:
+            # Use video filename as base, append timecode and _CLIP
+            video_file = Path(video_path)
+            safe_timecode = center_timecode.replace(":", "-")
+            output_filename = f"{video_file.stem}_{safe_timecode}_CLIP.mp4"
+        else:
+            # Use clip_prefix + timecode format
+            safe_timecode = center_timecode.replace(":", "-")
+            output_filename = f"{clip_prefix}_{safe_timecode}_CLIP.mp4"
+        
+        output_file = output_path / output_filename
+        
+        if overlay_type == "none":
+            cmd = [
+                "/home/linuxbrew/.linuxbrew/bin/ffmpeg",
+                "-y",
+                "-ss", str(start_seconds),
+                "-i", video_input,
+                "-t", str(duration),
+                "-c:v", "libx264",
+                "-preset", "veryfast",
+                "-crf", "27",
+                "-c:a", "copy",
+                "-pix_fmt", "yuv420p",
+                str(output_file),
+            ]
+            
+            logger.info(f"Running FFmpeg transcoding at original resolution (no overlay): {start_seconds}s for {duration}s")
+        else:
+            if overlay_type == "frame":
+                # Frame count mode: red text on white background, middle left
+                drawtext_filter = (
+                    "drawtext=text='%{n}':"
+                    "fontsize=40:"
+                    "fontcolor=red:"
+                    "box=1:"
+                    "boxcolor=white:"
+                    "boxborderw=5:"
+                    "x=10:"
+                    "y=(h-text_h)/2"
+                )
+                logger.info(f"Running FFmpeg with frame count overlay")
+            else:
+                # Timecode mode: white text with black border on white background, middle left
+                # Calculate PTS offset for time-of-day display
+                video_start_secs = timecode_to_seconds(normalize_timecode(video_start_time))
+                pts_offset = video_start_secs + start_seconds
+                
+                drawtext_filter = (
+                    f"drawtext=text='%{{pts\\:hms\\:{pts_offset}}}':"
+                    "fontsize=40:"
+                    "fontcolor=white:"
+                    "box=1:"
+                    "boxcolor=white:"
+                    "boxborderw=5:"
+                    "borderw=2:"
+                    "bordercolor=black:"
+                    "x=10:"
+                    "y=(h-text_h)/2"
+                )
+                logger.info(f"Running FFmpeg with timecode overlay (PTS offset: {pts_offset}s)")
+            
+            cmd = [
+                "/home/linuxbrew/.linuxbrew/bin/ffmpeg",
+                "-y",
+                "-ss", str(start_seconds),
+                "-i", video_input,
+                "-t", str(duration),
+                "-vf", drawtext_filter,
+                "-c:v", "libx264",
+                "-preset", "veryfast",
+                "-crf", "27",
+                "-c:a", "copy",
+                "-pix_fmt", "yuv420p",
+                str(output_file),
+            ]
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        logger.info(f"Successfully created clip: {output_file}")
+        
+        return str(output_file.absolute())
+        
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"FFmpeg failed: {e.stderr}") from e
+    except FileNotFoundError:
+        raise RuntimeError("FFmpeg not found in PATH. Please install FFmpeg.")
+    finally:
+        # Clean up temp downloaded file if it exists
+        if temp_downloaded_file and os.path.exists(temp_downloaded_file):
+            try:
+                os.unlink(temp_downloaded_file)
+                logger.info(f"Cleaned up temp downloaded file: {temp_downloaded_file}")
+            except Exception as e:
+                logger.warning(f"Failed to clean up temp file {temp_downloaded_file}: {e}")
+
+
+def download_video_if_url(video_url: str, output_dir: str) -> str:
+    """Download video if it's a URL, return local path.
+    
+    For HTTP/HTTPS URLs, returns the URL as-is (FFmpeg will stream).
+    For local paths, validates the file exists.
+    
+    Args:
+        video_url: URL or local path to video.
+        output_dir: Directory to save downloaded file.
+        
+    Returns:
+        URL or local path to video file.
+    """
+    if video_url.startswith(("http://", "https://")):
+        # Return URL as-is - FFmpeg will stream from it
+        return video_url
+    
+    video_path = Path(video_url)
+    if not video_path.exists():
+        raise ValueError(f"Video file not found: {video_url}")
+    
+    return str(video_path)
+
+
+def main() -> int:
+    """Main entry point."""
+    parser = create_parser()
+    args = parser.parse_args()
+    
+    # Setup logging
+    setup_logging(args.log_level)
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Load JSON metadata
+        logger.info(f"Loading JSON from {args.json_file}")
+        data = load_ad_break_json(args.json_file)
+        
+        # Get video path (CLI override or from JSON)
+        video_path = args.video_path or data['video_info']['filepath']
+        logger.info(f"Using video: {video_path}")
+        
+        # Determine output directory (same as video)
+        video_file = Path(video_path)
+        output_dir = str(video_file.parent)
+        logger.info(f"Output directory: {output_dir}")
+        
+        # Get video start time from JSON
+        video_start_time = data['video_info'].get('start_time')
+        if video_start_time:
+            logger.info(f"Video start time: {video_start_time} (time-of-day mode)")
+        
+        # Process each ad break
+        ad_breaks = data['ad_breaks']
+        logger.info(f"Processing {len(ad_breaks)} ad break(s)")
+        
+        for i, ad_break in enumerate(ad_breaks):
+            start_time = ad_break['start_time']
+            normalized_timecode = normalize_timecode(start_time)
+            
+            logger.info(f"Ad break {i}: {start_time} → {normalized_timecode}")
+            
+            clip_path = extract_clip_with_timecode(
+                video_path=video_path,
+                center_timecode=normalized_timecode,
+                output_dir=output_dir,
+                clip_prefix=args.clip_prefix,
+                before_secs=args.before_secs,
+                after_secs=args.after_secs,
+                video_start_time=video_start_time,
+                use_video_name=True,
+                overlay_timecode=args.overlay_type != "none",
+                overlay_type=args.overlay_type,
+            )
+            
+            logger.info(f"Created clip: {clip_path}")
+        
+        logger.info("All clips created successfully")
+        return 0
+        
+    except FileNotFoundError as e:
+        logger.error(f"File not found: {e}")
+        return 1
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON: {e}")
+        return 1
+    except ValueError as e:
+        logger.error(f"Invalid input: {e}")
+        return 1
+    except RuntimeError as e:
+        logger.error(f"Processing error: {e}")
+        return 1
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

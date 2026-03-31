@@ -1,0 +1,18 @@
+debug.json
+debug.md
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Video files (sample data)
+*.mp4
+*.mov
+*.avi
+
+# Output files
+*.xml
+*.json

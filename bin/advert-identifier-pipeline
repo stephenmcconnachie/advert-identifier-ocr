@@ -1,0 +1,539 @@
+#!/usr/bin/env python3
+"""Ad Break Pipeline - Coordinates metadata extraction, clip creation, and advert identification.
+
+This script automates the full pipeline:
+1. Extract metadata from CSV → JSON
+2. Extract video clips from ad break timestamps
+3. Identify individual adverts within clips using vision model
+4. Generate summary report
+
+Usage:
+    advert-identifier-pipeline --input-folder /path/to/videos --csv-folder /path/to/csv/files
+"""
+
+import argparse
+import logging
+import subprocess
+import sys
+import time
+import xml.etree.ElementTree as ET
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+
+def setup_logging(log_level: str = "INFO") -> logging.Logger:
+    """Configure logging."""
+    logging.basicConfig(
+        level=getattr(logging, log_level.upper()),
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
+    return logging.getLogger(__name__)
+
+
+def create_parser() -> argparse.ArgumentParser:
+    """Create CLI argument parser."""
+    parser = argparse.ArgumentParser(
+        description="Coordinate ad break processing pipeline"
+    )
+    
+    parser.add_argument(
+        "--input-folder",
+        type=str,
+        required=True,
+        help="Path to folder containing .mp4 files"
+    )
+    parser.add_argument(
+        "--csv-folder",
+        type=str,
+        required=True,
+        help="Path to folder containing CSV files (format: YYYY-MM-DD_CHANNEL.csv)"
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        default="INFO",
+        help="Logging level (default: INFO)"
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview what would be processed without executing"
+    )
+    parser.add_argument(
+        "--before-secs",
+        type=float,
+        default=10.0,
+        help="Seconds before ad break timecode to include in clip (default: 10)"
+    )
+    parser.add_argument(
+        "--after-secs",
+        type=float,
+        default=360.0,
+        help="Seconds after ad break timecode to include in clip (default: 360)"
+    )
+    parser.add_argument(
+        "--video-server-url",
+        type=str,
+        default="http://172.18.7.236:1100",
+        help="Base URL for video server (default: http://172.18.7.236:1100)"
+    )
+    
+    return parser
+
+
+def get_video_duration(video_path: Path) -> float:
+    """Get video duration in seconds using ffprobe."""
+    try:
+        result = subprocess.run(
+            [
+                "/home/linuxbrew/.linuxbrew/bin/ffprobe",
+                "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                str(video_path)
+            ],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return float(result.stdout.strip())
+    except (subprocess.CalledProcessError, ValueError) as e:
+        logging.warning(f"Could not determine duration for {video_path}: {e}")
+        return 0.0
+
+
+def run_metadata_extractor(video_path: Path, csv_folder: Path, output_dir: Path, logger: logging.Logger) -> Tuple[bool, Optional[Path]]:
+    """Run advert-identifier-metadata-extract to generate JSON from video and CSV folder."""
+    json_path = output_dir / f"{video_path.stem}_metadata.json"
+    
+    # Get the bin directory (where this script is located)
+    bin_dir = Path(__file__).parent
+    
+    cmd = [
+        sys.executable,
+        str(bin_dir / "advert-identifier-metadata-extract"),
+        "--video", str(video_path),
+        "--csv-folder", str(csv_folder),
+        "--output-dir", str(output_dir)
+    ]
+    
+    logger.info(f"Running metadata extractor: {' '.join(cmd)}")
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        logger.info(f"Metadata extracted: {json_path}")
+        return True, json_path
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Metadata extraction failed: {e.stderr}")
+        return False, None
+
+
+def run_clipper(json_path: Path, before_secs: float, after_secs: float, 
+                logger: logging.Logger) -> Tuple[bool, Optional[Path]]:
+    """Run advert-identifier-clip to extract video clips."""
+    # The clipper creates clips in the same directory as the video
+    # Clips are named: {video_name}_{timecode}_CLIP.mp4
+    
+    # Get the bin directory (where this script is located)
+    bin_dir = Path(__file__).parent
+    
+    cmd = [
+        sys.executable,
+        str(bin_dir / "advert-identifier-clip"),
+        "--json-file", str(json_path),
+        "--before-secs", str(before_secs),
+        "--after-secs", str(after_secs),
+        "--overlay-type", "none"
+    ]
+    
+    logger.info(f"Running clipper: {' '.join(cmd)}")
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        logger.info(f"Clip extraction completed")
+        return True, json_path.parent  # Return directory where clips are saved
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Clip extraction failed: {e.stderr}")
+        return False, None
+
+
+def find_clip_files(video_dir: Path, video_name: str) -> List[Path]:
+    """Find all extracted clip files for a video.
+    
+    Returns list of clip files sorted by filename.
+    """
+    # Look for files matching pattern: {video_name}_*_CLIP.mp4
+    pattern = f"{video_name}_*_CLIP.mp4"
+    clips = list(video_dir.glob(pattern))
+    
+    # Sort by filename to maintain order
+    return sorted(clips)
+
+
+def run_advert_identifier(clip_path: Path, json_path: Path, 
+                          ad_break_index: int, video_server_url: str,
+                          logger: logging.Logger) -> Tuple[bool, Optional[Path], int]:
+    """Run advert-identifier to identify adverts in clip.
+    
+    Args:
+        clip_path: Path to video clip (filesystem path)
+        json_path: Path to metadata JSON
+        ad_break_index: Index of which ad break in the JSON to process
+        video_server_url: Base URL for video server (e.g., http://server:port)
+        logger: Logger instance
+        
+    Returns:
+        Tuple of (success, xml_path, advert_count)
+    """
+    # Get the bin directory (where this script is located)
+    bin_dir = Path(__file__).parent
+    
+    # Construct HTTP URL from server base + clip filename
+    video_url = f"{video_server_url.rstrip('/')}/{clip_path.name}"
+    
+    cmd = [
+        sys.executable,
+        str(bin_dir / "advert-identifier"),
+        "-v", video_url,
+        "--metadata-file", str(json_path),
+        "--ad-break-index", str(ad_break_index),
+        "--mode", "timecode"
+    ]
+    
+    logger.info(f"Running advert identifier for ad break {ad_break_index}: {' '.join(cmd)}")
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        logger.info(f"Advert identification completed")
+        
+        # XML is written to same directory as metadata file
+        xml_path = json_path.parent / f"{clip_path.stem}.xml"
+        advert_count = 0
+        
+        # Parse XML to get advert count and last advert info
+        if xml_path.exists():
+            try:
+                tree = ET.parse(xml_path)
+                root = tree.getroot()
+                adverts = root.findall('.//advert')
+                advert_count = len(adverts)
+                logger.info(f"Found {advert_count} adverts in XML")
+            except ET.ParseError as e:
+                logger.warning(f"Could not parse XML: {e}")
+        
+        return True, xml_path, advert_count
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Advert identification failed: {e.stderr}")
+        return False, None, 0
+
+
+def parse_last_advert_info(xml_path: Path) -> Tuple[Optional[str], Optional[str]]:
+    """Parse XML to find the last advert's timecode/frame."""
+    try:
+        tree = ET.parse(xml_path)
+        root = tree.getroot()
+        
+        adverts = root.findall('.//advert')
+        if not adverts:
+            return None, None
+        
+        # Get the last advert
+        last_advert = adverts[-1]
+        
+        # Check for timecode or frame
+        timecode = last_advert.find('last_timecode')
+        frame = last_advert.find('last_frame')
+        
+        if timecode is not None and timecode.text:
+            return timecode.text, "timecode"
+        elif frame is not None and frame.text:
+            return frame.text, "frame"
+        
+        return None, None
+    except Exception as e:
+        logging.warning(f"Could not parse last advert from XML: {e}")
+        return None, None
+
+
+def generate_summary(
+    results: List[Dict],
+    total_runtime: float,
+    total_video_duration: float,
+    output_path: Path,
+    logger: logging.Logger
+) -> None:
+    """Generate summary report."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    # Calculate processing rate
+    if total_video_duration > 0:
+        processing_rate = total_runtime / total_video_duration
+    else:
+        processing_rate = 0.0
+    
+    lines = [
+        "=" * 80,
+        "AD BREAK PIPELINE SUMMARY",
+        "=" * 80,
+        f"Generated: {timestamp}",
+        "",
+        f"Total Runtime: {format_duration(total_runtime)}",
+        f"Total Video Duration: {format_duration(total_video_duration)}",
+        f"Processing Rate: {processing_rate:.2f}s per second of video",
+        "",
+        "-" * 80,
+        "FILES PROCESSED",
+        "-" * 80,
+        ""
+    ]
+    
+    for i, result in enumerate(results, 1):
+        status_icon = "✓" if result['success'] else "✗"
+        lines.append(f"{i}. {result['filename']}")
+        lines.append(f"   - Total Adverts: {result['advert_count']}")
+        lines.append(f"   - Status: {status_icon} {result['status']}")
+        
+        # Show ad break details if available
+        if 'ad_breaks' in result and result['ad_breaks']:
+            lines.append(f"   - Ad Breaks: {len(result['ad_breaks'])}")
+            for break_info in result['ad_breaks']:
+                if break_info['success']:
+                    lines.append(f"     • Break {break_info['index'] + 1}: {break_info['advert_count']} adverts")
+                    if break_info.get('last_time'):
+                        lines.append(f"       Last: {break_info['last_time']}")
+                else:
+                    lines.append(f"     • Break {break_info['index'] + 1}: Failed")
+        
+        if result['last_advert_time']:
+            mode_str = "timecode" if result['last_advert_type'] == 'timecode' else 'frame'
+            lines.append(f"   - Last Advert {mode_str}: {result['last_advert_time']}")
+        
+        if result['error']:
+            lines.append(f"   - Error: {result['error']}")
+        
+        lines.append("")
+    
+    # Summary statistics
+    successful = sum(1 for r in results if r['success'])
+    failed = len(results) - successful
+    total_adverts = sum(r['advert_count'] for r in results)
+    
+    lines.extend([
+        "-" * 80,
+        "SUMMARY STATISTICS",
+        "-" * 80,
+        "",
+        f"Total Files: {len(results)}",
+        f"Successful: {successful}",
+        f"Failed: {failed}",
+        f"Total Adverts Processed: {total_adverts}",
+        "",
+        "=" * 80
+    ])
+    
+    summary_text = "\n".join(lines)
+    
+    # Write to file
+    with open(output_path, 'w') as f:
+        f.write(summary_text)
+    
+    logger.info(f"Summary written to: {output_path}")
+    
+    # Also print to console
+    print("\n" + summary_text)
+
+
+def format_duration(seconds: float) -> str:
+    """Format duration in seconds to human readable string."""
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    elif seconds < 3600:
+        minutes = int(seconds // 60)
+        secs = int(seconds % 60)
+        return f"{minutes}m {secs}s"
+    else:
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        return f"{hours}h {minutes}m"
+
+
+def main() -> int:
+    """Main entry point."""
+    parser = create_parser()
+    args = parser.parse_args()
+    
+    logger = setup_logging(args.log_level)
+    
+    input_folder = Path(args.input_folder)
+    csv_folder = Path(args.csv_folder)
+    
+    if not input_folder.exists():
+        logger.error(f"Input folder not found: {input_folder}")
+        return 1
+    
+    if not csv_folder.exists():
+        logger.error(f"CSV folder not found: {csv_folder}")
+        return 1
+    
+    # Find all MP4 files
+    mp4_files = sorted(input_folder.glob("*.mp4"))
+    
+    if not mp4_files:
+        logger.warning(f"No .mp4 files found in {input_folder}")
+        return 0
+    
+    logger.info(f"Found {len(mp4_files)} video file(s) to process")
+    logger.info(f"Using CSV folder: {csv_folder}")
+    
+    if args.dry_run:
+        logger.info("DRY RUN - No actual processing will occur")
+        for mp4 in mp4_files:
+            logger.info(f"  {mp4.name}")
+        return 0
+    
+    # Track results
+    results: List[Dict] = []
+    total_video_duration = 0.0
+    pipeline_start_time = time.time()
+    
+    for mp4_file in mp4_files:
+        file_start_time = time.time()
+        video_name = mp4_file.stem
+        
+        logger.info(f"\n{'='*60}")
+        logger.info(f"Processing: {mp4_file.name}")
+        logger.info(f"{'='*60}")
+        
+        result = {
+            'filename': mp4_file.name,
+            'success': False,
+            'status': 'Not started',
+            'advert_count': 0,
+            'last_advert_time': None,
+            'last_advert_type': None,
+            'error': None
+        }
+        
+        # Get video duration for statistics
+        video_duration = get_video_duration(mp4_file)
+        total_video_duration += video_duration
+        
+        # Step 1: Extract metadata from video + CSV folder
+        success, json_path = run_metadata_extractor(mp4_file, csv_folder, input_folder, logger)
+        if not success:
+            result['status'] = 'Failed - Metadata extraction failed'
+            result['error'] = 'CSV file not found or metadata extraction error'
+            results.append(result)
+            continue
+        
+        # Step 2: Extract clips
+        success, clips_dir = run_clipper(json_path, args.before_secs, args.after_secs, logger)
+        if not success:
+            result['status'] = 'Failed - Clip extraction failed'
+            result['error'] = 'See log for details'
+            results.append(result)
+            continue
+        
+        # Find all generated clips
+        clip_paths = find_clip_files(input_folder, video_name)
+        if not clip_paths:
+            logger.error(f"Could not find any extracted clips for {video_name}")
+            result['status'] = 'Failed - No clips found'
+            result['error'] = 'No extracted clip files found'
+            results.append(result)
+            continue
+        
+        logger.info(f"Found {len(clip_paths)} clip(s) for {video_name}")
+        
+        # Step 3: Process each ad break / clip
+        total_adverts = 0
+        all_ad_breaks_success = True
+        ad_break_results = []
+        
+        for ad_break_index, clip_path in enumerate(clip_paths):
+            logger.info(f"\nProcessing ad break {ad_break_index + 1}/{len(clip_paths)}: {clip_path.name}")
+            
+            success, xml_path, advert_count = run_advert_identifier(
+                clip_path, json_path, ad_break_index, args.video_server_url, logger
+            )
+            
+            if success:
+                # Parse last advert info
+                last_time, last_type = parse_last_advert_info(xml_path)
+                
+                ad_break_results.append({
+                    'index': ad_break_index,
+                    'clip': clip_path.name,
+                    'success': True,
+                    'advert_count': advert_count,
+                    'last_time': last_time,
+                    'last_type': last_type
+                })
+                total_adverts += advert_count
+                logger.info(f"Ad break {ad_break_index + 1}: Found {advert_count} adverts")
+            else:
+                all_ad_breaks_success = False
+                ad_break_results.append({
+                    'index': ad_break_index,
+                    'clip': clip_path.name,
+                    'success': False,
+                    'error': 'Advert identification failed'
+                })
+                logger.error(f"Ad break {ad_break_index + 1}: Identification failed")
+        
+        # Update result based on all ad breaks
+        if all_ad_breaks_success and ad_break_results:
+            result['success'] = True
+            result['status'] = f'Success - {len(ad_break_results)} ad break(s)'
+            result['advert_count'] = total_adverts
+            # Use last ad break's info for backward compatibility
+            last_break = ad_break_results[-1]
+            result['last_advert_time'] = last_break.get('last_time')
+            result['last_advert_type'] = last_break.get('last_type')
+            result['ad_breaks'] = ad_break_results
+        elif ad_break_results:
+            # Partial success
+            successful_breaks = [b for b in ad_break_results if b['success']]
+            failed_breaks = [b for b in ad_break_results if not b['success']]
+            result['success'] = len(successful_breaks) > 0
+            result['status'] = f'Partial - {len(successful_breaks)}/{len(ad_break_results)} ad breaks'
+            result['advert_count'] = total_adverts
+            result['ad_breaks'] = ad_break_results
+            if successful_breaks:
+                result['last_advert_time'] = successful_breaks[-1].get('last_time')
+                result['last_advert_type'] = successful_breaks[-1].get('last_type')
+        else:
+            result['success'] = False
+            result['status'] = 'Failed - No ad breaks processed'
+            result['error'] = 'All ad break identifications failed'
+        
+        file_runtime = time.time() - file_start_time
+        logger.info(f"\nCompleted {mp4_file.name} in {format_duration(file_runtime)}")
+        logger.info(f"Total: {len(ad_break_results)} ad break(s), {total_adverts} advert(s)")
+        
+        results.append(result)
+    
+    # Calculate total runtime
+    total_runtime = time.time() - pipeline_start_time
+    
+    # Generate summary
+    summary_path = input_folder / "advert-identifier-pipeline-summary.txt"
+    generate_summary(results, total_runtime, total_video_duration, summary_path, logger)
+    
+    logger.info(f"\nPipeline completed. Processed {len(results)} files.")
+    
+    # Return exit code based on success
+    successful_count = sum(1 for r in results if r['success'])
+    if successful_count == len(results):
+        return 0
+    elif successful_count == 0:
+        return 1
+    else:
+        return 2  # Partial success
+
+
+if __name__ == "__main__":
+    sys.exit(main())

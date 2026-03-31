@@ -1,0 +1,231 @@
+<!DOCTYPE html><html><head><meta name="x-poe-datastore-behavior" content="local_only"><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;"><meta http-equiv="x-dns-prefetch-control" content="off"><script src="https://puc.poecdn.net/authenticated_preview_page/standard.3ef2c256959faf5a756d.js"></script>
+    <meta charset="utf-8">
+    <title>Advert Identifier - How It Works</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+  <script src="https://puc.poecdn.net/authenticated_preview_page/disableWebRTC.9710cebe07429a9e8e06.js"></script><meta name="x-poe-allow-downloads" content="true"><meta name="x-poe-datastore-behavior" content="disabled"><script src="https://puc.poecdn.net/authenticated_preview_page/tw.b9024aecac666455e183.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/deps.faccd16000d314dc16d5.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/exports.b0f0f482cdeb5302b0b9.js"></script><script src="https://puc.poecdn.net/authenticated_preview_page/renderer.75c73ae6b4235f62945a.js"></script><script>Object.defineProperty(exports, "__esModule", {value: true}); function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }var _react = require('react'); var _react2 = _interopRequireDefault(_react);
+var _framermotion = require('framer-motion');
+var _lucidereact = require('lucide-react');
+
+const Step = ({ icon: Icon, color, bgColor, number, title, children, index }) => (
+  _react2.default.createElement(_framermotion.motion.div, {
+    initial: { opacity: 0, y: 30 },
+    animate: { opacity: 1, y: 0 },
+    transition: { delay: index * 0.12, duration: 0.5 },
+    className: `bg-white rounded-2xl shadow-lg border-l-4 ${color} p-6`,}
+
+    , _react2.default.createElement('div', { className: "flex items-center gap-3 mb-4"   ,}
+      , _react2.default.createElement('div', { className: `w-10 h-10 rounded-full ${bgColor} flex items-center justify-center shrink-0`,}
+        , _react2.default.createElement(Icon, { className: "w-5 h-5 text-white"  ,} )
+      )
+      , _react2.default.createElement('div', null
+        , _react2.default.createElement('p', { className: "text-xs font-bold text-gray-400 uppercase tracking-wide"    ,}, "Step " , number)
+        , _react2.default.createElement('h3', { className: "text-lg font-bold text-gray-800"  ,}, title)
+      )
+    )
+    , children
+  )
+);
+
+const Arrow = () => (
+  _react2.default.createElement('div', { className: "flex justify-center py-2"  ,}
+    , _react2.default.createElement(_lucidereact.ArrowDown, { className: "w-6 h-6 text-gray-300"  ,} )
+  )
+);
+
+ function SimpleExplanation() {
+  return (
+    _react2.default.createElement('div', { className: "min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 md:p-8"     ,}
+      , _react2.default.createElement('div', { className: "max-w-xl mx-auto" ,}
+        , _react2.default.createElement(_framermotion.motion.div, { initial: { opacity: 0, y: -20 }, animate: { opacity: 1, y: 0 }, className: "text-center mb-8" ,}
+          , _react2.default.createElement('div', { className: "inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold mb-4"          ,}
+            , _react2.default.createElement(_lucidereact.Sparkles, { className: "w-4 h-4" ,} ), "Ad Break Identifier"
+
+          )
+          , _react2.default.createElement('h1', { className: "text-2xl md:text-3xl font-extrabold text-gray-900 mb-2"    ,}, "How It Works"  )
+          , _react2.default.createElement('p', { className: "text-gray-500 text-sm max-w-md mx-auto"   ,}, "AI that watches TV recordings and identifies every individual advert within an ad break — automatically, using scheduling data and computer vision."
+
+          )
+        )
+
+        /* Big picture */
+        , _react2.default.createElement(_framermotion.motion.div, {
+          initial: { opacity: 0, y: 20 },
+          animate: { opacity: 1, y: 0 },
+          transition: { delay: 0.05 },
+          className: "bg-blue-50 border border-blue-200 rounded-2xl p-5 mb-6"     ,}
+
+          , _react2.default.createElement('p', { className: "text-sm font-bold text-blue-800 mb-2"   ,}, "The Big Picture"  )
+          , _react2.default.createElement('p', { className: "text-sm text-blue-700" ,}, "TV recordings contain ad breaks with multiple adverts back-to-back. This tool already knows "
+                         , _react2.default.createElement('em', null, "what"), " adverts should be in each break (from ad scheduling data), and uses AI to confirm "               , _react2.default.createElement('em', null, "where"), " each one appears in the video — finding the exact last frame of every advert."
+          )
+        )
+
+        /* Step 1 — Scheduling data */
+        , _react2.default.createElement(Step, { icon: _lucidereact.FileSpreadsheet, color: "border-amber-500", bgColor: "bg-amber-500", number: 1, title: "Read the Schedule"  , index: 0,}
+          , _react2.default.createElement('p', { className: "text-gray-600 text-sm mb-4"  ,}, "The BFI National Archive obtains scheduling data as CSV files. These contain what was broadcast and approximately when — including every advert, its brand, duration, and timecode. The tool reads these files and matches them to the video recording."
+
+          )
+          , _react2.default.createElement('div', { className: "bg-amber-50 rounded-xl p-4"  ,}
+            , _react2.default.createElement('div', { className: "flex items-center gap-3 mb-3"   ,}
+              , _react2.default.createElement('div', { className: "text-2xl",}, "📋")
+              , _react2.default.createElement('div', null
+                , _react2.default.createElement('p', { className: "text-sm font-semibold text-amber-800"  ,}, "CSV Scheduling Data"  )
+                , _react2.default.createElement('p', { className: "text-xs text-amber-600" ,}, "e.g. 2024-03-26_BFIExport.csv" )
+              )
+            )
+            , _react2.default.createElement('div', { className: "bg-white rounded-lg p-3 text-xs font-mono text-gray-600 space-y-1"      ,}
+              , _react2.default.createElement('p', null, "13:52:05 — Tesco (10s)"   )
+              , _react2.default.createElement('p', null, "13:52:15 — Sky Mobile (30s)"    )
+              , _react2.default.createElement('p', null, "13:52:45 — Cadbury (20s)"   )
+              , _react2.default.createElement('p', { className: "text-gray-400",}, "...and so on"  )
+            )
+            , _react2.default.createElement('p', { className: "text-xs text-amber-600 mt-2"  ,}, "The tool automatically matches video filenames to the right schedule"         )
+          )
+        )
+
+        , _react2.default.createElement(Arrow, null )
+
+        /* Step 2 — Clip extraction */
+        , _react2.default.createElement(Step, { icon: _lucidereact.Scissors, color: "border-rose-500", bgColor: "bg-rose-500", number: 2, title: "Cut Out the Ad Breaks"    , index: 1,}
+          , _react2.default.createElement('p', { className: "text-gray-600 text-sm mb-4"  ,}, "Rather than processing an entire hours-long recording, the tool cuts out just the ad break sections. It knows from the schedule roughly when each ad break starts, so it extracts a short clip around that point — typically starting ten seconds before and ending six minutes after."
+
+          )
+          , _react2.default.createElement('div', { className: "bg-rose-50 rounded-xl p-4"  ,}
+            , _react2.default.createElement('div', { className: "flex items-end gap-0.5 mb-3"   ,}
+              , [...Array(20)].map((_, i) => {
+                const isAdBreak = i >= 6 && i <= 13;
+                const isClip = i >= 5 && i <= 14;
+                return (
+                  _react2.default.createElement('div', { key: i, className: "flex-1 flex flex-col items-center gap-0.5"    ,}
+                    , _react2.default.createElement('div', { className: `w-full rounded-sm ${isAdBreak ? 'bg-rose-400 h-8' : 'bg-gray-300 h-5'}`,} )
+                    , isClip && i === 5 && _react2.default.createElement('div', { className: "w-full border-l-2 border-dashed border-rose-600 h-2"    ,} )
+                  )
+                );
+              })
+            )
+            , _react2.default.createElement('div', { className: "flex items-center gap-2 text-xs"   ,}
+              , _react2.default.createElement('div', { className: "flex items-center gap-1"  ,}
+                , _react2.default.createElement('div', { className: "w-3 h-3 bg-gray-300 rounded-sm"   ,} )
+                , _react2.default.createElement('span', { className: "text-gray-500",}, "Programme")
+              )
+              , _react2.default.createElement('div', { className: "flex items-center gap-1"  ,}
+                , _react2.default.createElement('div', { className: "w-3 h-3 bg-rose-400 rounded-sm"   ,} )
+                , _react2.default.createElement('span', { className: "text-rose-600",}, "Ad break (extracted as clip)"    )
+              )
+            )
+            , _react2.default.createElement('p', { className: "text-xs text-rose-500 mt-2"  ,}, "A 2-hour recording might produce 3–4 short clips, one per ad break"           )
+          )
+        )
+
+        , _react2.default.createElement(Arrow, null )
+
+        /* Step 3 — AI watches */
+        , _react2.default.createElement(Step, { icon: _lucidereact.Eye, color: "border-violet-500", bgColor: "bg-violet-500", number: 3, title: "AI \"Watches\" Each Clip"   , index: 2,}
+          , _react2.default.createElement('p', { className: "text-gray-600 text-sm mb-4"  ,}, "The AI watches each ad break clip and looks for the last frame of every expected advert. It already knows from the schedule what brands and durations to look for — its job is to confirm when each one ends by spotting logos or brand names in the final seconds - typical advert structure."
+
+          )
+          , _react2.default.createElement('div', { className: "bg-violet-50 rounded-xl p-4"  ,}
+            , _react2.default.createElement('div', { className: "space-y-2 mb-3" ,}
+              , [
+                { brand: 'Tesco', time: '13:52:15', status: '✓ Found' },
+                { brand: 'Sky Mobile', time: '13:52:45', status: '✓ Found' },
+                { brand: 'Cadbury', time: '13:53:05', status: '✓ Found' },
+              ].map((ad, i) => (
+                _react2.default.createElement('div', { key: i, className: "flex items-center gap-3 bg-white rounded-lg px-3 py-2"      ,}
+                  , _react2.default.createElement('div', { className: "w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center text-xs"       ,}, "✓")
+                  , _react2.default.createElement('div', { className: "flex-1",}
+                    , _react2.default.createElement('p', { className: "text-xs font-bold text-gray-800"  ,}, ad.brand)
+                    , _react2.default.createElement('p', { className: "text-xs text-gray-400" ,}, "Last frame at "   , ad.time)
+                  )
+                  , _react2.default.createElement('span', { className: "text-xs font-semibold text-emerald-600"  ,}, ad.status)
+                )
+              ))
+            )
+            , _react2.default.createElement('div', { className: "flex gap-2" ,}
+              , _react2.default.createElement('div', { className: "bg-violet-100 rounded-lg p-2.5 flex-1 text-center"    ,}
+                , _react2.default.createElement('p', { className: "text-lg mb-1" ,}, "🔍")
+                , _react2.default.createElement('p', { className: "text-xs font-semibold text-violet-700"  ,}, "Logos & Text"  )
+              )
+              , _react2.default.createElement('div', { className: "bg-violet-100 rounded-lg p-2.5 flex-1 text-center"    ,}
+                , _react2.default.createElement('p', { className: "text-lg mb-1" ,}, "🎬")
+                , _react2.default.createElement('p', { className: "text-xs font-semibold text-violet-700"  ,}, "Scene Changes" )
+              )
+              , _react2.default.createElement('div', { className: "bg-violet-100 rounded-lg p-2.5 flex-1 text-center"    ,}
+                , _react2.default.createElement('p', { className: "text-lg mb-1" ,}, "⏱️")
+                , _react2.default.createElement('p', { className: "text-xs font-semibold text-violet-700"  ,}, "Timecodes")
+              )
+            )
+          )
+        )
+
+        , _react2.default.createElement(Arrow, null )
+
+        /* Step 4 — Voting */
+        , _react2.default.createElement(Step, { icon: _lucidereact.Users, color: "border-indigo-500", bgColor: "bg-indigo-500", number: 4, title: "Multiple Viewers Vote"  , index: 3,}
+          , _react2.default.createElement('p', { className: "text-gray-600 text-sm mb-4"  ,}, "To avoid mistakes, the AI doesn't just watch once — it watches multiple times independently, then the results are compared. The system picks the middle answer (the median), which filters out any wild outliers."
+
+          )
+          , _react2.default.createElement('div', { className: "bg-indigo-50 rounded-xl p-4"  ,}
+            , _react2.default.createElement('p', { className: "text-xs font-semibold text-indigo-700 mb-2"   ,}, "Example: finding the end of a Tesco advert"       )
+            , _react2.default.createElement('div', { className: "flex items-center gap-1.5 mb-3"   ,}
+              , ['13:52:14', '13:52:15', '13:52:15', '13:52:16', '13:52:30'].map((t, i) => (
+                _react2.default.createElement('div', { key: i, className: `flex-1 rounded-lg py-2 text-center text-xs font-mono ${i === 4 ? 'bg-red-100 text-red-400 line-through' : i === 2 ? 'bg-emerald-100 text-emerald-700 font-bold ring-2 ring-emerald-400' : 'bg-indigo-100 text-indigo-700'}`,}
+                  , t
+                )
+              ))
+            )
+            , _react2.default.createElement('div', { className: "flex items-center gap-2"  ,}
+              , _react2.default.createElement('div', { className: "bg-emerald-100 text-emerald-700 font-bold text-sm rounded-lg py-2 px-4 text-center"       ,}, "✓ Final: 13:52:15"
+
+              )
+              , _react2.default.createElement('p', { className: "text-xs text-gray-400 flex-1"  ,}, "Outlier discarded, median selected from the rest"      )
+            )
+          )
+        )
+
+        , _react2.default.createElement(Arrow, null )
+
+        /* Step 5 — Output */
+        , _react2.default.createElement(Step, { icon: _lucidereact.CheckCircle, color: "border-emerald-500", bgColor: "bg-emerald-500", number: 5, title: "Get the Results"  , index: 4,}
+          , _react2.default.createElement('p', { className: "text-gray-600 text-sm mb-4"  ,}, "For each ad break, we get a list of every advert found — its brand, timecode, duration, and what the AI saw. The results tell us exactly what played and when."
+
+          )
+          , _react2.default.createElement('div', { className: "bg-gray-900 rounded-xl p-4 font-mono text-sm space-y-2"     ,}
+            , _react2.default.createElement('p', { className: "text-emerald-400",}, "✓ Ad break processed"   )
+            , _react2.default.createElement('p', { className: "text-gray-400",}, "Found " , _react2.default.createElement('span', { className: "text-white font-bold" ,}, "3"), " of "  , _react2.default.createElement('span', { className: "text-white font-bold" ,}, "3"), " expected adverts"  )
+            , _react2.default.createElement('div', { className: "border-t border-gray-700 pt-2 mt-2 space-y-1"    ,}
+              , _react2.default.createElement('p', { className: "text-white",}, "1. " , _react2.default.createElement('span', { className: "text-yellow-300",}, "Tesco"), " — 13:52:05 "   , _react2.default.createElement('span', { className: "text-gray-500",}, "(10s)"))
+              , _react2.default.createElement('p', { className: "text-white",}, "2. " , _react2.default.createElement('span', { className: "text-yellow-300",}, "Sky Mobile" ), " — 13:52:15 "   , _react2.default.createElement('span', { className: "text-gray-500",}, "(30s)"))
+              , _react2.default.createElement('p', { className: "text-white",}, "3. " , _react2.default.createElement('span', { className: "text-yellow-300",}, "Cadbury"), " — 13:52:45 "   , _react2.default.createElement('span', { className: "text-gray-500",}, "(20s)"))
+            )
+          )
+        )
+
+        /* Automation callout */
+        , _react2.default.createElement(_framermotion.motion.div, {
+          initial: { opacity: 0, y: 20 },
+          animate: { opacity: 1, y: 0 },
+          transition: { delay: 0.7 },
+          className: "bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-5 mt-6 text-white"      ,}
+
+          , _react2.default.createElement('div', { className: "flex items-center gap-2 mb-2"   ,}
+            , _react2.default.createElement(_lucidereact.FolderOpen, { className: "w-5 h-5" ,} )
+            , _react2.default.createElement('p', { className: "font-bold text-sm" ,}, "Full Automation Available"  )
+          )
+          , _react2.default.createElement('p', { className: "text-sm text-blue-100" ,}, "We point the tool at an entire folder of recordings and it will process them all automatically — extracting metadata, cutting clips, and identifying every advert in every ad break. One command does everything."
+
+          )
+        )
+
+        , _react2.default.createElement('p', { className: "text-center text-xs text-gray-400 mt-8 mb-4"    ,}, "Powered by Qwen3.5 Vision-Language Model · FFmpeg · Built at the BFI National Archive"
+
+        )
+      )
+    )
+  );
+} exports.default = SimpleExplanation;
+</script></head>
+  <body>
+  
+
+<div id="preview-app"></div></body></html>
