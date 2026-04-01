@@ -21,7 +21,7 @@ class AdBreakConfig:
     # Metadata
     ad_break_metadata: AdBreakMetadata | None = None
     metadata_file: str | None = None
-    ad_break_index: int = 0  # Index when metadata file has multiple ad breaks
+    ad_break_index: int = 1  # Index when metadata file has multiple ad breaks (1-based)
     prog_before: str | None = None
     prog_after: str | None = None
     adverts_cli: list[str] | None = None
@@ -113,12 +113,12 @@ def parse_cli_metadata(
     )
 
 
-def load_metadata_from_file(file_path: str, ad_break_index: int = 0) -> AdBreakMetadata:
+def load_metadata_from_file(file_path: str, ad_break_index: int = 1) -> AdBreakMetadata:
     """Load metadata from JSON file.
     
     Args:
         file_path: Path to JSON metadata file.
-        ad_break_index: Index of ad break to load (for nested ad_breaks array format).
+        ad_break_index: Index of ad break to load (1-based, for nested ad_breaks array format).
         
     Returns:
         AdBreakMetadata object.
@@ -131,9 +131,9 @@ def load_metadata_from_file(file_path: str, ad_break_index: int = 0) -> AdBreakM
         data = json.load(f)
     
     if "ad_breaks" in data:
-        if ad_break_index >= len(data["ad_breaks"]):
-            raise ValueError(f"ad_break_index {ad_break_index} out of range (max: {len(data['ad_breaks']) - 1})")
-        break_data = data["ad_breaks"][ad_break_index]
+        if ad_break_index < 1 or ad_break_index > len(data["ad_breaks"]):
+            raise ValueError(f"ad_break_index {ad_break_index} out of range (valid: 1-{len(data['ad_breaks'])})")
+        break_data = data["ad_breaks"][ad_break_index - 1]  # Convert 1-based to 0-based for array access
     else:
         break_data = data
     

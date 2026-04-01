@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -176,8 +177,8 @@ def create_parser() -> argparse.ArgumentParser:
     metadata_group.add_argument(
         "--ad-break-index",
         type=int,
-        default=0,
-        help="Index of ad break to process when metadata file contains multiple breaks (default: 0)"
+        default=None,
+        help="Index of ad break to process when metadata file contains multiple breaks (1-based, auto-detected from filename pattern XXofYY.mp4, default: 1)"
     )
     metadata_group.add_argument(
         "--prog-before",
@@ -520,6 +521,15 @@ def main(args: list[str] | None = None) -> int:
     """
     parser = create_parser()
     parsed_args = parser.parse_args(args)
+    
+    # Auto-detect ad_break_index from filename if not explicitly provided
+    if parsed_args.ad_break_index is None:
+        video_path = Path(parsed_args.video_url.split("?")[0])  # Remove query params
+        match = re.search(r'(\d{2})of(\d{2})\.mp4$', video_path.name, re.IGNORECASE)
+        if match:
+            parsed_args.ad_break_index = int(match.group(1))  # Already 1-based
+        else:
+            parsed_args.ad_break_index = 1  # Default to first ad break
     
     config = AdBreakConfig(
         video_url=parsed_args.video_url,
