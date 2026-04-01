@@ -239,6 +239,8 @@ def extract_clip_with_timecode(
     center_timecode: str,
     output_dir: str,
     clip_prefix: str,
+    ad_break_index: int,
+    total_ad_breaks: int,
     before_secs: float = 3.0,
     after_secs: float = 1.0,
     video_start_time: str | None = None,
@@ -313,14 +315,16 @@ def extract_clip_with_timecode(
         duration = before_secs + after_secs
         
         if use_video_name:
-            # Use video filename as base, append timecode and _CLIP
+            # Use video filename as base, append zero-padded index of total
             video_file = Path(video_path)
-            safe_timecode = center_timecode.replace(":", "-")
-            output_filename = f"{video_file.stem}_{safe_timecode}_CLIP.mp4"
+            padded_index = f"{ad_break_index:02d}"
+            padded_total = f"{total_ad_breaks:02d}"
+            output_filename = f"{video_file.stem}_{padded_index}of{padded_total}.mp4"
         else:
-            # Use clip_prefix + timecode format
-            safe_timecode = center_timecode.replace(":", "-")
-            output_filename = f"{clip_prefix}_{safe_timecode}_CLIP.mp4"
+            # Use clip_prefix + zero-padded index of total format
+            padded_index = f"{ad_break_index:02d}"
+            padded_total = f"{total_ad_breaks:02d}"
+            output_filename = f"{clip_prefix}_{padded_index}of{padded_total}.mp4"
         
         output_file = output_path / output_filename
         
@@ -468,7 +472,7 @@ def main() -> int:
         ad_breaks = data['ad_breaks']
         logger.info(f"Processing {len(ad_breaks)} ad break(s)")
         
-        for i, ad_break in enumerate(ad_breaks):
+        for i, ad_break in enumerate(ad_breaks, 1):
             start_time = ad_break['start_time']
             normalized_timecode = normalize_timecode(start_time)
             
@@ -479,6 +483,8 @@ def main() -> int:
                 center_timecode=normalized_timecode,
                 output_dir=output_dir,
                 clip_prefix=args.clip_prefix,
+                ad_break_index=i,
+                total_ad_breaks=len(ad_breaks),
                 before_secs=args.before_secs,
                 after_secs=args.after_secs,
                 video_start_time=video_start_time,

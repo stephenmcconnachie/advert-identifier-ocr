@@ -569,7 +569,7 @@ def main():
             
             # Build output for each break
             ad_breaks_output = []
-            for i, break_data in enumerate(breaks):
+            for i, break_data in enumerate(breaks, 1):
                 break_output = build_ad_break_output(break_data, time_start, time_end, i)
                 ad_breaks_output.append(break_output)
             
