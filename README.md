@@ -1,6 +1,6 @@
 # Ad Break Identifier
 
-AI-powered advertisement break sequence identification in TV broadcast videos using vision-language models.
+AI-powered advert identification in TV broadcast videos using vision-language models.
 
 ## Quick Start
 
@@ -25,7 +25,7 @@ advert-identifier \
   --ad-break-index 0
 ```
 
-## One-Command Alternative
+## One-Command Alternative (NOT WORKING YET - DEBUGGING REQUIRED)
 
 Process entire folders automatically:
 

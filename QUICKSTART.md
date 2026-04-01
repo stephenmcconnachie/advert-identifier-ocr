@@ -48,7 +48,7 @@ Place videos in one folder, CSVs in another.
 
 ---
 
-### Step 2: Full Pipeline (Easiest)
+### Step 2: Full Pipeline (Easiest) - NOT WORKING YET - DEBUGGING REQUIRED
 
 Process all videos with one command:
 
