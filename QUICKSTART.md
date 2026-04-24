@@ -64,12 +64,14 @@ advert-identifier-pipeline \
 1. Extracts metadata from CSV → JSON
 2. Extracts video clips centered on ad breaks
 3. Runs AI analysis to identify adverts
-4. Generates summary report
+4. Extracts individual advert clips (lossless)
+5. Generates summary report
 
 **Output:**
 - `{video}_metadata.json` files
 - `{video}_{timecode}_CLIP.mp4` clips
 - `{video}.xml` results
+- `{unique_id}_{brand}.mp4` individual advert clips
 - `advert_identifier_pipeline_summary.txt` report
 
 ---
@@ -120,6 +122,15 @@ advert-identifier-single-advert-clip \
 
 Creates: `{unique_id}_{brand}.mp4` for each advert (lossless H.264)
 
+**With trimming (remove seconds from clip start/end):**
+```bash
+advert-identifier-single-advert-clip \
+  --xml-file metadata/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml \
+  --video-url "http://your-vllm-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
+  --output-dir clips/ \
+  --trim 0.5
+```
+
 ---
 
 ## Quick Options Reference
@@ -132,6 +143,7 @@ Creates: `{unique_id}_{brand}.mp4` for each advert (lossless H.264)
 | `--no-ensemble` | Single API call (faster, less accurate) | `--no-ensemble` |
 | `--debug` | Save debug info | `--debug` |
 | `--dry-run` | Preview without executing | `--dry-run` |
+| `--trim` | Trim seconds from clip start/end | `--trim 0.5` |
 
 ### Speed vs Accuracy
 

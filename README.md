@@ -92,7 +92,7 @@ python3 bin/advert-identifier-metadata-extract --help
 | `advert-identifier-pipeline` | Full folder automation | `--input-folder`, `--csv-folder` |
 | `advert-identifier-metadata-extract` | CSV → JSON metadata | `--video`, `--csv-folder` |
 | `advert-identifier-clip` | Extract video clips | `--before-secs`, `--after-secs` |
-| `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--index` |
+| `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--index`, `--trim` |
 | `advert-identifier-benchmark` | Test accuracy vs ground truth | `--ground-truth-first`, `-n 10` |
 | `advert-identifier-describe` | Generate video descriptions | `--video`, `--prompt` |
 
