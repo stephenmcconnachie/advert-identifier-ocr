@@ -125,16 +125,16 @@ def calculate_durations(adverts: list[dict]) -> list[dict]:
             curr_timecode = advert["last_timecode"]
             prev_secs = timecode_to_seconds(prev_timecode)
             curr_secs = timecode_to_seconds(curr_timecode)
-            duration = prev_secs - curr_secs
+            duration = curr_secs - prev_secs
             if duration <= 0:
                 raise ValueError(
                     f"Invalid duration calculation for advert {advert['index']}: "
-                    f"{prev_timecode} - {curr_timecode} = {duration}s"
+                    f"{curr_timecode} - {prev_timecode} = {duration}s"
                 )
             advert["duration_seconds"] = int(duration)
             logger.info(
                 f"Advert {advert['index']}: calculated duration = {duration}s "
-                f"({curr_timecode} to {prev_timecode})"
+                f"({prev_timecode} to {curr_timecode})"
             )
 
     return adverts
