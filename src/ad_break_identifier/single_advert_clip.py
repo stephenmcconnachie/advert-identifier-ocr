@@ -280,6 +280,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="Seconds to trim from start and end of each clip (default: 0.0)",
     )
     parser.add_argument(
+        "--pad",
+        type=float,
+        default=0.0,
+        help="Seconds to add to start and end of each clip (default: 0.0)",
+    )
+    parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
@@ -296,6 +302,10 @@ def main() -> int:
 
     setup_logging(args.log_level)
     logger = logging.getLogger(__name__)
+
+    if args.trim > 0 and args.pad > 0:
+        logger.error("--trim and --pad are mutually exclusive")
+        return 1
 
     try:
         logger.info(f"Parsing XML: {args.xml_file}")
@@ -331,10 +341,17 @@ def main() -> int:
                 start_secs = last_secs - duration
 
                 trim = args.trim
+                pad = args.pad
+
                 if trim > 0:
                     start_secs += trim
                     duration -= 2 * trim
                     logger.info(f"Advert {advert['index']}: trim={trim}s, adjusted start={start_secs:.3f}s, duration={duration:.3f}s")
+
+                if pad > 0:
+                    start_secs -= pad
+                    duration += 2 * pad
+                    logger.info(f"Advert {advert['index']}: pad={pad}s, adjusted start={start_secs:.3f}s, duration={duration:.3f}s")
 
                 if start_secs < 0:
                     logger.warning(
@@ -345,7 +362,7 @@ def main() -> int:
 
                 if duration <= 0:
                     logger.warning(
-                        f"Advert {advert['index']}: duration {duration}s is zero or negative after trim, skipping"
+                        f"Advert {advert['index']}: duration {duration}s is zero or negative, skipping"
                     )
                     continue
 
