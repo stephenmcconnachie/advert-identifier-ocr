@@ -1,0 +1,11 @@
+#!/usr/bin/env python3
+import importlib.util
+import sys
+from pathlib import Path
+
+module_path = Path(__file__).parent.parent / "src" / "ad_break_identifier" / "single_advert_clip.py"
+spec = importlib.util.spec_from_file_location("single_advert_clip", module_path)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+sys.exit(module.main())

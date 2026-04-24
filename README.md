@@ -4,7 +4,7 @@ AI-powered advert identification in TV broadcast videos using vision-language mo
 
 ## Quick Start
 
-Three commands to process a broadcast video:
+Four commands to process a broadcast video:
 
 ```bash
 # 1. Extract metadata from CSV scheduling data
@@ -23,6 +23,12 @@ advert-identifier \
   --video "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00_13-52-05.000_CLIP.mp4" \
   --metadata-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
   --ad-break-index 0
+
+# 4. Extract individual advert clips (lossless)
+advert-identifier-single-advert-clip \
+  --xml-file video/2024-03-26_ITV1HD_13:30:00_13-52-05.000_CLIP.xml \
+  --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
+  --output-dir video/clips
 ```
 
 ## One-Command Alternative (NOT WORKING YET - DEBUGGING REQUIRED)
@@ -86,6 +92,7 @@ python3 bin/advert-identifier-metadata-extract --help
 | `advert-identifier-pipeline` | Full folder automation | `--input-folder`, `--csv-folder` |
 | `advert-identifier-metadata-extract` | CSV → JSON metadata | `--video`, `--csv-folder` |
 | `advert-identifier-clip` | Extract video clips | `--before-secs`, `--after-secs` |
+| `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--index` |
 | `advert-identifier-benchmark` | Test accuracy vs ground truth | `--ground-truth-first`, `-n 10` |
 | `advert-identifier-describe` | Generate video descriptions | `--video`, `--prompt` |
 
@@ -97,6 +104,7 @@ See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) for complete documentation.
 2. **Clip Extraction**: Uses FFmpeg to extract clips centered on ad break timestamps
 3. **AI Analysis**: Vision-language model identifies last frame of each advert
 4. **Ensemble Voting**: Multiple API calls with median voting for accuracy
+5. **Advert Clip Extraction**: Extracts individual advert clips using last timecode and duration
 
 ## Example Output
 

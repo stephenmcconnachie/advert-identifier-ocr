@@ -87,9 +87,19 @@ def benchmark_main():
 def describer_main():
     """Entry point for advert-identifier-describe command."""
     import subprocess
-    
+
     bin_dir = _get_bin_dir()
     script = bin_dir / "advert-identifier-describe"
+    result = subprocess.run([sys.executable, str(script)] + sys.argv[1:])
+    sys.exit(result.returncode)
+
+
+def single_advert_clip_main():
+    """Entry point for advert-identifier-single-advert-clip command."""
+    import subprocess
+
+    bin_dir = _get_bin_dir()
+    script = bin_dir / "advert-identifier-single-advert-clip"
     result = subprocess.run([sys.executable, str(script)] + sys.argv[1:])
     sys.exit(result.returncode)
 
