@@ -390,6 +390,7 @@ def format_json(result: AdBreakResult, ensemble_stats: EnsembleStats | None = No
                 "advert_id": a.advert_id,
                 "brand": a.brand,
                 "description": a.description,
+                "duration_seconds": a.duration_seconds,
             }
             for a in result.adverts
         ]
@@ -402,6 +403,7 @@ def format_json(result: AdBreakResult, ensemble_stats: EnsembleStats | None = No
                 "advert_id": a.advert_id,
                 "brand": a.brand,
                 "description": a.description,
+                "duration_seconds": a.duration_seconds,
             }
             for a in result.adverts
         ]

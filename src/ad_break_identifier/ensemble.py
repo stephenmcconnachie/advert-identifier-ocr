@@ -244,7 +244,14 @@ def apply_ensemble_voting(
     voted_adverts, voting_method, voting_details = vote_on_adverts(parsed_results, mode)
     stats.voting_method = voting_method
     stats.advert_voting_details = voting_details
-    
+
+    # Wire duration_seconds from expected_adverts if available
+    if expected_adverts:
+        for i, advert in enumerate(voted_adverts):
+            if advert.duration_seconds is None and i < len(expected_adverts):
+                if expected_adverts[i].duration_seconds is not None:
+                    advert.duration_seconds = expected_adverts[i].duration_seconds
+
     return AdBreakResult(
         success=True,
         ident_end_timecode=None,
