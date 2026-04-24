@@ -274,6 +274,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="1-based advert index to process (default: all adverts)",
     )
     parser.add_argument(
+        "--trim",
+        type=float,
+        default=0.0,
+        help="Seconds to trim from start and end of each clip (default: 0.0)",
+    )
+    parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
@@ -324,12 +330,24 @@ def main() -> int:
                 last_secs = timecode_to_seconds(last_tc)
                 start_secs = last_secs - duration
 
+                trim = args.trim
+                if trim > 0:
+                    start_secs += trim
+                    duration -= 2 * trim
+                    logger.info(f"Advert {advert['index']}: trim={trim}s, adjusted start={start_secs:.3f}s, duration={duration:.3f}s")
+
                 if start_secs < 0:
                     logger.warning(
                         f"Advert {advert['index']}: start time {start_secs}s is negative, "
                         f"clipping to 00:00"
                     )
                     start_secs = 0
+
+                if duration <= 0:
+                    logger.warning(
+                        f"Advert {advert['index']}: duration {duration}s is zero or negative after trim, skipping"
+                    )
+                    continue
 
                 safe_brand = advert["brand"].replace("/", "_").replace("\\", "_")
                 output_path = output_dir / f"{advert['unique_id']}_{safe_brand}.mp4"
