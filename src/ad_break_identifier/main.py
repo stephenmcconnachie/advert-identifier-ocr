@@ -1,6 +1,7 @@
 """Main entry point for ad break sequence identification."""
 
 import argparse
+import html
 import json
 import re
 import sys
@@ -419,6 +420,11 @@ def format_json(result: AdBreakResult, ensemble_stats: EnsembleStats | None = No
     return json.dumps(output, indent=2)
 
 
+def _escape_xml(text: str) -> str:
+    """Escape XML special characters in text."""
+    return html.escape(text, quote=True)
+
+
 def format_xml(result: AdBreakResult, mode: str = "timecode") -> str:
     """Format result as XML with just the adverts array.
     
@@ -434,16 +440,16 @@ def format_xml(result: AdBreakResult, mode: str = "timecode") -> str:
     
     for advert in result.adverts:
         lines.append("    <advert>")
-        lines.append(f"        <unique_id>{advert.advert_id}</unique_id>")
-        lines.append(f"        <brand>{advert.brand}</brand>")
+        lines.append(f"        <unique_id>{_escape_xml(advert.advert_id)}</unique_id>")
+        lines.append(f"        <brand>{_escape_xml(advert.brand)}</brand>")
         if advert.duration_seconds:
             lines.append(f"        <duration_seconds>{advert.duration_seconds}</duration_seconds>")
         if mode == "frame":
             lines.append(f"        <last_frame>{advert.frame}</last_frame>")
         else:
-            lines.append(f"        <last_timecode>{advert.timecode}</last_timecode>")
+            lines.append(f"        <last_timecode>{_escape_xml(advert.timecode or '')}</last_timecode>")
         if advert.description:
-            lines.append(f"        <description>{advert.description}</description>")
+            lines.append(f"        <description>{_escape_xml(advert.description)}</description>")
         lines.append("    </advert>")
     
     lines.append("</ad_break>")
