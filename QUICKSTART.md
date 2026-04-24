@@ -109,6 +109,17 @@ advert-identifier \
 
 Creates: `metadata/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml`
 
+#### Extract Individual Advert Clips
+
+```bash
+advert-identifier-single-advert-clip \
+  --xml-file metadata/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml \
+  --video-url "http://your-vllm-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
+  --output-dir clips/
+```
+
+Creates: `{unique_id}_{brand}.mp4` for each advert (lossless H.264)
+
 ---
 
 ## Quick Options Reference
