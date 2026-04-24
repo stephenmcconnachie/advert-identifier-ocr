@@ -131,6 +131,15 @@ advert-identifier-single-advert-clip \
   --trim 0.5
 ```
 
+**With padding (add seconds to clip start/end):**
+```bash
+advert-identifier-single-advert-clip \
+  --xml-file metadata/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml \
+  --video-url "http://your-vllm-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
+  --output-dir clips/ \
+  --pad 0.5
+```
+
 ---
 
 ## Quick Options Reference
@@ -144,6 +153,7 @@ advert-identifier-single-advert-clip \
 | `--debug` | Save debug info | `--debug` |
 | `--dry-run` | Preview without executing | `--dry-run` |
 | `--trim` | Trim seconds from clip start/end | `--trim 0.5` |
+| `--pad` | Add seconds to clip start/end | `--pad 0.5` |
 
 ### Speed vs Accuracy
 
