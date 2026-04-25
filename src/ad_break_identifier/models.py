@@ -48,6 +48,8 @@ class AdvertResult:
     frame: int | None = None
     advert_id: str = ""
     brand: str = ""
+    advertiser: str = ""
+    category: str = ""
     description: str = ""
     confidence: float = 0.0
     duration_seconds: int | None = None
@@ -73,4 +75,25 @@ class EnsembleStats:
     valid_responses: int
     invalid_responses: int
     voting_method: str = "median"
-    advert_voting_details: list[dict] = field(default_factory=list)  # Per-advert voting breakdown
+    advert_voting_details: list[dict] = field(default_factory=list)
+
+
+@dataclass
+class RefinedAdvertResult:
+    """Result for a single advert after frame refinement."""
+    original_timecode: str | None = None
+    refined_timecode: str | None = None
+    refined_clip_frame: int | None = None
+    confidence: str = "unknown"
+    refinement_status: str = "pending"
+    description: str = ""
+
+
+@dataclass
+class RefinedAdBreakResult:
+    """Complete result for frame refinement stage."""
+    success: bool = False
+    error: str | None = None
+    adverts: list[RefinedAdvertResult] = field(default_factory=list)
+    total_refined: int = 0
+    total_fallback: int = 0

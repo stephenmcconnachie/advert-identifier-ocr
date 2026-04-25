@@ -9,9 +9,12 @@ from .models import (
     AdvertResult,
     AdBreakResult,
     EnsembleStats,
+    RefinedAdvertResult,
+    RefinedAdBreakResult,
 )
-from .prompts import build_ad_break_prompt
+from .prompts import build_ad_break_prompt, build_refine_prompt
 from .response_parser import parse_ad_break_response
+from .refinement import refine_advert_timecodes
 
 __all__ = [
     "main",
@@ -25,6 +28,10 @@ __all__ = [
     "AdvertResult",
     "AdBreakResult",
     "EnsembleStats",
+    "RefinedAdvertResult",
+    "RefinedAdBreakResult",
     "build_ad_break_prompt",
+    "build_refine_prompt",
     "parse_ad_break_response",
+    "refine_advert_timecodes",
 ]

@@ -157,11 +157,11 @@ def parse_ad_break_response(
         # If we have expected adverts, match by sequence order
         if expected_adverts and len(parsed_adverts) == len(expected_adverts):
             for i, parsed in enumerate(parsed_adverts):
-                # Replace the advert_id with the correct unique_id from input
                 parsed.advert_id = expected_adverts[i].unique_id
-                # Use duration from input if not provided in response
                 if parsed.duration_seconds is None and expected_adverts[i].duration_seconds:
                     parsed.duration_seconds = expected_adverts[i].duration_seconds
+                parsed.advertiser = expected_adverts[i].advertiser
+                parsed.category = expected_adverts[i].category
                 adverts.append(parsed)
         else:
             # No matching possible, use parsed IDs

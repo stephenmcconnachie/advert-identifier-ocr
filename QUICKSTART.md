@@ -111,6 +111,21 @@ advert-identifier \
 
 Creates: `metadata/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml`
 
+#### (Optional) Refine to Frame-Accurate Boundaries
+
+If you need frame-accurate advert boundaries (rather than 1-second resolution), run the refinement stage:
+
+```bash
+advert-identifier-refine \
+  --xml-file metadata/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml \
+  --video-url "http://your-vllm-server:8000/video/2024-03-26_ITV1HD_13:30:00_01of01.mp4" \
+  --json-file metadata/2024-03-26_ITV1HD_13:30:00_metadata.json
+```
+
+Creates: `metadata/2024-03-26_ITV1HD_13-52-05.000_CLIP_refined.xml`
+
+The refinement stage extracts 3-second clips (1.5s before/after each advert's expected end), analyzes them at 24 FPS with ensemble voting, and outputs precise `HH:MM:SS.mmm` timecodes.
+
 #### Extract Individual Advert Clips
 
 ```bash

@@ -137,6 +137,63 @@ Return EXACTLY this XML structure with ALL values as elements (not attributes):
 '''
 
 
+AD_REFINE_PROMPT = '''
+You are analyzing a 3-second video clip (72 frames at 24fps) showing the
+FINAL FRAMES OF AN ADVERTISEMENT.
+
+## ADVERT INFORMATION
+- Brand: {brand}
+- Advertiser: {advertiser}
+- Category: {category}
+- Duration: {duration} seconds
+
+## YOUR TASK
+
+Identify the EXACT LAST FRAME where the brand/product appears in this clip.
+- The clip is centered on the expected end of the advert
+- Look carefully at all 72 frames for brand logos and visual branding
+- Use the brand and advertiser information above to help identify the correct frames
+
+## OUTPUT FORMAT
+
+Return EXACTLY this XML structure:
+
+<advert>
+    <last_frame>FRAME_NUMBER</last_frame>
+    <confidence>HIGH/MEDIUM/LOW</confidence>
+    <description>Brief reason for decision</description>
+</advert>
+
+## NOTES
+
+- Frame 0 is the first frame of the clip (1.5 seconds BEFORE the expected advert end)
+- Frame 71 is the last frame of the clip (1.5 seconds AFTER the expected advert end)
+- The expected advert end timecode is at frame 36 (center of clip)
+- Return only the frame number (0-71), not a full timecode
+'''
+
+
+def build_refine_prompt(brand: str, advertiser: str, category: str, duration: int | None) -> str:
+    """Build refinement prompt with advert-specific context.
+
+    Args:
+        brand: Brand name.
+        advertiser: Advertiser name.
+        category: Category name.
+        duration: Duration in seconds or None.
+
+    Returns:
+        Formatted prompt string.
+    """
+    duration_str = f"{duration} seconds" if duration else "unknown"
+    return AD_REFINE_PROMPT.format(
+        brand=brand,
+        advertiser=advertiser,
+        category=category,
+        duration=duration_str,
+    )
+
+
 def build_ad_break_prompt(metadata: AdBreakMetadata, mode: str = "timecode") -> str:
     """Build VLM prompt from ad break metadata.
     

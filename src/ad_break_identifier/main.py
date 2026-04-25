@@ -258,7 +258,12 @@ def create_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show detailed progress information during execution"
     )
-    
+    parser.add_argument(
+        "--refine",
+        action="store_true",
+        help="Run frame refinement stage after detection for frame-accurate boundaries"
+    )
+
     return parser
 
 
@@ -442,6 +447,8 @@ def format_xml(result: AdBreakResult, mode: str = "timecode") -> str:
         lines.append("    <advert>")
         lines.append(f"        <unique_id>{_escape_xml(advert.advert_id)}</unique_id>")
         lines.append(f"        <brand>{_escape_xml(advert.brand)}</brand>")
+        lines.append(f"        <advertiser>{_escape_xml(advert.advertiser)}</advertiser>")
+        lines.append(f"        <category>{_escape_xml(advert.category)}</category>")
         if advert.duration_seconds:
             lines.append(f"        <duration_seconds>{advert.duration_seconds}</duration_seconds>")
         if mode == "frame":
@@ -570,18 +577,46 @@ def main(args: list[str] | None = None) -> int:
     debug_mode = parsed_args.debug
     
     result, ensemble_stats, prompt, raw_responses = run_ad_break_analysis(config, debug_mode)
-    
-    # Always write results to XML file (for pipeline automation)
+
+    xml_written = False
+    xml_output_path = None
+
     if result.success:
         xml_output = format_xml(result, mode=config.mode)
-        xml_path = _get_output_path(config.video_url, config.metadata_file)
-        
+        xml_output_path = _get_output_path(config.video_url, config.metadata_file)
+
         try:
-            with open(xml_path, "w") as f:
+            with open(xml_output_path, "w") as f:
                 f.write(xml_output)
-            print(f"Results saved to: {xml_path}", file=sys.stderr)
+            print(f"Results saved to: {xml_output_path}", file=sys.stderr)
+            xml_written = True
         except Exception as e:
-            print(f"Warning: Could not save XML output to {xml_path}: {e}", file=sys.stderr)
+            print(f"Warning: Could not save XML output to {xml_output_path}: {e}", file=sys.stderr)
+
+    if parsed_args.refine and result.success and xml_output_path:
+        from .refinement import refine_advert_timecodes
+        print(f"\n{'='*60}", file=sys.stderr)
+        print("Running frame refinement stage...", file=sys.stderr)
+        print(f"{'='*60}\n", file=sys.stderr)
+
+        refined_output_path = str(Path(xml_output_path).parent / f"{Path(xml_output_path).stem}_refined.xml")
+        refined_result = refine_advert_timecodes(
+            xml_path=xml_output_path,
+            video_url=config.video_url,
+            output_path=refined_output_path,
+            metadata_json=config.metadata_file,
+            api_base_url=config.api_base_url,
+            api_key=config.api_key,
+            model=config.model_name,
+            ensemble_size=3,
+            ensemble_delay=5.0,
+        )
+
+        if refined_result.success:
+            print(f"\nRefinement complete: {refined_result.total_refined} refined, {refined_result.total_fallback} fallback", file=sys.stderr)
+            print(f"Refined XML: {refined_output_path}", file=sys.stderr)
+        else:
+            print(f"\nRefinement warning: {refined_result.error}", file=sys.stderr)
     
     if debug_mode and prompt is not None:
         debug_output = {

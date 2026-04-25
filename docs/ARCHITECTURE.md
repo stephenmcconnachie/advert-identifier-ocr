@@ -14,6 +14,7 @@ The ad break identifier uses a vision-language model (VLM) to analyze TV broadca
 2. **Video Clipper** - Extracts clips using FFmpeg
 3. **AI Analyzer** - Vision-language model for advert detection
 4. **Ensemble Voter** - Combines multiple API responses
+5. **Frame Refiner** - High-precision boundary detection using 24 FPS analysis
 
 ---
 
@@ -160,6 +161,47 @@ Video clip + Metadata → vLLM API → Parse XML → Vote → Results
 - Receives XML response for each advert
 - Ensemble voting combines multiple responses
 - Outputs final JSON/XML results
+
+### Stage 4: Frame Refinement (Optional)
+
+For frame-accurate advert boundaries, the refinement stage runs after primary detection:
+
+```
+Coarse XML + Video URL → FFmpeg clip → 24 FPS VLLM → Ensemble vote → Refined XML
+```
+
+**Process per advert:**
+1. Extract 3-second clip centered on coarse timecode (1.5s before/after)
+2. Send clip to VLLM at 24 FPS (72 frames) with brand/advertiser/category context
+3. Ensemble of 3 calls vote on precise last frame (0-71 within clip)
+4. Calculate `refined_timecode = clip_start + (frame / 24)`
+5. Fall back to coarse timecode on failure
+
+**Refinement output:**
+```xml
+<advert>
+  <unique_id>BBHTCPT536010</unique_id>
+  <brand>Tesco</brand>
+  <advertiser>Tesco stores</advertiser>
+  <category>retail</category>
+  <duration_seconds>20</duration_seconds>
+  <last_timecode>09:30</last_timecode>           <!-- coarse 1-FPS -->
+  <refined_timecode>09:31.417</refined_timecode>  <!-- precise 24-FPS -->
+  <refined_clip_frame>43</refined_clip_frame>     <!-- 0-71 within clip -->
+  <refinement_status>success</refinement_status>
+  <description>Brand visible in frames 40-43</description>
+</advert>
+```
+
+**Comparison with Primary Detection:**
+
+| Aspect | Primary Detection | Refinement |
+|--------|-------------------|------------|
+| FPS | 1 FPS | 24 FPS |
+| Clip duration | Full ad break | 3 seconds per advert |
+| Ensemble size | 5 calls | 3 calls |
+| Context | Full advert sequence | Single advert with brand info |
+| Output | MM:SS timecode | HH:MM:SS.mmm timecode |
 
 ---
 

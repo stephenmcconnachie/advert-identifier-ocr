@@ -104,6 +104,13 @@ def single_advert_clip_main():
     sys.exit(result.returncode)
 
 
+def refine_main():
+    """Entry point for advert-identifier-refine command."""
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from ad_break_identifier.refinement_cli import main
+    main()
+
+
 if __name__ == "__main__":
     # Default to identifier if called directly
     identifier_main()

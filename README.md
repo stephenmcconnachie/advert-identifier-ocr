@@ -18,15 +18,21 @@ advert-identifier-clip \
   --before-secs 60 \
   --after-secs 360
 
-# 3. Identify individual adverts using AI
+# 3. Identify individual adverts using AI (1 FPS detection)
 advert-identifier \
   --video "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00_13-52-05.000_CLIP.mp4" \
   --metadata-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
   --ad-break-index 0
 
-# 4. Extract individual advert clips (lossless)
+# 4. (Optional) Refine to frame-accurate boundaries using 24 FPS analysis
+advert-identifier-refine \
+  --xml-file video/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml \
+  --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00_01of01.mp4" \
+  --json-file video/2024-03-26_ITV1HD_13:30:00_metadata.json
+
+# 5. Extract individual advert clips (lossless)
 advert-identifier-single-advert-clip \
-  --xml-file video/2024-03-26_ITV1HD_13:30:00_13-52-05.000_CLIP.xml \
+  --xml-file video/2024-03-26_ITV1HD_13-52-05.000_CLIP_refined.xml \
   --json-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
   --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00_01of01.mp4" \
   --output-dir video/clips
@@ -89,11 +95,12 @@ python3 bin/advert-identifier-metadata-extract --help
 
 | Command | Purpose | Key Options |
 |---------|---------|-------------|
-| `advert-identifier` | Identify adverts in clips | `--mode timecode\|frame`, `--ad-break-index`, `--verbose`, `--debug` |
+| `advert-identifier` | Identify adverts in clips | `--mode timecode\|frame`, `--ad-break-index`, `--verbose`, `--debug`, `--refine` |
 | `advert-identifier-pipeline` | Full folder automation | `--input-folder`, `--csv-folder` |
 | `advert-identifier-metadata-extract` | CSV → JSON metadata | `--video`, `--csv-folder` |
 | `advert-identifier-clip` | Extract video clips | `--before-secs`, `--after-secs` |
 | `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--index`, `--trim`, `--pad` |
+| `advert-identifier-refine` | Frame-accurate boundary refinement | `--xml-file`, `--video-url`, `--json-file` |
 | `advert-identifier-benchmark` | Test accuracy vs ground truth | `--ground-truth-first`, `-n 10` |
 | `advert-identifier-describe` | Generate video descriptions | `--video`, `--prompt` |
 
