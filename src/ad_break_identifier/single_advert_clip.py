@@ -2,8 +2,10 @@
 """Extract individual advert clips from XML analysis results."""
 
 import argparse
+import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -12,6 +14,57 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 logger = logging.getLogger(__name__)
+
+
+def sanitize_filename(text: str) -> str:
+    """Remove unsafe characters and replace spaces with hyphens for filenames."""
+    text = text.replace(" ", "-")
+    text = re.sub(r'[\\/:*?"<>|]', '', text)
+    return text
+
+
+def parse_ad_break_index(video_url: str) -> int:
+    """Extract 0-based ad break index from video URL filename.
+
+    Args:
+        video_url: URL or path containing filename like '01of08.mp4'.
+
+    Returns:
+        0-based index (0 for '01ofxx', 1 for '02ofxx', etc.).
+    """
+    video_path = Path(video_url.split("?")[0])
+    filename = video_path.name
+    match = re.search(r'(\d{2})of\d{2}', filename)
+    if match:
+        return int(match.group(1)) - 1
+    return 0
+
+
+def get_category_for_advert(json_path: str, ad_break_index: int, unique_id: str) -> str:
+    """Get category from JSON metadata for a specific advert.
+
+    Args:
+        json_path: Path to JSON metadata file.
+        ad_break_index: 0-based index of the ad break.
+        unique_id: Advert unique_id to match.
+
+    Returns:
+        Sanitized category string, or 'unknown' if not found.
+    """
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+
+    ad_breaks = data.get('ad_breaks', [])
+    if ad_break_index >= len(ad_breaks):
+        return "unknown"
+
+    for advert in ad_breaks[ad_break_index].get('adverts', []):
+        if advert.get('unique_id') == unique_id:
+            category = advert.get('category', 'unknown')
+            if category:
+                return sanitize_filename(category)
+            return "unknown"
+    return "unknown"
 
 
 def setup_logging(log_level: str = "INFO") -> None:
@@ -259,6 +312,11 @@ def create_parser() -> argparse.ArgumentParser:
         help="Path to XML file with advert analysis results",
     )
     parser.add_argument(
+        "--json-file",
+        required=True,
+        help="Path to JSON metadata file (required for category extraction)",
+    )
+    parser.add_argument(
         "--video-url",
         required=True,
         help="URL or path to source video",
@@ -331,6 +389,9 @@ def main() -> int:
 
             indices_to_process = [args.index] if args.index else [a["index"] for a in adverts]
 
+            ad_break_index = parse_ad_break_index(args.video_url)
+            logger.info(f"Parsed ad break index from video URL: {ad_break_index} (0-based)")
+
             for advert in adverts:
                 if advert["index"] not in indices_to_process:
                     continue
@@ -366,8 +427,10 @@ def main() -> int:
                     )
                     continue
 
-                safe_brand = advert["brand"].replace("/", "_").replace("\\", "_")
-                output_path = output_dir / f"{advert['unique_id']}_{safe_brand}.mp4"
+                safe_brand = sanitize_filename(advert["brand"])
+                category = get_category_for_advert(args.json_file, ad_break_index, advert['unique_id'])
+                output_path = output_dir / f"{advert['unique_id']}_{category}_{safe_brand}.mp4"
+                logger.info(f"Advert {advert['index']}: category={category}, output={output_path.name}")
 
                 extract_advert_clip(
                     video_input=video_input,
