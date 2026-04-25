@@ -27,7 +27,8 @@ advert-identifier \
 # 4. Extract individual advert clips (lossless)
 advert-identifier-single-advert-clip \
   --xml-file video/2024-03-26_ITV1HD_13:30:00_13-52-05.000_CLIP.xml \
-  --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
+  --json-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
+  --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00_01of01.mp4" \
   --output-dir video/clips
 ```
 

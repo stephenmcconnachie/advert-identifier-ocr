@@ -71,7 +71,7 @@ advert-identifier-pipeline \
 - `{video}_metadata.json` files
 - `{video}_{timecode}_CLIP.mp4` clips
 - `{video}.xml` results
-- `{unique_id}_{brand}.mp4` individual advert clips
+- `{unique_id}_{category}_{brand}.mp4` individual advert clips
 - `advert_identifier_pipeline_summary.txt` report
 
 ---
@@ -116,17 +116,19 @@ Creates: `metadata/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml`
 ```bash
 advert-identifier-single-advert-clip \
   --xml-file metadata/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml \
-  --video-url "http://your-vllm-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
+  --json-file metadata/2024-03-26_ITV1HD_13:30:00_metadata.json \
+  --video-url "http://your-vllm-server:8000/video/2024-03-26_ITV1HD_13:30:00_01of01.mp4" \
   --output-dir clips/
 ```
 
-Creates: `{unique_id}_{brand}.mp4` for each advert (lossless H.264)
+Creates: `{unique_id}_{category}_{brand}.mp4` for each advert (lossless H.264)
 
 **With trimming (remove seconds from clip start/end):**
 ```bash
 advert-identifier-single-advert-clip \
   --xml-file metadata/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml \
-  --video-url "http://your-vllm-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
+  --json-file metadata/2024-03-26_ITV1HD_13:30:00_metadata.json \
+  --video-url "http://your-vllm-server:8000/video/2024-03-26_ITV1HD_13:30:00_01of01.mp4" \
   --output-dir clips/ \
   --trim 0.5
 ```
@@ -135,7 +137,8 @@ advert-identifier-single-advert-clip \
 ```bash
 advert-identifier-single-advert-clip \
   --xml-file metadata/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml \
-  --video-url "http://your-vllm-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
+  --json-file metadata/2024-03-26_ITV1HD_13:30:00_metadata.json \
+  --video-url "http://your-vllm-server:8000/video/2024-03-26_ITV1HD_13:30:00_01of01.mp4" \
   --output-dir clips/ \
   --pad 0.5
 ```
