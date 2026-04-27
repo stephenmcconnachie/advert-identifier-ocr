@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from xml.etree import ElementTree
 
@@ -23,6 +24,62 @@ from .models import (
 from .prompts import build_refine_prompt
 
 logger = logging.getLogger(__name__)
+
+
+def download_video_to_temp(video_url: str, max_retries: int = 3) -> str:
+    """Download video from URL to temporary file using curl.
+
+    Args:
+        video_url: URL to download.
+        max_retries: Maximum retry attempts.
+
+    Returns:
+        Path to downloaded temporary file.
+
+    Raises:
+        RuntimeError: If download fails after max_retries attempts.
+    """
+    temp_file = None
+
+    for attempt in range(max_retries):
+        try:
+            temp_fd, temp_path = tempfile.mkstemp(suffix=".mp4")
+            os.close(temp_fd)
+            temp_file = temp_path
+
+            logger.info(f"Downloading video (attempt {attempt + 1}/{max_retries})")
+
+            cmd = [
+                "curl",
+                "-L",
+                "-o",
+                temp_file,
+                "--fail",
+                "--silent",
+                "--show-error",
+                video_url,
+            ]
+
+            subprocess.run(cmd, capture_output=True, text=True, check=True)
+            logger.info(f"Downloaded to {temp_file}")
+            return temp_file
+
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"Download attempt {attempt + 1} failed: {e.stderr}")
+            if temp_file and os.path.exists(temp_file):
+                os.unlink(temp_file)
+                temp_file = None
+
+            if attempt < max_retries - 1:
+                wait_time = 2 ** attempt
+                logger.info(f"Retrying in {wait_time}s...")
+                time.sleep(wait_time)
+            else:
+                raise RuntimeError(
+                    f"Failed to download video after {max_retries} attempts: {e.stderr}"
+                )
+
+    raise RuntimeError("Unexpected code path in download_video_to_temp")
 
 
 def timecode_to_seconds(timecode: str) -> float:
@@ -238,7 +295,7 @@ def _sanitize_xml(xml_content: str) -> str:
 def refine_single_advert(
     client,
     advert: AdvertResult,
-    video_url: str,
+    video_path: str,
     model: str,
     ensemble_size: int = 3,
     ensemble_delay: float = 5.0,
@@ -248,7 +305,7 @@ def refine_single_advert(
     Args:
         client: OpenAI/vLLM client.
         advert: AdvertResult from primary detection (includes advertiser/category).
-        video_url: URL to video.
+        video_path: Local path to video file.
         model: Model name.
         ensemble_size: Number of ensemble calls (default: 3).
         ensemble_delay: Delay between ensemble calls (default: 5.0).
@@ -284,7 +341,7 @@ def refine_single_advert(
             )
 
             try:
-                extract_clip(video_url, clip_start, clip_duration, clip_path)
+                extract_clip(video_path, clip_start, clip_duration, clip_path)
             except RuntimeError as e:
                 result.refinement_status = "error"
                 result.description = f"Clip extraction failed: {e}"
@@ -449,32 +506,40 @@ def refine_advert_timecodes(
 
     client = create_vllm_client(base_url=api_base_url, api_key=api_key)
 
+    logger.info(f"Downloading video: {video_url}")
+    temp_video_path = download_video_to_temp(video_url)
+
     refined_adverts = []
     total_refined = 0
     total_fallback = 0
 
-    for i, advert in enumerate(ad_break_result.adverts, 1):
-        logger.info(f"Refining advert {i}/{len(ad_break_result.adverts)}: {advert.brand} ({advert.advert_id})")
+    try:
+        for i, advert in enumerate(ad_break_result.adverts, 1):
+            logger.info(f"Refining advert {i}/{len(ad_break_result.adverts)}: {advert.brand} ({advert.advert_id})")
 
-        refined = refine_single_advert(
-            client=client,
-            advert=advert,
-            video_url=video_url,
-            model=model,
-            ensemble_size=ensemble_size,
-            ensemble_delay=ensemble_delay,
-        )
-        refined_adverts.append(refined)
-
-        if refined.refinement_status == "success":
-            total_refined += 1
-            logger.info(
-                f"  -> Refined: {advert.timecode} -> {refined.refined_timecode} "
-                f"(clip frame {refined.refined_clip_frame})"
+            refined = refine_single_advert(
+                client=client,
+                advert=advert,
+                video_path=temp_video_path,
+                model=model,
+                ensemble_size=ensemble_size,
+                ensemble_delay=ensemble_delay,
             )
-        else:
-            total_fallback += 1
-            logger.warning(f"  -> Fallback to original: {advert.timecode} ({refined.description})")
+            refined_adverts.append(refined)
+
+            if refined.refinement_status == "success":
+                total_refined += 1
+                logger.info(
+                    f"  -> Refined: {advert.timecode} -> {refined.refined_timecode} "
+                    f"(clip frame {refined.refined_clip_frame})"
+                )
+            else:
+                total_fallback += 1
+                logger.warning(f"  -> Fallback to original: {advert.timecode} ({refined.description})")
+    finally:
+        if temp_video_path and os.path.exists(temp_video_path):
+            os.unlink(temp_video_path)
+            logger.info(f"Cleaned up temp video: {temp_video_path}")
 
     if output_path is None:
         xml_path_obj = Path(xml_path)
