@@ -78,6 +78,9 @@ def extract_clip(
 
     Returns:
         Path to extracted clip.
+
+    Raises:
+        RuntimeError: If FFmpeg fails, with clear message for partial files.
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -109,7 +112,14 @@ def extract_clip(
 
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg failed: {result.stderr}")
+        error_msg = result.stderr
+        if "partial file" in error_msg.lower():
+            raise RuntimeError(
+                f"Video file is incomplete (partial file). "
+                f"Ensure the video is fully downloaded before refinement. "
+                f"Error: {error_msg[-500:]}"
+            )
+        raise RuntimeError(f"FFmpeg failed: {error_msg}")
 
     return str(output_path)
 
