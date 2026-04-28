@@ -311,6 +311,7 @@ def refine_single_advert(
     model: str,
     ensemble_size: int = 3,
     ensemble_delay: float = 5.0,
+    fps: float = 25.0,
     verbose: bool = False,
 ) -> tuple[RefinedAdvertResult, list[tuple[str | None, str | None, dict[str, Any] | None]]]:
     """Refine a single advert's timecode using high-FPS analysis.
@@ -322,6 +323,7 @@ def refine_single_advert(
         model: Model name.
         ensemble_size: Number of ensemble calls (default: 3).
         ensemble_delay: Delay between ensemble calls (default: 5.0).
+        fps: Frames per second for the video (default: 25.0).
         verbose: Enable verbose logging.
 
     Returns:
@@ -360,13 +362,13 @@ def refine_single_advert(
                 return result, raw_responses
 
             clip_url = f"file://{clip_path}"
-            fps = 24.0
 
             prompt = build_refine_prompt(
                 brand=advert.brand,
                 advertiser=advert.advertiser,
                 category=advert.category,
                 duration=advert.duration_seconds,
+                fps=fps,
             )
 
             _log_verbose(verbose, f"Making {ensemble_size} ensemble calls at {fps} FPS")
@@ -406,7 +408,7 @@ def refine_single_advert(
 
             median_frame = sorted(valid_frames)[len(valid_frames) // 2]
 
-            refined_seconds = clip_start + (median_frame / 24.0)
+            refined_seconds = clip_start + (median_frame / fps)
             refined_timecode = seconds_to_timecode(refined_seconds)
 
             majority_confidence = max(set(confidences), key=confidences.count) if confidences else "MEDIUM"
@@ -500,6 +502,7 @@ def refine_advert_timecodes(
     model: str = "Qwen/Qwen3.5-4B",
     ensemble_size: int = 3,
     ensemble_delay: float = 5.0,
+    fps: float = 25.0,
     verbose: bool = False,
     debug_mode: bool = False,
 ) -> tuple[RefinedAdBreakResult, RefinementStats | None]:
@@ -515,6 +518,7 @@ def refine_advert_timecodes(
         model: Model name.
         ensemble_size: Number of ensemble calls per advert.
         ensemble_delay: Delay between ensemble calls.
+        fps: Frames per second for the video (default: 25.0).
         verbose: Enable verbose logging.
         debug_mode: Enable debug mode to return raw responses.
 
@@ -555,6 +559,7 @@ def refine_advert_timecodes(
                 model=model,
                 ensemble_size=ensemble_size,
                 ensemble_delay=ensemble_delay,
+                fps=fps,
                 verbose=verbose,
             )
             refined_adverts.append(refined)

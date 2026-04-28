@@ -138,7 +138,7 @@ Return EXACTLY this XML structure with ALL values as elements (not attributes):
 
 
 AD_REFINE_PROMPT = '''
-You are analyzing a 3-second video clip (72 frames at 24fps) showing the
+You are analyzing a {duration_seconds}-second video clip ({total_frames} frames at {fps}fps) showing the
 FINAL FRAMES OF AN ADVERTISEMENT.
 
 ## ADVERT INFORMATION
@@ -151,7 +151,7 @@ FINAL FRAMES OF AN ADVERTISEMENT.
 
 Identify the EXACT LAST FRAME where the brand/product appears in this clip.
 - The clip is centered on the expected end of the advert
-- Look carefully at all 72 frames for brand logos and visual branding
+- Look carefully at all {total_frames} frames for brand logos and visual branding
 - Use the brand and advertiser information above to help identify the correct frames
 
 ## OUTPUT FORMAT
@@ -166,14 +166,20 @@ Return EXACTLY this XML structure:
 
 ## NOTES
 
-- Frame 0 is the first frame of the clip (1.5 seconds BEFORE the expected advert end)
-- Frame 71 is the last frame of the clip (1.5 seconds AFTER the expected advert end)
-- The expected advert end timecode is at frame 36 (center of clip)
-- Return only the frame number (0-71), not a full timecode
+- Frame 0 is the first frame of the clip ({half_duration}s BEFORE the expected advert end)
+- Frame {last_frame} is the last frame of the clip ({half_duration}s AFTER the expected advert end)
+- The expected advert end timecode is at frame {center_frame} (center of clip)
+- Return only the frame number (0-{last_frame}), not a full timecode
 '''
 
 
-def build_refine_prompt(brand: str, advertiser: str, category: str, duration: int | None) -> str:
+def build_refine_prompt(
+    brand: str,
+    advertiser: str,
+    category: str,
+    duration: int | None,
+    fps: float = 25.0,
+) -> str:
     """Build refinement prompt with advert-specific context.
 
     Args:
@@ -181,16 +187,28 @@ def build_refine_prompt(brand: str, advertiser: str, category: str, duration: in
         advertiser: Advertiser name.
         category: Category name.
         duration: Duration in seconds or None.
+        fps: Frames per second for the video (default: 25.0).
 
     Returns:
         Formatted prompt string.
     """
     duration_str = f"{duration} seconds" if duration else "unknown"
+    total_frames = int(3 * fps)
+    half_duration = 1.5
+    last_frame = total_frames - 1
+    center_frame = last_frame // 2
+
     return AD_REFINE_PROMPT.format(
         brand=brand,
         advertiser=advertiser,
         category=category,
-        duration=duration_str,
+        duration_str=duration_str,
+        fps=fps,
+        duration_seconds=3,
+        total_frames=total_frames,
+        half_duration=half_duration,
+        last_frame=last_frame,
+        center_frame=center_frame,
     )
 
 

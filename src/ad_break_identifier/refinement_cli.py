@@ -70,6 +70,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="Delay between ensemble calls in seconds (default: 5.0)",
     )
     parser.add_argument(
+        "--refine-fps",
+        type=float,
+        default=25.0,
+        help="FPS for refinement stage (default: 25.0)",
+    )
+    parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
@@ -131,6 +137,7 @@ def main(args: list[str] | None = None) -> int:
         model=parsed_args.model,
         ensemble_size=parsed_args.ensemble_size,
         ensemble_delay=parsed_args.ensemble_delay,
+        fps=parsed_args.refine_fps,
         verbose=verbose,
         debug_mode=debug_mode,
     )
