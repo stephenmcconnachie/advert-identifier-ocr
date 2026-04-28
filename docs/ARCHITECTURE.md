@@ -167,15 +167,19 @@ Video clip + Metadata → vLLM API → Parse XML → Vote → Results
 For frame-accurate advert boundaries, the refinement stage runs after primary detection:
 
 ```
-Coarse XML + Video URL → FFmpeg clip → 24 FPS VLLM → Ensemble vote → Refined XML
+Coarse XML + Video URL → FFmpeg clip → 25 FPS VLLM → Ensemble vote → Refined XML
 ```
 
 **Process per advert:**
 1. Extract 3-second clip centered on coarse timecode (1.5s before/after)
-2. Send clip to VLLM at 24 FPS (72 frames) with brand/advertiser/category context
-3. Ensemble of 3 calls vote on precise last frame (0-71 within clip)
-4. Calculate `refined_timecode = clip_start + (frame / 24)`
+2. Send clip to VLLM at 25 FPS (75 frames) with brand/advertiser/category context
+3. Ensemble of 3 calls vote on precise last frame (0-74 within clip at 25fps)
+4. Calculate `refined_timecode = clip_start + (frame / fps)`
 5. Fall back to coarse timecode on failure
+
+**FPS Configuration:**
+- Default: 25 FPS (PAL video sources)
+- Override with `--refine-fps` flag (e.g., 24 FPS for NTSC)
 
 **Refinement output:**
 ```xml
@@ -186,8 +190,8 @@ Coarse XML + Video URL → FFmpeg clip → 24 FPS VLLM → Ensemble vote → Ref
   <category>retail</category>
   <duration_seconds>20</duration_seconds>
   <last_timecode>09:30</last_timecode>           <!-- coarse 1-FPS -->
-  <refined_timecode>09:31.417</refined_timecode>  <!-- precise 24-FPS -->
-  <refined_clip_frame>43</refined_clip_frame>     <!-- 0-71 within clip -->
+  <refined_timecode>09:31.416</refined_timecode>  <!-- precise 25-FPS -->
+  <refined_clip_frame>43</refined_clip_frame>     <!-- 0-74 within clip at 25fps -->
   <refinement_status>success</refinement_status>
   <description>Brand visible in frames 40-43</description>
 </advert>
@@ -197,7 +201,7 @@ Coarse XML + Video URL → FFmpeg clip → 24 FPS VLLM → Ensemble vote → Ref
 
 | Aspect | Primary Detection | Refinement |
 |--------|-------------------|------------|
-| FPS | 1 FPS | 24 FPS |
+| FPS | 1 FPS | 25 FPS (configurable) |
 | Clip duration | Full ad break | 3 seconds per advert |
 | Ensemble size | 5 calls | 3 calls |
 | Context | Full advert sequence | Single advert with brand info |

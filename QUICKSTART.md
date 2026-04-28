@@ -124,7 +124,7 @@ advert-identifier-refine \
 
 Creates: `metadata/2024-03-26_ITV1HD_13-52-05.000_CLIP_refined.xml`
 
-The refinement stage extracts 3-second clips (1.5s before/after each advert's expected end), analyzes them at 24 FPS with ensemble voting, and outputs precise `HH:MM:SS.mmm` timecodes.
+The refinement stage extracts 3-second clips (1.5s before/after each advert's expected end), analyzes them at 25 FPS with ensemble voting, and outputs precise `HH:MM:SS.mmm` timecodes. Use `--refine-fps 24.0` for NTSC video sources.
 
 #### Extract Individual Advert Clips
 

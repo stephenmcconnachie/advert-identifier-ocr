@@ -192,6 +192,15 @@ Key env vars (see config.py):
 - `FPS` - Sampling rate (default: `1.0`)
 - `ENABLE_ENSEMBLE` - Enable ensemble voting (default: `true`)
 - `ENSEMBLE_SIZE` - Number of parallel calls (default: `5`)
+- `REFINE_FPS` - FPS for refinement stage (default: `25.0`)
+
+## Refinement Stage
+
+The refinement stage provides frame-accurate advert boundaries:
+- Extracts 3-second clips centered on each advert's expected end timecode
+- Analyzes at configurable FPS (default 25.0, use `--refine-fps` for NTSC at 24.0)
+- Uses ensemble voting (default 3 calls) to determine precise last frame
+- Outputs `HH:MM:SS.mmm` timecodes from `clip_start + (frame / fps)`
 
 ## Dependencies
 

@@ -263,7 +263,7 @@ Creates clips named `{video_name}_{timecode}_CLIP.mp4` in the video directory.
 
 ## advert-identifier-refine
 
-Refine advert boundaries to frame-accurate precision using 24 FPS analysis.
+Refine advert boundaries to frame-accurate precision using 25 FPS (configurable) analysis.
 
 ### Usage
 
@@ -283,14 +283,17 @@ advert-identifier-refine --xml-file PATH --video-url URL [OPTIONS]
 | `--model` | No | `Qwen/Qwen3.5-4B` | Model name |
 | `--ensemble-size` | No | 3 | Ensemble calls per advert |
 | `--ensemble-delay` | No | 5.0 | Delay between ensemble requests |
+| `--refine-fps` | No | 25.0 | FPS for refinement stage (25 for PAL, 24 for NTSC) |
+| `--verbose` | No | False | Show detailed progress |
+| `--debug` | No | False | Save debug_refine.json with raw responses |
 | `--log-level` | No | INFO | DEBUG, INFO, WARNING, ERROR |
 
 ### How It Works
 
 1. For each advert in the input XML, extracts a 3-second clip centered on the expected end timecode
-2. Sends the clip to VLLM at 24 FPS (72 frames) with advert brand/advertiser/category context
-3. Ensemble of 3 calls vote on the precise last frame (0-71)
-4. Calculates refined `HH:MM:SS.mmm` timecode from clip start + (frame/24)
+2. Sends the clip to VLLM at 25 FPS (75 frames) with advert brand/advertiser/category context
+3. Ensemble of 3 calls vote on the precise last frame (0-74 at 25fps)
+4. Calculates refined `HH:MM:SS.mmm` timecode from clip start + (frame/fps)
 5. Falls back to original timecode on failure
 
 ### Examples
@@ -307,13 +310,20 @@ advert-identifier-refine \
   --video-url "http://server/video.mp4" \
   --json-file metadata/video_metadata.json
 
-# Custom ensemble settings
+# Custom ensemble and FPS settings
 advert-identifier-refine \
   --xml-file results/video_clip.xml \
   --video-url "http://server/video.mp4" \
   --json-file metadata/video_metadata.json \
   --ensemble-size 5 \
-  --ensemble-delay 3.0
+  --ensemble-delay 3.0 \
+  --refine-fps 24.0
+
+# Override FPS for NTSC video sources
+advert-identifier-refine \
+  --xml-file results/video_clip.xml \
+  --video-url "http://server/video.mp4" \
+  --refine-fps 24.0
 ```
 
 ### Output
@@ -328,8 +338,8 @@ Creates `{original}_refined.xml` with enhanced advert elements:
   <category>retail</category>
   <duration_seconds>20</duration_seconds>
   <last_timecode>09:30</last_timecode>           <!-- coarse 1-FPS -->
-  <refined_timecode>09:31.417</refined_timecode>  <!-- precise 24-FPS -->
-  <refined_clip_frame>43</refined_clip_frame>     <!-- 0-71 within clip -->
+  <refined_timecode>09:31.416</refined_timecode>  <!-- precise 25-FPS -->
+  <refined_clip_frame>43</refined_clip_frame>     <!-- 0-74 within clip at 25fps -->
   <refinement_status>success</refinement_status>
   <description>Brand visible in frames 40-43</description>
 </advert>

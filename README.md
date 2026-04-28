@@ -24,7 +24,7 @@ advert-identifier \
   --metadata-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
   --ad-break-index 0
 
-# 4. (Optional) Refine to frame-accurate boundaries using 24 FPS analysis
+# 4. (Optional) Refine to frame-accurate boundaries using 25 FPS analysis
 advert-identifier-refine \
   --xml-file video/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml \
   --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00_01of01.mp4" \
