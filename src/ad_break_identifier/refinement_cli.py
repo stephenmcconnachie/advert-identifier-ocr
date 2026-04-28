@@ -2,11 +2,20 @@
 """CLI for frame refinement stage."""
 
 import argparse
+import json
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from .refinement import refine_advert_timecodes
+
+
+def _log_verbose(verbose: bool, message: str) -> None:
+    """Print verbose message with timestamp to stderr."""
+    if verbose:
+        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        print(f"[{timestamp}] {message}", file=sys.stderr, flush=True)
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -66,6 +75,16 @@ def create_parser() -> argparse.ArgumentParser:
         default="INFO",
         help="Logging level (default: INFO)",
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show detailed progress information during execution",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Print raw model responses and save to debug_refine.json",
+    )
 
     return parser
 
@@ -91,15 +110,18 @@ def main(args: list[str] | None = None) -> int:
     if output_path is None:
         output_path = str(xml_path.parent / f"{xml_path.stem}_refined.xml")
 
-    logger.info("=" * 60)
-    logger.info("Frame Refinement Stage Starting")
-    logger.info(f"Input XML: {xml_path}")
-    logger.info(f"Video URL: {parsed_args.video_url}")
-    logger.info(f"Output XML: {output_path}")
-    logger.info(f"Ensemble: {parsed_args.ensemble_size} calls per advert")
-    logger.info("=" * 60)
+    verbose = parsed_args.verbose
+    debug_mode = parsed_args.debug
 
-    result = refine_advert_timecodes(
+    _log_verbose(verbose, "=" * 60)
+    _log_verbose(verbose, "Frame Refinement Stage Starting")
+    _log_verbose(verbose, f"Input XML: {xml_path}")
+    _log_verbose(verbose, f"Video URL: {parsed_args.video_url}")
+    _log_verbose(verbose, f"Output XML: {output_path}")
+    _log_verbose(verbose, f"Ensemble: {parsed_args.ensemble_size} calls per advert")
+    _log_verbose(verbose, "=" * 60)
+
+    result, stats = refine_advert_timecodes(
         xml_path=str(xml_path),
         video_url=parsed_args.video_url,
         output_path=output_path,
@@ -109,7 +131,54 @@ def main(args: list[str] | None = None) -> int:
         model=parsed_args.model,
         ensemble_size=parsed_args.ensemble_size,
         ensemble_delay=parsed_args.ensemble_delay,
+        verbose=verbose,
+        debug_mode=debug_mode,
     )
+
+    if debug_mode and stats:
+        debug_output = {
+            "result": {
+                "success": result.success,
+                "total_refined": result.total_refined,
+                "total_fallback": result.total_fallback,
+            },
+            "refinement_stats": {
+                "total_responses": stats.total_responses,
+                "valid_responses": stats.valid_responses,
+                "invalid_responses": stats.invalid_responses,
+                "advert_voting_details": stats.advert_voting_details,
+            },
+        }
+
+        debug_path = Path("debug_refine.json")
+        with open(debug_path, "w") as f:
+            json.dump(debug_output, f, indent=2)
+
+        _log_verbose(verbose, f"\n{'='*80}")
+        _log_verbose(verbose, "DEBUG MODE: Saved debug_refine.json with refinement data")
+        _log_verbose(verbose, f"{'='*80}\n")
+
+        if stats.advert_voting_details:
+            _log_verbose(verbose, f"\n{'='*80}")
+            _log_verbose(verbose, "ENSEMBLE VOTING BREAKDOWN:")
+            _log_verbose(verbose, f"{'='*80}")
+            for detail in stats.advert_voting_details:
+                pos = detail.get("advert_position", "?")
+                brand = detail.get("brand", "Unknown")
+                advert_id = detail.get("advert_id", "Unknown")
+                voted_value = detail.get("voted_value", "N/A")
+
+                _log_verbose(verbose, f"\nAdvert {pos}: {brand} ({advert_id})")
+                _log_verbose(verbose, f"  Final voted frame: {voted_value}")
+
+                response_values = detail.get("response_values", [])
+                if response_values:
+                    _log_verbose(verbose, "  Individual responses:")
+                    for rv in response_values:
+                        resp_num = rv.get("response_num", "?")
+                        value = rv.get("value", "N/A")
+                        _log_verbose(verbose, f"    - Response {resp_num}: {value}")
+            _log_verbose(verbose, f"\n{'='*80}\n")
 
     if result.success:
         logger.info("=" * 60)

@@ -97,3 +97,12 @@ class RefinedAdBreakResult:
     adverts: list[RefinedAdvertResult] = field(default_factory=list)
     total_refined: int = 0
     total_fallback: int = 0
+
+
+@dataclass
+class RefinementStats:
+    """Statistics from refinement ensemble voting."""
+    total_responses: int = 0
+    valid_responses: int = 0
+    invalid_responses: int = 0
+    advert_voting_details: list[dict] = field(default_factory=list)

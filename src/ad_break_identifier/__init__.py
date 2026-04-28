@@ -11,6 +11,7 @@ from .models import (
     EnsembleStats,
     RefinedAdvertResult,
     RefinedAdBreakResult,
+    RefinementStats,
 )
 from .prompts import build_ad_break_prompt, build_refine_prompt
 from .response_parser import parse_ad_break_response

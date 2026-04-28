@@ -5,13 +5,17 @@ them to frame-accurate boundaries using 24 FPS analysis of 3-second clips.
 """
 
 import html
+import json
 import logging
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import time
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 from xml.etree import ElementTree
 
 from .api_client import create_vllm_client, run_ensemble_sync
@@ -20,10 +24,18 @@ from .models import (
     AdvertResult,
     RefinedAdvertResult,
     RefinedAdBreakResult,
+    RefinementStats,
 )
 from .prompts import build_refine_prompt
 
 logger = logging.getLogger(__name__)
+
+
+def _log_verbose(verbose: bool, message: str) -> None:
+    """Print verbose message with timestamp to stderr."""
+    if verbose:
+        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        print(f"[{timestamp}] {message}", file=sys.stderr, flush=True)
 
 
 def download_video_to_temp(video_url: str, max_retries: int = 3) -> str:
@@ -299,7 +311,8 @@ def refine_single_advert(
     model: str,
     ensemble_size: int = 3,
     ensemble_delay: float = 5.0,
-) -> RefinedAdvertResult:
+    verbose: bool = False,
+) -> tuple[RefinedAdvertResult, list[tuple[str | None, str | None, dict[str, Any] | None]]]:
     """Refine a single advert's timecode using high-FPS analysis.
 
     Args:
@@ -309,18 +322,20 @@ def refine_single_advert(
         model: Model name.
         ensemble_size: Number of ensemble calls (default: 3).
         ensemble_delay: Delay between ensemble calls (default: 5.0).
+        verbose: Enable verbose logging.
 
     Returns:
-        RefinedAdvertResult with refined timecode or fallback.
+        Tuple of (RefinedAdvertResult, raw_responses).
     """
     result = RefinedAdvertResult(
         original_timecode=advert.timecode,
     )
+    raw_responses: list = []
 
     if not advert.timecode:
         result.refinement_status = "error"
         result.description = "No original timecode to refine"
-        return result
+        return result, raw_responses
 
     try:
         coarse_seconds = timecode_to_seconds(advert.timecode)
@@ -335,17 +350,14 @@ def refine_single_advert(
         with tempfile.TemporaryDirectory() as tmpdir:
             clip_path = Path(tmpdir) / "refinement_clip.mp4"
 
-            logger.debug(
-                f"Extracting clip for {advert.advert_id}: "
-                f"start={clip_start:.3f}s, duration={clip_duration}s"
-            )
+            _log_verbose(verbose, f"Extracting clip: start={clip_start:.3f}s, duration={clip_duration}s")
 
             try:
                 extract_clip(video_path, clip_start, clip_duration, clip_path)
             except RuntimeError as e:
                 result.refinement_status = "error"
                 result.description = f"Clip extraction failed: {e}"
-                return result
+                return result, raw_responses
 
             clip_url = f"file://{clip_path}"
             fps = 24.0
@@ -356,6 +368,8 @@ def refine_single_advert(
                 category=advert.category,
                 duration=advert.duration_seconds,
             )
+
+            _log_verbose(verbose, f"Making {ensemble_size} ensemble calls at {fps} FPS")
 
             raw_responses = run_ensemble_sync(
                 client=client,
@@ -370,13 +384,15 @@ def refine_single_advert(
             valid_frames = []
             confidences = []
             descriptions = []
+            invalid_count = 0
 
-            for response_text, error, _ in raw_responses:
-                if error:
-                    logger.warning(f"Ensemble call failed: {error}")
+            for resp_text, resp_error, resp_dict in raw_responses:
+                if resp_error:
+                    logger.warning(f"Ensemble call failed: {resp_error}")
+                    invalid_count += 1
                     continue
 
-                frame, confidence, description = parse_refinement_response(response_text or "")
+                frame, confidence, description = parse_refinement_response(resp_text or "")
                 if frame is not None:
                     valid_frames.append(frame)
                     confidences.append(confidence)
@@ -386,7 +402,7 @@ def refine_single_advert(
             if not valid_frames:
                 result.refinement_status = "fallback"
                 result.description = "No valid frames from ensemble"
-                return result
+                return result, raw_responses
 
             median_frame = sorted(valid_frames)[len(valid_frames) // 2]
 
@@ -402,12 +418,18 @@ def refine_single_advert(
             result.refinement_status = "success"
             result.description = primary_description
 
-            return result
+            _log_verbose(
+                verbose,
+                f"Voting: valid={len(valid_frames)}, invalid={invalid_count}, "
+                f"median_frame={median_frame}, refined_timecode={refined_timecode}"
+            )
+
+            return result, raw_responses
 
     except Exception as e:
         result.refinement_status = "fallback"
         result.description = f"Refinement error: {str(e)}"
-        return result
+        return result, []
 
 
 def parse_ad_break_xml(xml_path: str, metadata_json: str | None = None) -> AdBreakResult:
@@ -478,7 +500,9 @@ def refine_advert_timecodes(
     model: str = "Qwen/Qwen3.5-4B",
     ensemble_size: int = 3,
     ensemble_delay: float = 5.0,
-) -> RefinedAdBreakResult:
+    verbose: bool = False,
+    debug_mode: bool = False,
+) -> tuple[RefinedAdBreakResult, RefinementStats | None]:
     """Refine advert timecodes from primary detection XML.
 
     Args:
@@ -491,55 +515,85 @@ def refine_advert_timecodes(
         model: Model name.
         ensemble_size: Number of ensemble calls per advert.
         ensemble_delay: Delay between ensemble calls.
+        verbose: Enable verbose logging.
+        debug_mode: Enable debug mode to return raw responses.
 
     Returns:
-        RefinedAdBreakResult with per-advert refined results.
+        Tuple of (RefinedAdBreakResult, RefinementStats or None).
     """
-    logger.info(f"Parsing primary detection XML: {xml_path}")
+    _log_verbose(verbose, f"Parsing primary detection XML: {xml_path}")
     ad_break_result = parse_ad_break_xml(xml_path, metadata_json)
 
     if not ad_break_result.adverts:
         return RefinedAdBreakResult(
             success=False,
             error="No adverts found in XML",
-        )
+        ), None
 
     client = create_vllm_client(base_url=api_base_url, api_key=api_key)
 
-    logger.info(f"Downloading video: {video_url}")
+    _log_verbose(verbose, f"Downloading video: {video_url}")
     temp_video_path = download_video_to_temp(video_url)
 
     refined_adverts = []
+    all_raw_responses: list[dict] = []
+    advert_voting_details: list[dict] = []
     total_refined = 0
     total_fallback = 0
+    total_responses = 0
+    valid_responses = 0
+    invalid_responses = 0
 
     try:
         for i, advert in enumerate(ad_break_result.adverts, 1):
-            logger.info(f"Refining advert {i}/{len(ad_break_result.adverts)}: {advert.brand} ({advert.advert_id})")
+            _log_verbose(verbose, f"Refining advert {i}/{len(ad_break_result.adverts)}: {advert.brand} ({advert.advert_id})")
 
-            refined = refine_single_advert(
+            refined, raw_responses = refine_single_advert(
                 client=client,
                 advert=advert,
                 video_path=temp_video_path,
                 model=model,
                 ensemble_size=ensemble_size,
                 ensemble_delay=ensemble_delay,
+                verbose=verbose,
             )
             refined_adverts.append(refined)
 
             if refined.refinement_status == "success":
                 total_refined += 1
-                logger.info(
+                _log_verbose(
+                    verbose,
                     f"  -> Refined: {advert.timecode} -> {refined.refined_timecode} "
                     f"(clip frame {refined.refined_clip_frame})"
                 )
             else:
                 total_fallback += 1
-                logger.warning(f"  -> Fallback to original: {advert.timecode} ({refined.description})")
+                _log_verbose(verbose, f"  -> Fallback to original: {advert.timecode} ({refined.description})")
+
+            if debug_mode:
+                total_responses += len(raw_responses)
+                for j, (resp_text, resp_error, resp_dict) in enumerate(raw_responses, 1):
+                    if resp_error:
+                        invalid_responses += 1
+                    else:
+                        valid_responses += 1
+
+                advert_voting_details.append({
+                    "advert_position": i,
+                    "advert_id": advert.advert_id,
+                    "brand": advert.brand,
+                    "value_type": "frame",
+                    "voted_value": refined.refined_clip_frame if refined.refined_clip_frame is not None else "N/A",
+                    "response_values": [
+                        {"response_num": j, "value": "valid" if resp_text and not resp_error else "invalid"}
+                        for j, (resp_text, resp_error, _) in enumerate(raw_responses, 1)
+                    ],
+                })
+
     finally:
         if temp_video_path and os.path.exists(temp_video_path):
             os.unlink(temp_video_path)
-            logger.info(f"Cleaned up temp video: {temp_video_path}")
+            _log_verbose(verbose, f"Cleaned up temp video: {temp_video_path}")
 
     if output_path is None:
         xml_path_obj = Path(xml_path)
@@ -551,12 +605,23 @@ def refine_advert_timecodes(
         output_path=output_path,
     )
 
-    return RefinedAdBreakResult(
+    result = RefinedAdBreakResult(
         success=True,
         adverts=refined_adverts,
         total_refined=total_refined,
         total_fallback=total_fallback,
     )
+
+    if debug_mode:
+        stats = RefinementStats(
+            total_responses=total_responses,
+            valid_responses=valid_responses,
+            invalid_responses=invalid_responses,
+            advert_voting_details=advert_voting_details,
+        )
+        return result, stats
+
+    return result, None
 
 
 def format_refined_xml(
