@@ -145,7 +145,7 @@ FINAL FRAMES OF AN ADVERTISEMENT.
 - Brand: {brand}
 - Advertiser: {advertiser}
 - Category: {category}
-- Duration: {duration} seconds
+- Duration: {duration_str} seconds
 
 ## YOUR TASK
 
