@@ -193,15 +193,18 @@ def extract_clip(
     return str(output_path)
 
 
-def parse_refinement_response(response_text: str) -> tuple[int | None, str, str]:
+def parse_refinement_response(response_text: str, fps: float = 25.0) -> tuple[int | None, str, str]:
     """Parse refinement response XML to extract frame number, confidence, description.
 
     Args:
         response_text: Raw response text from VLM.
+        fps: Frames per second used for clip extraction (default: 25.0).
 
     Returns:
         Tuple of (frame_number, confidence, description).
     """
+    max_frame = int(3 * fps) - 1
+
     try:
         xml_content = _extract_refinement_xml(response_text)
         root = ElementTree.fromstring(xml_content)
@@ -214,8 +217,8 @@ def parse_refinement_response(response_text: str) -> tuple[int | None, str, str]
         if frame_el is not None and frame_el.text:
             try:
                 frame = int(frame_el.text.strip())
-                if not (0 <= frame <= 71):
-                    logger.warning(f"Frame {frame} out of range 0-71, ignoring")
+                if not (0 <= frame <= max_frame):
+                    logger.warning(f"Frame {frame} out of range 0-{max_frame}, ignoring")
                     frame = None
             except ValueError:
                 logger.warning(f"Invalid frame value: {frame_el.text}")
@@ -394,7 +397,7 @@ def refine_single_advert(
                     invalid_count += 1
                     continue
 
-                frame, confidence, description = parse_refinement_response(resp_text or "")
+                frame, confidence, description = parse_refinement_response(resp_text or "", fps)
                 if frame is not None:
                     valid_frames.append(frame)
                     confidences.append(confidence)
