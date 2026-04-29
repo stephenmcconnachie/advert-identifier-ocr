@@ -316,7 +316,7 @@ def refine_single_advert(
     ensemble_delay: float = 5.0,
     fps: float = 25.0,
     verbose: bool = False,
-) -> tuple[RefinedAdvertResult, list[tuple[str | None, str | None, dict[str, Any] | None]]]:
+) -> tuple[RefinedAdvertResult, str, list[tuple[str | None, str | None, dict[str, Any] | None]]]:
     """Refine a single advert's timecode using high-FPS analysis.
 
     Args:
@@ -330,7 +330,7 @@ def refine_single_advert(
         verbose: Enable verbose logging.
 
     Returns:
-        Tuple of (RefinedAdvertResult, raw_responses).
+        Tuple of (RefinedAdvertResult, prompt, raw_responses).
     """
     result = RefinedAdvertResult(
         original_timecode=advert.timecode,
@@ -340,7 +340,7 @@ def refine_single_advert(
     if not advert.timecode:
         result.refinement_status = "error"
         result.description = "No original timecode to refine"
-        return result, raw_responses
+        return result, "", raw_responses
 
     try:
         coarse_seconds = timecode_to_seconds(advert.timecode)
@@ -362,7 +362,7 @@ def refine_single_advert(
             except RuntimeError as e:
                 result.refinement_status = "error"
                 result.description = f"Clip extraction failed: {e}"
-                return result, raw_responses
+                return result, "", raw_responses
 
             clip_url = f"file://{clip_path}"
 
@@ -407,7 +407,7 @@ def refine_single_advert(
             if not valid_frames:
                 result.refinement_status = "fallback"
                 result.description = "No valid frames from ensemble"
-                return result, raw_responses
+                return result, prompt, raw_responses
 
             median_frame = sorted(valid_frames)[len(valid_frames) // 2]
 
@@ -430,12 +430,12 @@ def refine_single_advert(
                 f"median_frame={median_frame}, refined_timecode={refined_timecode}"
             )
 
-            return result, raw_responses
+            return result, prompt, raw_responses
 
     except Exception as e:
         result.refinement_status = "fallback"
         result.description = f"Refinement error: {str(e)}"
-        return result, []
+        return result, "", []
 
 
 def parse_ad_break_xml(xml_path: str, metadata_json: str | None = None) -> AdBreakResult:
@@ -556,7 +556,7 @@ def refine_advert_timecodes(
         for i, advert in enumerate(ad_break_result.adverts, 1):
             _log_verbose(verbose, f"Refining advert {i}/{len(ad_break_result.adverts)}: {advert.brand} ({advert.advert_id})")
 
-            refined, raw_responses = refine_single_advert(
+            refined, prompt, raw_responses = refine_single_advert(
                 client=client,
                 advert=advert,
                 video_path=temp_video_path,
@@ -593,8 +593,14 @@ def refine_advert_timecodes(
                     "brand": advert.brand,
                     "value_type": "frame",
                     "voted_value": refined.refined_clip_frame if refined.refined_clip_frame is not None else "N/A",
+                    "prompt": prompt,
                     "response_values": [
-                        {"response_num": j, "value": "valid" if resp_text and not resp_error else "invalid"}
+                        {
+                            "response_num": j,
+                            "value": frame if (frame := parse_refinement_response(resp_text or "", fps)[0]) is not None else (resp_text or resp_error),
+                            "error": resp_error,
+                            "raw_response": resp_text,
+                        }
                         for j, (resp_text, resp_error, _) in enumerate(raw_responses, 1)
                     ],
                 })
