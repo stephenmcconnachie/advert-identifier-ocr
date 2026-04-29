@@ -293,8 +293,9 @@ advert-identifier-refine --xml-file PATH --video-url URL [OPTIONS]
 1. For each advert in the input XML, extracts a 3-second clip centered on the expected end timecode
 2. Sends the clip to VLLM at 25 FPS (75 frames) with advert brand/advertiser/category context
 3. Ensemble of 3 calls vote on the precise last frame (0-74 at 25fps)
-4. Calculates refined `HH:MM:SS.mmm` timecode from clip start + (frame/fps)
-5. Falls back to original timecode on failure
+4. Calculates refined `HH:MM:SS.mmm` timecode from clip start + (frame/fps), floor-snapped to the nearest frame boundary
+5. Output milliseconds are always a clean multiple of `1/fps` (e.g., `.000`, `.040`, `.080` at 25 FPS)
+6. Falls back to original timecode on failure
 
 ### Examples
 
@@ -338,7 +339,7 @@ Creates `{original}_refined.xml` with enhanced advert elements:
   <category>retail</category>
   <duration_seconds>20</duration_seconds>
   <last_timecode>09:30</last_timecode>           <!-- coarse 1-FPS -->
-  <refined_timecode>09:31.416</refined_timecode>  <!-- precise 25-FPS -->
+  <refined_timecode>09:31.400</refined_timecode>  <!-- precise 25-FPS, floor-snapped -->
   <refined_clip_frame>43</refined_clip_frame>     <!-- 0-74 within clip at 25fps -->
   <refinement_status>success</refinement_status>
   <description>Brand visible in frames 40-43</description>

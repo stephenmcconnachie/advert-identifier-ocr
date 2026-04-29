@@ -411,7 +411,8 @@ def refine_single_advert(
 
             median_frame = sorted(valid_frames)[len(valid_frames) // 2]
 
-            refined_seconds = clip_start + (median_frame / fps)
+            raw_refined_seconds = clip_start + (median_frame / fps)
+            refined_seconds = int(raw_refined_seconds * fps) / fps
             refined_timecode = seconds_to_timecode(refined_seconds)
 
             majority_confidence = max(set(confidences), key=confidences.count) if confidences else "MEDIUM"

@@ -14,7 +14,7 @@ The ad break identifier uses a vision-language model (VLM) to analyze TV broadca
 2. **Video Clipper** - Extracts clips using FFmpeg
 3. **AI Analyzer** - Vision-language model for advert detection
 4. **Ensemble Voter** - Combines multiple API responses
-5. **Frame Refiner** - High-precision boundary detection using 24 FPS analysis
+5. **Frame Refiner** - High-precision boundary detection using 25 FPS analysis
 
 ---
 
@@ -174,8 +174,10 @@ Coarse XML + Video URL → FFmpeg clip → 25 FPS VLLM → Ensemble vote → Ref
 1. Extract 3-second clip centered on coarse timecode (1.5s before/after)
 2. Send clip to VLLM at 25 FPS (75 frames) with brand/advertiser/category context
 3. Ensemble of 3 calls vote on precise last frame (0-74 within clip at 25fps)
-4. Calculate `refined_timecode = clip_start + (frame / fps)`
-5. Fall back to coarse timecode on failure
+4. Calculate `refined_timecode = floor(clip_start + (frame / fps))` snapped to nearest frame boundary
+5. Millisecond value is always a clean multiple of `1/fps` (e.g., `.000`, `.040`, `.080` at 25 FPS)
+6. Floor semantics ensure timecode never advances into the next advert
+7. Fall back to coarse timecode on failure
 
 **FPS Configuration:**
 - Default: 25 FPS (PAL video sources)
@@ -190,7 +192,7 @@ Coarse XML + Video URL → FFmpeg clip → 25 FPS VLLM → Ensemble vote → Ref
   <category>retail</category>
   <duration_seconds>20</duration_seconds>
   <last_timecode>09:30</last_timecode>           <!-- coarse 1-FPS -->
-  <refined_timecode>09:31.416</refined_timecode>  <!-- precise 25-FPS -->
+  <refined_timecode>09:31.400</refined_timecode>  <!-- precise 25-FPS, floor-snapped -->
   <refined_clip_frame>43</refined_clip_frame>     <!-- 0-74 within clip at 25fps -->
   <refinement_status>success</refinement_status>
   <description>Brand visible in frames 40-43</description>
@@ -205,7 +207,7 @@ Coarse XML + Video URL → FFmpeg clip → 25 FPS VLLM → Ensemble vote → Ref
 | Clip duration | Full ad break | 3 seconds per advert |
 | Ensemble size | 5 calls | 3 calls |
 | Context | Full advert sequence | Single advert with brand info |
-| Output | MM:SS timecode | HH:MM:SS.mmm timecode |
+| Output | MM:SS timecode | HH:MM:SS.mmm (floor-snapped to 1/fps) |
 
 ---
 
