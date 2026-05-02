@@ -149,10 +149,10 @@ FINAL FRAMES OF AN ADVERTISEMENT.
 
 ## YOUR TASK
 
-Identify the EXACT LAST FRAME where the brand/product appears in this clip.
-- The clip is centered on the expected end of the advert
-- Look carefully at all {total_frames} frames for brand logos and visual branding
-- Use the brand and advertiser information above to help identify the correct frames
+Identify the EXACT LAST FRAME where {brand} appears in this clip
+- The clip is centered on the estimated end of the {brand} advert
+- Look carefully at all {total_frames} frames, looking for brand logos and visual branding
+- Use the brand and advertiser information - {brand} and {advertiser} to help identify the precise end of the {brand} advert
 
 ## OUTPUT FORMAT
 
@@ -166,10 +166,10 @@ Return EXACTLY this XML structure:
 
 ## NOTES
 
-- Frame 0 is the first frame of the clip ({half_duration}s BEFORE the expected advert end)
-- Frame {last_frame} is the last frame of the clip ({half_duration}s AFTER the expected advert end)
-- The expected advert end timecode is at frame {center_frame} (center of clip)
-- Return only the frame number (0-{last_frame}), not a full timecode
+- Frame 0 is the first frame of the clip ({half_duration}s BEFORE the estimated end of the advert for {brand})
+- Frame {last_frame} is the last frame of the clip ({half_duration}s AFTER the estimated end of the advert for {brand})
+- The estimated end of the {brand} advert is at frame {center_frame} (center of clip)
+- Return only the frame number (between 0-{last_frame}), not a full timecode
 '''
 
 
