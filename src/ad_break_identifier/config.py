@@ -41,6 +41,7 @@ class AdBreakConfig:
     enable_ensemble: bool = True
     ensemble_size: int = 5
     ensemble_delay: float = 10.0
+    enable_thinking: bool = True
     
     # Output
     output_format: Literal["json", "text"] = "json"

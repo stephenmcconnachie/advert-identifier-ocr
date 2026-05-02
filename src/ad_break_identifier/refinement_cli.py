@@ -91,6 +91,11 @@ def create_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print raw model responses and save to debug_refine.json",
     )
+    parser.add_argument(
+        "--no-thinking",
+        action="store_true",
+        help="Disable model thinking/reasoning (faster, less accurate)",
+    )
 
     return parser
 
@@ -138,6 +143,7 @@ def main(args: list[str] | None = None) -> int:
         ensemble_size=parsed_args.ensemble_size,
         ensemble_delay=parsed_args.ensemble_delay,
         fps=parsed_args.refine_fps,
+        enable_thinking=not parsed_args.no_thinking,
         verbose=verbose,
         debug_mode=debug_mode,
     )

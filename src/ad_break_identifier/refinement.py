@@ -315,6 +315,7 @@ def refine_single_advert(
     ensemble_size: int = 3,
     ensemble_delay: float = 5.0,
     fps: float = 25.0,
+    enable_thinking: bool = True,
     verbose: bool = False,
 ) -> tuple[RefinedAdvertResult, str, list[tuple[str | None, str | None, dict[str, Any] | None]]]:
     """Refine a single advert's timecode using high-FPS analysis.
@@ -327,6 +328,7 @@ def refine_single_advert(
         ensemble_size: Number of ensemble calls (default: 3).
         ensemble_delay: Delay between ensemble calls (default: 5.0).
         fps: Frames per second for the video (default: 25.0).
+        enable_thinking: Whether to enable model thinking/reasoning.
         verbose: Enable verbose logging.
 
     Returns:
@@ -384,6 +386,7 @@ def refine_single_advert(
                 fps=fps,
                 ensemble_size=ensemble_size,
                 ensemble_delay=ensemble_delay,
+                enable_thinking=enable_thinking,
             )
 
             valid_frames = []
@@ -507,6 +510,7 @@ def refine_advert_timecodes(
     ensemble_size: int = 3,
     ensemble_delay: float = 5.0,
     fps: float = 25.0,
+    enable_thinking: bool = True,
     verbose: bool = False,
     debug_mode: bool = False,
 ) -> tuple[RefinedAdBreakResult, RefinementStats | None]:
@@ -523,6 +527,7 @@ def refine_advert_timecodes(
         ensemble_size: Number of ensemble calls per advert.
         ensemble_delay: Delay between ensemble calls.
         fps: Frames per second for the video (default: 25.0).
+        enable_thinking: Whether to enable model thinking/reasoning.
         verbose: Enable verbose logging.
         debug_mode: Enable debug mode to return raw responses.
 
@@ -564,6 +569,7 @@ def refine_advert_timecodes(
                 ensemble_size=ensemble_size,
                 ensemble_delay=ensemble_delay,
                 fps=fps,
+                enable_thinking=enable_thinking,
                 verbose=verbose,
             )
             refined_adverts.append(refined)

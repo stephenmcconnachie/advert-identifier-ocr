@@ -24,12 +24,14 @@ advert-identifier --video URL --metadata-file PATH [OPTIONS]
 | `--ensemble-size` | | No | 5 | Number of ensemble API calls |
 | `--ensemble-delay` | | No | 10.0 | Seconds between ensemble requests |
 | `--no-ensemble` | | No | False | Disable ensemble, single API call |
+| `--no-thinking` | | No | False | Disable model thinking/reasoning (faster, less accurate) |
 | `--output-format` | `-o` | No | `json` | Output format: `json` or `text` |
 | `--debug` | | No | False | Save debug.json and debug.md |
 | `--fps` | `-f` | No | 1.0 | Frame sampling rate for vLLM |
 | `--api-base-url` | | No | env var | vLLM API endpoint |
 | `--model` | | No | `Qwen/Qwen3.5-4B` | Model name to use |
 | `--refine` | | No | False | Run frame refinement stage after detection |
+| `--no-thinking` | | No | False | Disable model thinking/reasoning (faster, less accurate) |
 
 ### Examples
 
@@ -50,6 +52,11 @@ advert-identifier \
   --video "http://server/video.mp4" \
   --metadata-file metadata.json \
   --no-ensemble
+# Fastest single call (no ensemble, no thinking)
+advert-identifier \
+  --video "http://server/video.mp4" \
+  --metadata-file metadata.json \
+  --no-ensemble --no-thinking
 
 # Debug mode with detailed output
 advert-identifier \
@@ -286,6 +293,7 @@ advert-identifier-refine --xml-file PATH --video-url URL [OPTIONS]
 | `--refine-fps` | No | 25.0 | FPS for refinement stage (25 for PAL, 24 for NTSC) |
 | `--verbose` | No | False | Show detailed progress |
 | `--debug` | No | False | Save debug_refine.json with raw responses |
+| `--no-thinking` | No | False | Disable model thinking/reasoning (faster, less accurate) |
 | `--log-level` | No | INFO | DEBUG, INFO, WARNING, ERROR |
 
 ### How It Works

@@ -95,12 +95,12 @@ python3 bin/advert-identifier-metadata-extract --help
 
 | Command | Purpose | Key Options |
 |---------|---------|-------------|
-| `advert-identifier` | Identify adverts in clips | `--mode timecode\|frame`, `--ad-break-index`, `--verbose`, `--debug`, `--refine` |
+| `advert-identifier` | Identify adverts in clips | `--mode timecode\|frame`, `--ad-break-index`, `--no-thinking`, `--verbose`, `--debug`, `--refine` |
 | `advert-identifier-pipeline` | Full folder automation | `--input-folder`, `--csv-folder` |
 | `advert-identifier-metadata-extract` | CSV → JSON metadata | `--video`, `--csv-folder` |
 | `advert-identifier-clip` | Extract video clips | `--before-secs`, `--after-secs` |
 | `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--index`, `--trim`, `--pad` |
-| `advert-identifier-refine` | Frame-accurate boundary refinement | `--xml-file`, `--video-url`, `--json-file` |
+| `advert-identifier-refine` | Frame-accurate boundary refinement | `--xml-file`, `--video-url`, `--json-file`, `--no-thinking` |
 | `advert-identifier-benchmark` | Test accuracy vs ground truth | `--ground-truth-first`, `-n 10` |
 | `advert-identifier-describe` | Generate video descriptions | `--video`, `--prompt` |
 

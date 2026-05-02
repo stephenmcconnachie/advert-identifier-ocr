@@ -300,7 +300,7 @@ Coarse XML + Video URL → FFmpeg clip → 25 FPS VLLM → Ensemble vote → Ref
 - Top-p: 0.8
 - Top-k: 20
 - Max tokens: 10000
-- Enable thinking: true (for quality)
+- Enable thinking: true by default (disable with `--no-thinking` for faster results)
 
 ### Recommended Models
 

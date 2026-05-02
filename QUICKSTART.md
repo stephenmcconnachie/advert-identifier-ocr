@@ -168,6 +168,7 @@ advert-identifier-single-advert-clip \
 |------|---------|---------|
 | `--mode frame` | Use frame numbers instead of timecodes | `--mode frame` |
 | `--no-ensemble` | Single API call (faster, less accurate) | `--no-ensemble` |
+| `--no-thinking` | Disable model reasoning (much faster) | `--no-thinking` |
 | `--debug` | Save debug info | `--debug` |
 | `--dry-run` | Preview without executing | `--dry-run` |
 | `--trim` | Trim seconds from clip start/end | `--trim 0.5` |
@@ -177,7 +178,7 @@ advert-identifier-single-advert-clip \
 
 **Fastest (testing):**
 ```bash
-advert-identifier ... --no-ensemble
+advert-identifier ... --no-ensemble --no-thinking
 ```
 
 **Balanced (default):**

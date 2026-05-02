@@ -28,6 +28,7 @@ async def call_vllm_single(
     prompt: str,
     model: str,
     fps: float,
+    enable_thinking: bool = True,
 ) -> tuple[str | None, str | None, dict[str, Any] | None]:
     """Single VLM call (async).
     
@@ -37,6 +38,7 @@ async def call_vllm_single(
         prompt: Prompt text.
         model: Model name.
         fps: Sampling rate.
+        enable_thinking: Whether to enable model thinking/reasoning.
         
     Returns:
         Tuple of (response_text, error_message, raw_response_dict).
@@ -61,7 +63,7 @@ async def call_vllm_single(
                 "top_k": 20,
                 "min_p": 0.0,
                 "repetition_penalty": 1.0,
-                "chat_template_kwargs": {"enable_thinking": True},
+                "chat_template_kwargs": {"enable_thinking": enable_thinking},
                 "mm_processor_kwargs": {"fps": fps, "do_sample_frames": True},
             },
         )
@@ -93,6 +95,7 @@ async def call_vllm_ensemble(
     fps: float,
     ensemble_size: int = 5,
     ensemble_delay: float = 10.0,
+    enable_thinking: bool = True,
 ) -> list[tuple[str | None, str | None, dict[str, Any] | None]]:
     """Run ensemble of VLM calls with delay between requests.
     
@@ -104,6 +107,7 @@ async def call_vllm_ensemble(
         fps: Sampling rate.
         ensemble_size: Number of ensemble members (default: 5).
         ensemble_delay: Delay between requests in seconds (default: 10.0).
+        enable_thinking: Whether to enable model thinking/reasoning.
         
     Returns:
         List of (response_text, error, raw_response_dict) tuples.
@@ -111,7 +115,7 @@ async def call_vllm_ensemble(
     results = []
     
     for i in range(ensemble_size):
-        response, error, raw_dict = await call_vllm_single(client, video_url, prompt, model, fps)
+        response, error, raw_dict = await call_vllm_single(client, video_url, prompt, model, fps, enable_thinking)
         results.append((response, error, raw_dict))
         
         if i < ensemble_size - 1:
@@ -128,6 +132,7 @@ def run_ensemble_sync(
     fps: float = 1.0,
     ensemble_size: int = 5,
     ensemble_delay: float = 10.0,
+    enable_thinking: bool = True,
 ) -> list[tuple[str | None, str | None, dict[str, Any] | None]]:
     """Synchronous wrapper for ensemble calls.
     
@@ -139,10 +144,11 @@ def run_ensemble_sync(
         fps: Sampling rate.
         ensemble_size: Number of ensemble members.
         ensemble_delay: Delay between requests.
+        enable_thinking: Whether to enable model thinking/reasoning.
         
     Returns:
         List of (response_text, error, raw_response_dict) tuples.
     """
     return asyncio.run(call_vllm_ensemble(
-        client, video_url, prompt, model, fps, ensemble_size, ensemble_delay
+        client, video_url, prompt, model, fps, ensemble_size, ensemble_delay, enable_thinking
     ))

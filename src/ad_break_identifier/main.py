@@ -263,6 +263,11 @@ def create_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run frame refinement stage after detection for frame-accurate boundaries"
     )
+    parser.add_argument(
+        "--no-thinking",
+        action="store_true",
+        help="Disable model thinking/reasoning (faster, less accurate)"
+    )
 
     return parser
 
@@ -334,6 +339,7 @@ def run_ad_break_analysis(
                 fps=config.fps,
                 ensemble_size=config.ensemble_size,
                 ensemble_delay=config.ensemble_delay,
+                enable_thinking=config.enable_thinking,
             )
             _log_verbose(config, f"  Received {len(raw_responses)} responses")
             result, stats = apply_ensemble_voting(
@@ -349,7 +355,7 @@ def run_ad_break_analysis(
             import asyncio
             
             response_text, error, raw_dict = asyncio.run(call_vllm_single(
-                client, config.video_url, prompt, config.model_name, config.fps
+                client, config.video_url, prompt, config.model_name, config.fps, config.enable_thinking
             ))
             
             if error:
@@ -554,12 +560,13 @@ def main(args: list[str] | None = None) -> int:
         prog_after=parsed_args.prog_after,
         adverts_cli=parsed_args.advert,
         api_base_url=parsed_args.api_base_url or "http://localhost:8000/v1",
-        model_name=parsed_args.model or "Qwen/Qwen3.5-9B",
+        model_name=parsed_args.model or "Qwen/Qwen3.5-4B",
         fps=parsed_args.fps,
         mode=parsed_args.mode,
         enable_ensemble=not parsed_args.no_ensemble,
         ensemble_size=parsed_args.ensemble_size,
         ensemble_delay=parsed_args.ensemble_delay,
+        enable_thinking=not parsed_args.no_thinking,
         output_format=parsed_args.output_format,
         verbose=parsed_args.verbose,
     )
@@ -610,6 +617,7 @@ def main(args: list[str] | None = None) -> int:
             model=config.model_name,
             ensemble_size=3,
             ensemble_delay=5.0,
+            enable_thinking=config.enable_thinking,
         )
 
         if refined_result.success:
