@@ -139,7 +139,7 @@ Return EXACTLY this XML structure with ALL values as elements (not attributes):
 
 AD_REFINE_PROMPT = '''
 You are analyzing a {duration_seconds}-second video clip ({total_frames} frames at {fps}fps) showing the
-FINAL FRAMES OF AN ADVERTISEMENT.
+FINAL FRAMES OF AN ADVERTISEMENT and the first frames of the next advertisement.
 
 ## ADVERT INFORMATION
 - Brand: {brand}
@@ -150,9 +150,8 @@ FINAL FRAMES OF AN ADVERTISEMENT.
 ## YOUR TASK
 
 Identify the EXACT LAST FRAME where {brand} appears in this clip
-- The clip is centered on the estimated end of the {brand} advert
 - Look carefully at all {total_frames} frames, looking for brand logos and visual branding
-- Use the brand and advertiser information - {brand} and {advertiser} to help identify the precise end of the {brand} advert
+- Use the brand, advertiser, category and duration information - {brand}, {advertiser}, {category}, {duration_str} seconds - to help identify the precise end of the {brand} advert
 
 ## OUTPUT FORMAT
 
@@ -166,9 +165,9 @@ Return EXACTLY this XML structure:
 
 ## NOTES
 
-- Frame 0 is the first frame of the clip ({half_duration}s BEFORE the estimated end of the advert for {brand})
+- Frame 0 is the first frame of the video ({half_duration}s BEFORE the estimated end of the advert for {brand})
 - Frame {last_frame} is the last frame of the clip ({half_duration}s AFTER the estimated end of the advert for {brand})
-- The estimated end of the {brand} advert is at frame {center_frame} (center of clip)
+- The estimated end of the {brand} advert is at frame {center_frame} but your job is to identify the actual end frame
 - Return only the frame number (between 0-{last_frame}), not a full timecode
 '''
 
