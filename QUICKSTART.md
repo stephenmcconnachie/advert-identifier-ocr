@@ -166,6 +166,7 @@ advert-identifier-single-advert-clip \
 
 | Flag | Purpose | Example |
 |------|---------|---------|
+| `--model NAME` | Override default model (e.g., Qwen/Qwen3.5-9B) | `--model Qwen/Qwen3.5-9B` |
 | `--mode frame` | Use frame numbers instead of timecodes | `--mode frame` |
 | `--no-ensemble` | Single API call (faster, less accurate) | `--no-ensemble` |
 | `--no-thinking` | Disable model reasoning (much faster) | `--no-thinking` |
