@@ -34,11 +34,11 @@ advert-identifier-refine \
 advert-identifier-single-advert-clip \
   --xml-file video/2024-03-26_ITV1HD_13-52-05.000_CLIP_refined.xml \
   --json-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
-  --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00_01of01.mp4" \
+  --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir video/clips
 ```
 
-## One-Command Alternative (NOT WORKING YET - DEBUGGING REQUIRED)
+## One-Command Pipeline
 
 Process entire folders automatically:
 
@@ -50,6 +50,11 @@ advert-identifier-pipeline \
   --after-secs 360 \
   --video-server-url http://your-server:1100
 ```
+
+The pipeline creates a **pipeline state file** (`{video}_pipeline_state.json`) at Stage 1
+and threads it through every subsequent stage. This file tracks each advert's progression
+from metadata extraction → 1 FPS identification → 25 FPS refinement → clip extraction,
+including the computed `adjusted_start_broadcast` used for accurate FFmpeg seek offsets.
 
 ## Installation
 
@@ -97,10 +102,10 @@ python3 bin/advert-identifier-metadata-extract --help
 |---------|---------|-------------|
 | `advert-identifier` | Identify adverts in clips | `--mode timecode\|frame`, `--model`, `--no-thinking`, `--verbose`, `--debug`, `--refine` |
 | `advert-identifier-pipeline` | Full folder automation | `--input-folder`, `--csv-folder` |
-| `advert-identifier-metadata-extract` | CSV → JSON metadata | `--video`, `--csv-folder` |
+| `advert-identifier-metadata-extract` | CSV → JSON metadata | `--video`, `--csv-folder`, `--before-secs` |
 | `advert-identifier-clip` | Extract video clips | `--before-secs`, `--after-secs` |
-| `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--index`, `--trim`, `--pad` |
-| `advert-identifier-refine` | Frame-accurate boundary refinement | `--xml-file`, `--video-url`, `--json-file`, `--model`, `--no-thinking` |
+| `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--index`, `--trim`, `--pad`, `--clip-offset`, `--state-file` |
+| `advert-identifier-refine` | Frame-accurate boundary refinement | `--xml-file`, `--video-url`, `--json-file`, `--model`, `--refine-fps`, `--ensemble-filter`, `--no-thinking` |
 | `advert-identifier-benchmark` | Test accuracy vs ground truth | `--ground-truth-first`, `-n 10` |
 | `advert-identifier-describe` | Generate video descriptions | `--video`, `--prompt` |
 
@@ -113,6 +118,26 @@ See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) for complete documentation.
 3. **AI Analysis**: Vision-language model identifies last frame of each advert
 4. **Ensemble Voting**: Multiple API calls with median voting for accuracy
 5. **Advert Clip Extraction**: Extracts individual advert clips using last timecode and duration
+6. **Pipeline State Tracking**: A persistent state file (`_pipeline_state.json`) tracks every
+   advert through all stages, maintaining coordinate transformations between clip-relative
+   and broadcast-absolute timecodes with millisecond precision.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed breakdown of the detection
+strategy, ensemble voting, and output formats.
+
+## Coordinate Systems
+
+The pipeline uses three coordinate frames. Understanding them is critical for correct
+clip extraction:
+
+| Frame | Origin | Used by |
+|-------|--------|---------|
+| **Broadcast-absolute** | Start of full broadcast `.mp4` | FFmpeg `-ss` seeks |
+| **Clip-relative** | Start of 6-minute extracted clip | 1 FPS LLM output, 25 FPS refinement |
+| **Time-of-day** | Wall clock HH:MM:SS | CSV metadata |
+
+The pipeline state file automatically converts between these frames. See
+[docs/coordinate-systems.md](docs/coordinate-systems.md) for the full reference.
 
 ## Example Output
 
@@ -164,6 +189,50 @@ This shows real-time progress through each stage:
 
 For even more detail, combine with `--debug` to save raw API responses to `debug.json`.
 
+## Pipeline State File
+
+When you run `advert-identifier-metadata-extract` with `--before-secs` (default 10.0),
+it creates a `{video}_pipeline_state.json` alongside the metadata JSON. This file
+is progressively updated by each stage:
+
+```json
+{
+  "pipeline_version": 1,
+  "video_info": {
+    "filepath": "video/2024-03-26_ITV1HD_13:30:00.mp4",
+    "start_time": "13:30:00"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "start_time": "13:52:05",
+      "clip_offset": 1295.0,
+      "adverts": [
+        {
+          "unique_id": "BBHTCPT536010",
+          "brand": "Tesco",
+          "status": "refined",
+          "coarse_1fps": {
+            "last_timecode": "22:05",
+            "last_seconds_clip": 1325.0
+          },
+          "refined_25fps": {
+            "last_timecode": "00:22:05.080",
+            "last_seconds_clip": 1325.08,
+            "clip_frame": 42,
+            "last_seconds_broadcast": 2620.08,
+            "adjusted_start_broadcast": 2610.08
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+The `adjusted_start_broadcast` field is the final value used for FFmpeg seek offsets
+in `advert-identifier-single-advert-clip` (via `--state-file`).
+
 ## Requirements
 
 - Python 3.10+
@@ -173,9 +242,10 @@ For even more detail, combine with `--debug` to save raw API responses to `debug
 
 ## Documentation
 
-- [CLI Reference](docs/CLI_REFERENCE.md) - Complete command documentation
-- [Architecture](docs/ARCHITECTURE.md) - How the detection works
-- [Troubleshooting](docs/TROUBLESHOOTING.md) - Common errors and solutions
+- [CLI Reference](docs/CLI_REFERENCE.md) — Complete command documentation
+- [Architecture](docs/ARCHITECTURE.md) — How the detection works
+- [Coordinate Systems](docs/coordinate-systems.md) — Timecode reference frames
+- [Troubleshooting](docs/TROUBLESHOOTING.md) — Common errors and solutions
 
 ## File Naming Conventions
 
@@ -184,4 +254,4 @@ For even more detail, combine with `--debug` to save raw API responses to `debug
 
 ## License
 
-MIT License - See LICENSE file for details.
+MIT License — See LICENSE file for details.

@@ -6,15 +6,17 @@ How the ad break identifier system works.
 
 ## System Overview
 
-The ad break identifier uses a vision-language model (VLM) to analyze TV broadcast videos and identify the last frame of each advertisement in an ad break sequence.
+The ad break identifier uses a vision-language model (VLM) to analyze TV broadcast
+videos and identify the last frame of each advertisement in an ad break sequence.
 
 ### Key Components
 
-1. **Metadata Extractor** - Parses CSV scheduling data
-2. **Video Clipper** - Extracts clips using FFmpeg
-3. **AI Analyzer** - Vision-language model for advert detection
-4. **Ensemble Voter** - Combines multiple API responses
-5. **Frame Refiner** - High-precision boundary detection using 25 FPS analysis
+1. **Metadata Extractor** — Parses CSV scheduling data
+2. **Video Clipper** — Extracts clips using FFmpeg
+3. **AI Analyzer** — Vision-language model for advert detection
+4. **Ensemble Voter** — Combines multiple API responses
+5. **Frame Refiner** — High-precision boundary detection using 25 FPS analysis
+6. **Pipeline State Manager** — Persistent JSON tracking across all stages
 
 ---
 
@@ -35,7 +37,8 @@ The VLM receives:
 3. **Duration-based sequencing**: Uses provided durations to identify advert boundaries
 4. **Last frame identification**: Reports the frame/timecode where each advert ends
 
-The model focuses on finding where adverts end (brand logos typically appear in the last 2-3 seconds), not where they begin.
+The model focuses on finding where adverts end (brand logos typically appear in the
+last 2-3 seconds), not where they begin.
 
 ---
 
@@ -73,8 +76,20 @@ With ensemble enabled (default: 5 calls):
    - **Timecodes/Frames**: Median value from all valid responses
    - **Brands/IDs**: Majority voting
    - **Descriptions**: First valid description
-
 4. **Outlier rejection**: Invalid responses are filtered and reported
+
+### MAD-Based Outlier Filter (Optional)
+
+When `--ensemble-filter mad` is enabled, the system applies Median Absolute Deviation
+rejection before the final median vote:
+
+1. Compute median of all valid votes
+2. Compute absolute deviations from the median
+3. Compute MAD (median of absolute deviations)
+4. Discard votes where deviation > `threshold × MAD` (default threshold: 3.0)
+5. Compute median of remaining votes
+
+This filters out sporadic model outputs while keeping the ensemble's consensus.
 
 ### Why Ensemble?
 
@@ -111,7 +126,7 @@ With ensemble enabled (default: 5 calls):
 }
 ```
 
-### XML Output
+### XML Output (1 FPS — Primary Detection)
 
 ```xml
 <ad_break>
@@ -125,6 +140,25 @@ With ensemble enabled (default: 5 calls):
 </ad_break>
 ```
 
+### XML Output (25 FPS — Refined)
+
+```xml
+<ad_break>
+  <advert>
+    <unique_id>BBHTCPT536010</unique_id>
+    <brand>Tesco</brand>
+    <advertiser>Tesco stores</advertiser>
+    <category>retail</category>
+    <duration_seconds>20</duration_seconds>
+    <last_timecode>09:30</last_timecode>             <!-- coarse 1-FPS -->
+    <refined_timecode>00:09:31.400</refined_timecode> <!-- precise 25-FPS -->
+    <refined_clip_frame>43</refined_clip_frame>       <!-- 0-74 within 3s clip -->
+    <refinement_status>success</refinement_status>
+    <description>Brand visible in frames 40-43</description>
+  </advert>
+</ad_break>
+```
+
 ---
 
 ## Pipeline Workflow
@@ -133,12 +167,14 @@ With ensemble enabled (default: 5 calls):
 
 ```
 Video filename → Parse date/channel/time → Find CSV → Filter rows → Output JSON
+                                                                     └→ Pipeline state file
 ```
 
 - Extracts date, channel, time from filename pattern
 - Searches for `YYYY-MM-DD_BFIExport.csv`
 - Filters CSV rows by channel (case-insensitive) and time range
 - Groups matching adverts into ad breaks
+- Creates pipeline state file with per-break `clip_offset` values
 
 ### Stage 2: Video Clipping
 
@@ -154,13 +190,15 @@ JSON metadata → Extract timestamps → FFmpeg → Video clips
 ### Stage 3: Advert Identification
 
 ```
-Video clip + Metadata → vLLM API → Parse XML → Vote → Results
+Video clip + Metadata → vLLM API → Parse XML → Vote → XML results
+                                                        └→ Pipeline state update (coarse_1fps)
 ```
 
 - Sends video to vLLM with metadata context
 - Receives XML response for each advert
 - Ensemble voting combines multiple responses
-- Outputs final JSON/XML results
+- Outputs XML results
+- Updates pipeline state with `coarse_1fps` data
 
 ### Stage 4: Frame Refinement (Optional)
 
@@ -168,6 +206,7 @@ For frame-accurate advert boundaries, the refinement stage runs after primary de
 
 ```
 Coarse XML + Video URL → FFmpeg clip → 25 FPS VLLM → Ensemble vote → Refined XML
+                                                                       └→ Pipeline state update (refined_25fps)
 ```
 
 **Process per advert:**
@@ -177,27 +216,12 @@ Coarse XML + Video URL → FFmpeg clip → 25 FPS VLLM → Ensemble vote → Ref
 4. Calculate `refined_timecode = floor(clip_start + (frame / fps))` snapped to nearest frame boundary
 5. Millisecond value is always a clean multiple of `1/fps` (e.g., `.000`, `.040`, `.080` at 25 FPS)
 6. Floor semantics ensure timecode never advances into the next advert
-7. Fall back to coarse timecode on failure
+7. Updates pipeline state with `refined_25fps` including auto-computed `adjusted_start_broadcast`
+8. Fall back to coarse timecode on failure
 
 **FPS Configuration:**
 - Default: 25 FPS (PAL video sources)
 - Override with `--refine-fps` flag (e.g., 24 FPS for NTSC)
-
-**Refinement output:**
-```xml
-<advert>
-  <unique_id>BBHTCPT536010</unique_id>
-  <brand>Tesco</brand>
-  <advertiser>Tesco stores</advertiser>
-  <category>retail</category>
-  <duration_seconds>20</duration_seconds>
-  <last_timecode>09:30</last_timecode>           <!-- coarse 1-FPS -->
-  <refined_timecode>09:31.400</refined_timecode>  <!-- precise 25-FPS, floor-snapped -->
-  <refined_clip_frame>43</refined_clip_frame>     <!-- 0-74 within clip at 25fps -->
-  <refinement_status>success</refinement_status>
-  <description>Brand visible in frames 40-43</description>
-</advert>
-```
 
 **Comparison with Primary Detection:**
 
@@ -208,6 +232,99 @@ Coarse XML + Video URL → FFmpeg clip → 25 FPS VLLM → Ensemble vote → Ref
 | Ensemble size | 5 calls | 3 calls |
 | Context | Full advert sequence | Single advert with brand info |
 | Output | MM:SS timecode | HH:MM:SS.mmm (floor-snapped to 1/fps) |
+
+---
+
+## Pipeline State File
+
+The pipeline state file (`{video}_pipeline_state.json`) is the system of record
+for advert progression through all stages. It is created at Stage 1 and updated
+by each subsequent stage.
+
+### Purpose
+
+- **Persistent tracking**: Every advert's status is recorded from metadata extraction
+  through final clip extraction
+- **Coordinate transformation**: Converts between clip-relative timecodes and
+  broadcast-absolute seek offsets using pre-computed `clip_offset`
+- **Millisecond precision**: Maintains full precision of 25 FPS refinement results
+- **Audit trail**: Each advert has a complete history of detected values
+
+### State Machine
+
+```
+metadata_extracted → clip_extracted → identified → refined → clipped
+```
+
+### Adjusted Start Computation
+
+When the refinement stage writes `refined_25fps` data, the state manager
+automatically computes:
+
+```
+last_seconds_broadcast    = clip_offset + last_seconds_clip
+adjusted_start_broadcast  = last_seconds_broadcast - scheduled_duration_seconds
+```
+
+These broadcast-absolute values are what `advert-identifier-single-advert-clip`
+uses for its FFmpeg seek offset when `--state-file` is provided.
+
+### State File Format
+
+```json
+{
+  "pipeline_version": 1,
+  "video_info": {
+    "filepath": "video/2024-03-26_ITV1HD_13:30:00.mp4",
+    "start_time": "13:30:00"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "start_time": "13:52:05",
+      "clip_offset": 1295.0,
+      "adverts": [
+        {
+          "unique_id": "BBHTCPT536010",
+          "brand": "Tesco",
+          "advertiser": "Tesco stores",
+          "category": "retail",
+          "scheduled_duration_seconds": 10,
+          "status": "refined",
+          "coarse_1fps": {
+            "last_timecode": "22:05",
+            "last_seconds_clip": 1325.0
+          },
+          "refined_25fps": {
+            "last_timecode": "00:22:05.080",
+            "last_seconds_clip": 1325.08,
+            "clip_frame": 42,
+            "last_seconds_broadcast": 2620.08,
+            "adjusted_start_broadcast": 2610.08
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Coordinate Systems
+
+The pipeline operates in three coordinate frames:
+
+| Frame | Symbol | Origin | Used by |
+|-------|--------|--------|---------|
+| **Broadcast-absolute** | `t_bcast` | Start of full broadcast `.mp4` | FFmpeg `-ss` seeks |
+| **Clip-relative** | `t_clip` | Start of 6-minute extracted clip | 1 FPS LLM output, 25 FPS refinement |
+| **Time-of-day** | `t_tod` | Wall clock HH:MM:SS | CSV metadata |
+
+The pipeline state file bridges these frames using `clip_offset = (break_start_tod - video_start_tod) - before_secs`.
+
+See [coordinate-systems.md](coordinate-systems.md) for the complete reference diagram
+including known coordinate bugs and their fixes.
 
 ---
 
@@ -328,4 +445,5 @@ When using `--debug`, the system saves:
 - Voting calculation steps
 - Outlier identification
 
-Use debug mode to understand why the model detected specific frames or to tune ensemble settings.
+Use debug mode to understand why the model detected specific frames or to tune
+ensemble settings.
