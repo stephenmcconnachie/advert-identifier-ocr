@@ -258,7 +258,8 @@ def run_single_advert_clipper(
     json_path: Path,
     ad_break_index: int,
     before_secs: float,
-    logger: logging.Logger
+    logger: logging.Logger,
+    state_file_path: Path | None = None,
 ) -> Tuple[bool, int]:
     """Run advert-identifier-single-advert-clip to extract advert clips.
 
@@ -303,6 +304,10 @@ def run_single_advert_clipper(
         "--output-dir", str(output_dir),
         "--clip-offset", str(clip_offset),
     ]
+
+    if state_file_path:
+        cmd.extend(["--state-file", str(state_file_path)])
+        logger.info(f"Using pipeline state file: {state_file_path}")
 
     logger.info(f"Running advert clip extraction")
 
@@ -517,6 +522,19 @@ def main() -> int:
             result['error'] = 'CSV file not found or metadata extraction error'
             results.append(result)
             continue
+
+        # Derive pipeline state path from metadata JSON
+        state_file_path = None
+        if json_path:
+            stem = json_path.stem
+            if stem.endswith("_metadata"):
+                stem = stem[:-9]
+            candidate = json_path.parent / f"{stem}_pipeline_state.json"
+            if candidate.exists():
+                state_file_path = candidate
+                logger.info(f"Pipeline state file: {state_file_path}")
+            else:
+                logger.info("No pipeline state file found (stages will write state as they run)")
         
         # Step 2: Extract clips
         success, clips_dir = run_clipper(json_path, args.before_secs, args.after_secs, logger)
@@ -557,7 +575,8 @@ def main() -> int:
                 original_video_url = f"{args.video_server_url.rstrip('/')}/{mp4_file.name}"
                 clips_success, clip_count = run_single_advert_clipper(
                     xml_path, original_video_url, mp4_file.parent,
-                    json_path, ad_break_index, args.before_secs, logger
+                    json_path, ad_break_index, args.before_secs, logger,
+                    state_file_path=state_file_path,
                 )
 
                 ad_break_results.append({
