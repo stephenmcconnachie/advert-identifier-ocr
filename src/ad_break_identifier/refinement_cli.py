@@ -70,6 +70,18 @@ def create_parser() -> argparse.ArgumentParser:
         help="Delay between ensemble calls in seconds (default: 5.0)",
     )
     parser.add_argument(
+        "--ensemble-filter",
+        choices=["none", "mad"],
+        default="none",
+        help="Ensemble vote filter method. 'mad' discards MAD outliers before median (default: none)",
+    )
+    parser.add_argument(
+        "--ensemble-filter-threshold",
+        type=float,
+        default=3.0,
+        help="MAD multiplier for outlier fence (default: 3.0). Higher = fewer outliers filtered",
+    )
+    parser.add_argument(
         "--refine-fps",
         type=float,
         default=25.0,
@@ -142,6 +154,8 @@ def main(args: list[str] | None = None) -> int:
         model=parsed_args.model,
         ensemble_size=parsed_args.ensemble_size,
         ensemble_delay=parsed_args.ensemble_delay,
+        ensemble_filter=parsed_args.ensemble_filter,
+        ensemble_filter_threshold=parsed_args.ensemble_filter_threshold,
         fps=parsed_args.refine_fps,
         enable_thinking=not parsed_args.no_thinking,
         verbose=verbose,

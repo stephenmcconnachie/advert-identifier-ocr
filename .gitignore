@@ -16,3 +16,20 @@ __pycache__/
 # Output files
 *.xml
 *.json
+
+# Virtual environments
+.venv/
+venv/
+.env/
+
+# IDE/OS
+.DS_Store
+
+# Test cache
+.pytest_cache/
+
+# Plan files
+.hermes/plans/
+
+# Egg info
+*.egg-info/

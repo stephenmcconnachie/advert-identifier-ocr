@@ -19,6 +19,7 @@ from typing import Any
 from xml.etree import ElementTree
 
 from .api_client import create_vllm_client, run_ensemble_sync
+from .ensemble_filter import ensemble_vote_with_filter
 from .models import (
     AdBreakResult,
     AdvertResult,
@@ -317,6 +318,8 @@ def refine_single_advert(
     fps: float = 25.0,
     enable_thinking: bool = True,
     verbose: bool = False,
+    ensemble_filter: str = "none",
+    ensemble_filter_threshold: float = 3.0,
 ) -> tuple[RefinedAdvertResult, str, list[tuple[str | None, str | None, dict[str, Any] | None]]]:
     """Refine a single advert's timecode using high-FPS analysis.
 
@@ -330,6 +333,10 @@ def refine_single_advert(
         fps: Frames per second for the video (default: 25.0).
         enable_thinking: Whether to enable model thinking/reasoning.
         verbose: Enable verbose logging.
+        ensemble_filter: Ensemble vote filter method. 'none' = raw median;
+            'mad' = discard MAD outliers before median (default: 'none').
+        ensemble_filter_threshold: MAD multiplier for outlier fence
+            (default: 3.0). Higher = fewer outliers filtered.
 
     Returns:
         Tuple of (RefinedAdvertResult, prompt, raw_responses).
@@ -412,7 +419,12 @@ def refine_single_advert(
                 result.description = "No valid frames from ensemble"
                 return result, prompt, raw_responses
 
-            median_frame = sorted(valid_frames)[len(valid_frames) // 2]
+            median_frame, vote_stats = ensemble_vote_with_filter(
+                valid_frames,
+                method=ensemble_filter,
+                threshold=ensemble_filter_threshold,
+            )
+            result.ensemble_vote_stats = vote_stats
 
             raw_refined_seconds = clip_start + (median_frame / fps)
             refined_seconds = int(raw_refined_seconds * fps) / fps
@@ -430,7 +442,9 @@ def refine_single_advert(
             _log_verbose(
                 verbose,
                 f"Voting: valid={len(valid_frames)}, invalid={invalid_count}, "
-                f"median_frame={median_frame}, refined_timecode={refined_timecode}"
+                f"median_frame={median_frame}, refined_timecode={refined_timecode}, "
+                f"outliers_removed={vote_stats['outliers_removed']}, "
+                f"mad={vote_stats['mad']}"
             )
 
             return result, prompt, raw_responses
@@ -513,6 +527,8 @@ def refine_advert_timecodes(
     enable_thinking: bool = True,
     verbose: bool = False,
     debug_mode: bool = False,
+    ensemble_filter: str = "none",
+    ensemble_filter_threshold: float = 3.0,
 ) -> tuple[RefinedAdBreakResult, RefinementStats | None]:
     """Refine advert timecodes from primary detection XML.
 
@@ -530,6 +546,10 @@ def refine_advert_timecodes(
         enable_thinking: Whether to enable model thinking/reasoning.
         verbose: Enable verbose logging.
         debug_mode: Enable debug mode to return raw responses.
+        ensemble_filter: Ensemble vote filter method. 'none' = raw median;
+            'mad' = discard MAD outliers before median (default: 'none').
+        ensemble_filter_threshold: MAD multiplier for outlier fence
+            (default: 3.0). Higher = fewer outliers filtered.
 
     Returns:
         Tuple of (RefinedAdBreakResult, RefinementStats or None).
@@ -571,6 +591,8 @@ def refine_advert_timecodes(
                 fps=fps,
                 enable_thinking=enable_thinking,
                 verbose=verbose,
+                ensemble_filter=ensemble_filter,
+                ensemble_filter_threshold=ensemble_filter_threshold,
             )
             refined_adverts.append(refined)
 
@@ -599,6 +621,7 @@ def refine_advert_timecodes(
                     "brand": advert.brand,
                     "value_type": "frame",
                     "voted_value": refined.refined_clip_frame if refined.refined_clip_frame is not None else "N/A",
+                    "vote_stats": refined.ensemble_vote_stats or {},
                     "prompt": prompt,
                     "response_values": [
                         {

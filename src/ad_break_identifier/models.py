@@ -87,6 +87,7 @@ class RefinedAdvertResult:
     confidence: str = "unknown"
     refinement_status: str = "pending"
     description: str = ""
+    ensemble_vote_stats: dict | None = None
 
 
 @dataclass
