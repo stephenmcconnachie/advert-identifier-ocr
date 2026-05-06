@@ -139,7 +139,7 @@ Return EXACTLY this XML structure with ALL values as elements (not attributes):
 
 AD_REFINE_PROMPT = '''
 You are analyzing a {duration_seconds}-second video clip ({total_frames} frames at {fps}fps) showing the
-FINAL FRAMES OF AN ADVERTISEMENT and the first frames of the next advertisement.
+FINAL FRAMES OF AN ADVERTISEMENT for {brand} and the first few frames of the next advertisement.
 
 ## ADVERT INFORMATION
 - Brand: {brand}
@@ -150,8 +150,11 @@ FINAL FRAMES OF AN ADVERTISEMENT and the first frames of the next advertisement.
 ## YOUR TASK
 
 Identify the EXACT LAST FRAME where {brand} appears in this clip
-- Look carefully at all {total_frames} frames, looking for brand logos and visual branding
-- Use the brand, advertiser, category and duration information - {brand}, {advertiser}, {category}, {duration_str} seconds - to help identify the precise end of the {brand} advert
+- Look carefully at all frames, looking for {brand} logos and visual brand identifiers or textual information featuring {advertiser} or {brand}
+- Use the brand, advertiser, category and duration information - {brand}, {advertiser}, {category}, {duration_str} seconds - to help identify the precise end of the advert for {brand}
+- The last few frames will usually show a logo for the brand, or a product design. Pay close attention to logos / visual branding for {brand} - the advert always ends with logos, text or other visual brand identifiers
+- The product image is not always the end of the advert - branding text, logos or brand identifiers are most likely to end the advert - so look for {brand} identifiers in final frames even if the product is shown before
+- If you see a series of frames with visual brand identifiers for {brand}, then a different advert / product appears, the very last frame with {brand} is the one to select
 
 ## OUTPUT FORMAT
 
@@ -166,9 +169,9 @@ Return EXACTLY this XML structure:
 ## NOTES
 
 - Frame 0 is the first frame of the video ({half_duration}s BEFORE the estimated end of the advert for {brand})
-- Frame {last_frame} is the last frame of the clip ({half_duration}s AFTER the estimated end of the advert for {brand})
-- The estimated end of the {brand} advert is at frame {center_frame} but your job is to identify the actual end frame
-- Return only the frame number (between 0-{last_frame}), not a full timecode
+- Frame {last_frame} is the last frame of the video ({half_duration}s AFTER the estimated end of the advert for {brand})
+- The estimated end of the '{brand}' advert is at frame {center_frame} but your job is to identify the actual end frame
+- Return a frame integer (between 0-{last_frame}), not a timecode
 '''
 
 

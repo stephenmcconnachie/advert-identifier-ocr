@@ -47,10 +47,10 @@ if ! screen_exists "multimodal-vLLM"; then
         CUDA_VISIBLE_DEVICES=\"0\" vllm serve \"${VLLM_MODEL}\" \
             --reasoning-parser qwen3 \
             --max-model-len 65536 \
-            --max-num-seqs 16 \
+            --max-num-seqs 1 \
             --gpu-memory-utilization 0.9 \
             --media-io-kwargs \"{\\\"video\\\": {\\\"num_frames\\\": -1}}\" \
-            --limit-mm-per-prompt \"{\\\"video\\\": {\\\"count\\\": 1, \\\"num_frames\\\": 1048, \\\"width\\\": 452, \\\"height\\\": 256}}\" \
+            --limit-mm-per-prompt \"{\\\"video\\\": {\\\"count\\\": 1, \\\"width\\\": 452, \\\"height\\\": 256}}\" \
             --allowed-local-media-path /tmp \
             --enable-prefix-caching \
             2>&1 | tee /mnt/qnap_04/Admin/code/ai_machine_learning/logs/vllm_serve.log
