@@ -77,22 +77,27 @@ def setup_logging(log_level: str = "INFO") -> None:
 
 
 def timecode_to_seconds(timecode: str) -> float:
-    """Convert MM:SS or HH:MM:SS timecode to seconds.
-    
+    """Convert MM:SS, HH:MM:SS, or HH:MM:SS.mmm timecode to seconds.
+
+    Supports:
+        - MM:SS         (e.g., "04:30" → 270.0)
+        - HH:MM:SS      (e.g., "01:30:00" → 5400.0)
+        - HH:MM:SS.mmm  (e.g., "00:04:30.080" → 270.08)
+
     Args:
-        timecode: Timecode string in MM:SS or HH:MM:SS format.
-        
+        timecode: Timecode string in MM:SS, HH:MM:SS, or HH:MM:SS.mmm format.
+
     Returns:
-        Total seconds as float.
+        Total seconds as float (with millisecond precision).
     """
     parts = timecode.strip().split(":")
 
     if len(parts) == 2:
         minutes, seconds = parts
-        return int(minutes) * 60 + int(seconds)
+        return int(minutes) * 60 + float(seconds)
     elif len(parts) == 3:
         hours, minutes, seconds = parts
-        return int(hours) * 3600 + int(minutes) * 60 + int(seconds)
+        return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
     else:
         raise ValueError(f"Invalid timecode format: {timecode}")
 
@@ -142,6 +147,8 @@ def parse_advert_xml(xml_path: str) -> list[dict]:
         brand = get_text("brand") or f"advert_{i + 1}"
         last_timecode = get_text("last_timecode") or ""
         duration_str = get_text("duration_seconds") or ""
+        refined_timecode = get_text("refined_timecode")
+        refined_clip_frame_str = get_text("refined_clip_frame")
 
         advert = {
             "index": i + 1,
@@ -149,6 +156,8 @@ def parse_advert_xml(xml_path: str) -> list[dict]:
             "brand": brand,
             "last_timecode": last_timecode,
             "duration_seconds": None if not duration_str else int(duration_str),
+            "refined_timecode": refined_timecode,
+            "refined_clip_frame": None if not refined_clip_frame_str else int(refined_clip_frame_str),
         }
         adverts.append(advert)
 
@@ -344,6 +353,13 @@ def create_parser() -> argparse.ArgumentParser:
         help="Seconds to add to start and end of each clip (default: 0.0)",
     )
     parser.add_argument(
+        "--clip-offset",
+        type=float,
+        default=0.0,
+        help="Seconds from broadcast start to clip start (default: 0.0). "
+             "Needed to convert clip-relative timecodes to broadcast-absolute.",
+    )
+    parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
@@ -396,10 +412,22 @@ def main() -> int:
                 if advert["index"] not in indices_to_process:
                     continue
 
-                last_tc = advert["last_timecode"]
+                # Prefer refined_timecode from 25 FPS refinement when available
+                time_source = advert.get("refined_timecode") or advert["last_timecode"]
                 duration = advert["duration_seconds"]
-                last_secs = timecode_to_seconds(last_tc)
-                start_secs = last_secs - duration
+                last_secs = timecode_to_seconds(time_source)
+                start_secs = last_secs - duration + args.clip_offset
+
+                if advert.get("refined_timecode"):
+                    logger.info(
+                        f"Advert {advert['index']}: using refined_timecode={time_source} "
+                        f"(raw last_timecode={advert['last_timecode']})"
+                    )
+
+                logger.info(
+                    f"Advert {advert['index']}: clip_offset={args.clip_offset:.3f}s, "
+                    f"last_secs={last_secs:.3f}s, start_secs={start_secs:.3f}s"
+                )
 
                 trim = args.trim
                 pad = args.pad

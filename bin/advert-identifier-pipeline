@@ -23,6 +23,26 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 
+def timecode_to_seconds(timecode: str) -> float:
+    """Convert HH:MM:SS timecode to seconds.
+
+    Args:
+        timecode: Timecode string in HH:MM:SS format.
+
+    Returns:
+        Total seconds as float.
+    """
+    parts = timecode.strip().split(":")
+    if len(parts) == 3:
+        hours, minutes, seconds = parts
+        return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+    elif len(parts) == 2:
+        minutes, seconds = parts
+        return int(minutes) * 60 + float(seconds)
+    else:
+        raise ValueError(f"Invalid timecode format: {timecode}")
+
+
 def setup_logging(log_level: str = "INFO") -> logging.Logger:
     """Configure logging."""
     logging.basicConfig(
@@ -235,14 +255,23 @@ def run_single_advert_clipper(
     xml_path: Path,
     original_video_url: str,
     output_dir: Path,
+    json_path: Path,
+    ad_break_index: int,
+    before_secs: float,
     logger: logging.Logger
 ) -> Tuple[bool, int]:
     """Run advert-identifier-single-advert-clip to extract advert clips.
+
+    Computes clip_offset from JSON metadata to convert clip-relative
+    timecodes to broadcast-absolute coordinates.
 
     Args:
         xml_path: Path to XML with advert analysis results.
         original_video_url: Full URL to the original video file.
         output_dir: Directory where clips will be saved.
+        json_path: Path to JSON metadata file (required for clip_offset).
+        ad_break_index: 0-based index of the ad break.
+        before_secs: Seconds before ad break start used in clip extraction.
         logger: Logger instance.
 
     Returns:
@@ -250,12 +279,29 @@ def run_single_advert_clipper(
     """
     bin_dir = Path(__file__).parent
 
+    # Compute clip_offset from JSON metadata
+    # clip_offset = (break_start_tod - video_start_tod) - before_secs
+    with open(json_path) as f:
+        data = json.load(f)
+
+    video_start_secs = timecode_to_seconds(data["video_info"]["start_time"])
+    break_start_tod = data["ad_breaks"][ad_break_index]["start_time"]
+    break_start_secs = timecode_to_seconds(break_start_tod)
+    clip_offset = break_start_secs - video_start_secs - before_secs
+
+    logger.info(
+        f"Computed clip_offset: {break_start_tod} - {data['video_info']['start_time']} "
+        f"- {before_secs}s = {clip_offset:.3f}s"
+    )
+
     cmd = [
         sys.executable,
         str(bin_dir / "advert-identifier-single-advert-clip"),
         "--xml-file", str(xml_path),
         "--video-url", original_video_url,
-        "--output-dir", str(output_dir)
+        "--json-file", str(json_path),
+        "--output-dir", str(output_dir),
+        "--clip-offset", str(clip_offset),
     ]
 
     logger.info(f"Running advert clip extraction")
@@ -510,7 +556,8 @@ def main() -> int:
                 # Step 4: Extract individual advert clips
                 original_video_url = f"{args.video_server_url.rstrip('/')}/{mp4_file.name}"
                 clips_success, clip_count = run_single_advert_clipper(
-                    xml_path, original_video_url, mp4_file.parent, logger
+                    xml_path, original_video_url, mp4_file.parent,
+                    json_path, ad_break_index, args.before_secs, logger
                 )
 
                 ad_break_results.append({
