@@ -360,6 +360,11 @@ def create_parser() -> argparse.ArgumentParser:
              "Needed to convert clip-relative timecodes to broadcast-absolute.",
     )
     parser.add_argument(
+        "--state-file",
+        help="Path to pipeline state file. When provided, reads adjusted_start_broadcast "
+             "from state instead of computing from XML timecode + clip_offset.",
+    )
+    parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
@@ -412,21 +417,41 @@ def main() -> int:
                 if advert["index"] not in indices_to_process:
                     continue
 
-                # Prefer refined_timecode from 25 FPS refinement when available
-                time_source = advert.get("refined_timecode") or advert["last_timecode"]
-                duration = advert["duration_seconds"]
-                last_secs = timecode_to_seconds(time_source)
-                start_secs = last_secs - duration + args.clip_offset
+                # Determine start time: prefer pipeline state adjusted_start,
+                # then fall back to clip-relative timecode + clip_offset
+                start_secs = None
+                time_source_desc = ""
+                if args.state_file:
+                    try:
+                        from ad_break_identifier.pipeline_state import (
+                            read_state,
+                            get_adjusted_starts,
+                        )
+                        state = read_state(args.state_file)
+                        starts = get_adjusted_starts(state, ad_break_index + 1)
+                        adv_idx = advert["index"] - 1
+                        if adv_idx < len(starts) and starts[adv_idx] is not None:
+                            start_secs = starts[adv_idx]
+                            time_source_desc = f"pipeline_state adjusted_start={start_secs:.3f}s"
+                    except Exception as e:
+                        logger.warning(f"Could not read pipeline state: {e}")
 
-                if advert.get("refined_timecode"):
-                    logger.info(
-                        f"Advert {advert['index']}: using refined_timecode={time_source} "
-                        f"(raw last_timecode={advert['last_timecode']})"
+                if start_secs is None:
+                    # Fall back to clip-relative timecode + clip_offset
+                    time_source = advert.get("refined_timecode") or advert["last_timecode"]
+                    duration = advert["duration_seconds"]
+                    last_secs = timecode_to_seconds(time_source)
+                    start_secs = last_secs - duration + args.clip_offset
+                    time_source_desc = (
+                        f"refined_timecode={time_source}" if advert.get("refined_timecode")
+                        else f"last_timecode={time_source}"
                     )
+                    if args.clip_offset != 0.0:
+                        time_source_desc += f" + clip_offset={args.clip_offset:.3f}s"
 
+                logger.info(f"Advert {advert['index']}: {time_source_desc}")
                 logger.info(
-                    f"Advert {advert['index']}: clip_offset={args.clip_offset:.3f}s, "
-                    f"last_secs={last_secs:.3f}s, start_secs={start_secs:.3f}s"
+                    f"Advert {advert['index']}: start_secs={start_secs:.3f}s"
                 )
 
                 trim = args.trim

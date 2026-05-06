@@ -10,6 +10,11 @@ import sys
 from datetime import timedelta
 from pathlib import Path
 
+# Allow import of package modules (when running from repo root)
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT / "src"))
+
 
 def parse_video_filename(filename):
     """Extract date, channel, time from filename.
@@ -459,7 +464,14 @@ def main():
         "-o", "--output-dir",
         help="Output directory for JSON file (default: video file directory)"
     )
-    
+    parser.add_argument(
+        "--before-secs",
+        type=float,
+        default=10.0,
+        help="Seconds before ad break start used for clip extraction (default: 10.0). "
+             "Affects clip_offset computation in the pipeline state file."
+    )
+
     args = parser.parse_args()
     
     # Parse video path
@@ -610,6 +622,20 @@ def main():
         json.dump(output, f, indent=2)
     
     print(f"Output written to: {output_path}")
+    
+    # Write pipeline state file
+    try:
+        from ad_break_identifier.pipeline_state import (
+            create_initial_state,
+            derive_state_path,
+            write_state,
+        )
+        state = create_initial_state(str(output_path), args.before_secs)
+        state_path = derive_state_path(str(output_path))
+        write_state(state_path, state)
+        print(f"Pipeline state written to: {state_path}")
+    except Exception as e:
+        print(f"Warning: Could not write pipeline state: {e}", file=sys.stderr)
     print(f"Summary: {output['summary']['total_ad_breaks']} ad break(s), {output['summary']['total_adverts']} advert(s)")
     
     # Only show partial break info if we have results and partial_count is defined

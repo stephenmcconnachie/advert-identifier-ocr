@@ -529,6 +529,7 @@ def refine_advert_timecodes(
     debug_mode: bool = False,
     ensemble_filter: str = "none",
     ensemble_filter_threshold: float = 3.0,
+    ad_break_index: int | None = None,
 ) -> tuple[RefinedAdBreakResult, RefinementStats | None]:
     """Refine advert timecodes from primary detection XML.
 
@@ -655,6 +656,47 @@ def refine_advert_timecodes(
         total_refined=total_refined,
         total_fallback=total_fallback,
     )
+
+    # Update pipeline state with refined 25 FPS results
+    if metadata_json and result.success:
+        try:
+            from .pipeline_state import (
+                derive_state_path,
+                read_state,
+                write_state,
+                update_break_adverts,
+            )
+            # Determine ad_break_index: explicit param, or parse from XML filename
+            b_idx = ad_break_index
+            if b_idx is None:
+                xml_name = Path(xml_path).name
+                import re
+                m = re.search(r'(\d{2})of\d{2}', xml_name)
+                b_idx = int(m.group(1)) if m else 1
+
+            state_path = derive_state_path(metadata_json)
+            state = read_state(state_path)
+            updates = []
+            for ref_adv in refined_adverts:
+                r25_entry = {
+                    "last_timecode": ref_adv.refined_timecode or "",
+                    "clip_frame": ref_adv.refined_clip_frame,
+                }
+                # Compute last_seconds_clip from refined_timecode if available
+                if ref_adv.refined_timecode:
+                    try:
+                        r25_entry["last_seconds_clip"] = timecode_to_seconds(ref_adv.refined_timecode)
+                    except Exception:
+                        pass
+                updates.append({
+                    "status": "refined",
+                    "refined_25fps": r25_entry,
+                })
+            if updates:
+                update_break_adverts(state, b_idx, updates)
+                write_state(state_path, state)
+        except Exception as e:
+            logger.warning(f"Could not update pipeline state: {e}")
 
     if debug_mode:
         stats = RefinementStats(

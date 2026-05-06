@@ -600,6 +600,39 @@ def main(args: list[str] | None = None) -> int:
         except Exception as e:
             print(f"Warning: Could not save XML output to {xml_output_path}: {e}", file=sys.stderr)
 
+    # Update pipeline state with coarse 1 FPS results
+    if result.success and config.metadata_file:
+        try:
+            from .pipeline_state import (
+                derive_state_path,
+                read_state,
+                write_state,
+                update_break_adverts,
+            )
+            state_path = derive_state_path(config.metadata_file)
+            state = read_state(state_path)
+            updates = []
+            for adv in result.adverts:
+                seconds_clip = None
+                if adv.timecode:
+                    from .ensemble import timecode_to_seconds
+                    try:
+                        seconds_clip = timecode_to_seconds(adv.timecode)
+                    except Exception:
+                        pass
+                updates.append({
+                    "status": "identified",
+                    "coarse_1fps": {
+                        "last_timecode": adv.timecode or "",
+                        "last_seconds_clip": seconds_clip,
+                    },
+                })
+            if updates:
+                update_break_adverts(state, config.ad_break_index, updates)
+                write_state(state_path, state)
+        except Exception as e:
+            print(f"Warning: Could not update pipeline state: {e}", file=sys.stderr)
+
     if parsed_args.refine and result.success and xml_output_path:
         from .refinement import refine_advert_timecodes
         print(f"\n{'='*60}", file=sys.stderr)

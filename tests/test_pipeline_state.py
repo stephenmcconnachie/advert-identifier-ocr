@@ -1,0 +1,229 @@
+"""Tests for pipeline_state module."""
+import json
+import pytest
+from ad_break_identifier.pipeline_state import (
+    derive_state_path,
+    create_initial_state,
+    read_state,
+    write_state,
+    update_break_adverts,
+    get_adjusted_starts,
+    _tod_to_seconds,
+)
+from pathlib import Path
+
+
+SAMPLE_METADATA = {
+    "video_info": {
+        "filepath": "/videos/2024-03-26_ITV1HD_09:00:00.mp4",
+        "start_time": "09:00:00",
+    },
+    "ad_breaks": [
+        {
+            "index": 1,
+            "start_time": "09:48:30",
+            "adverts": [
+                {
+                    "unique_id": "ADV001",
+                    "brand": "BrandA",
+                    "advertiser": "AdvA",
+                    "category": "Food",
+                    "duration_seconds": 30,
+                },
+                {
+                    "unique_id": "ADV002",
+                    "brand": "BrandB",
+                    "advertiser": "AdvB",
+                    "category": "Drink",
+                    "duration_seconds": 20,
+                },
+            ],
+        },
+        {
+            "index": 2,
+            "start_time": "10:15:00",
+            "adverts": [
+                {
+                    "unique_id": "ADV003",
+                    "brand": "BrandC",
+                    "advertiser": "AdvC",
+                    "category": "Car",
+                    "duration_seconds": 60,
+                },
+            ],
+        },
+    ],
+}
+
+
+class TestTodToSeconds:
+    def test_hh_mm_ss(self):
+        # 09:48:30 = 9*3600 + 48*60 + 30 = 35310
+        assert _tod_to_seconds("09:48:30") == 35310.0
+
+    def test_hh_mm_ss_midnight(self):
+        assert _tod_to_seconds("00:00:00") == 0.0
+
+    def test_mm_ss(self):
+        assert _tod_to_seconds("04:30") == 270.0
+
+    def test_invalid_format(self):
+        with pytest.raises(ValueError):
+            _tod_to_seconds("not-a-time")
+
+
+class TestDeriveStatePath:
+    def test_metadata_suffix(self, tmp_path):
+        meta = tmp_path / "2024-03-26_ITV1HD_09:00:00_metadata.json"
+        meta.write_text("{}")
+        state = derive_state_path(str(meta))
+        assert state.endswith("_pipeline_state.json")
+        assert "metadata" not in Path(state).stem
+
+    def test_no_metadata_suffix(self, tmp_path):
+        meta = tmp_path / "data.json"
+        meta.write_text("{}")
+        state = derive_state_path(str(meta))
+        assert state.endswith("_pipeline_state.json")
+
+
+class TestCreateInitialState:
+    def test_creates_ad_breaks(self, tmp_path):
+        meta_path = tmp_path / "sample_metadata.json"
+        meta_path.write_text(json.dumps(SAMPLE_METADATA))
+
+        state = create_initial_state(str(meta_path), before_secs=10.0)
+        assert state["pipeline_version"] == 1
+        assert len(state["ad_breaks"]) == 2
+
+    def test_clip_offset_computation(self, tmp_path):
+        meta_path = tmp_path / "sample_metadata.json"
+        meta_path.write_text(json.dumps(SAMPLE_METADATA))
+
+        state = create_initial_state(str(meta_path), before_secs=10.0)
+        # Break 1: 09:48:30 = 35310, 09:00:00 = 32400
+        # clip_offset = 35310 - 32400 - 10 = 2900
+        break1 = state["ad_breaks"][0]
+        assert break1["clip_offset"] == pytest.approx(2900.0, abs=0.001)
+
+    def test_advert_initial_status(self, tmp_path):
+        meta_path = tmp_path / "sample_metadata.json"
+        meta_path.write_text(json.dumps(SAMPLE_METADATA))
+
+        state = create_initial_state(str(meta_path), before_secs=10.0)
+        adv0 = state["ad_breaks"][0]["adverts"][0]
+        assert adv0["status"] == "metadata_extracted"
+        assert adv0["coarse_1fps"] is None
+        assert adv0["refined_25fps"] is None
+        assert adv0["unique_id"] == "ADV001"
+
+
+class TestWriteReadState:
+    def test_round_trip(self, tmp_path):
+        meta_path = tmp_path / "sample_metadata.json"
+        meta_path.write_text(json.dumps(SAMPLE_METADATA))
+        state = create_initial_state(str(meta_path), before_secs=10.0)
+
+        state_path = tmp_path / "test_state.json"
+        write_state(str(state_path), state)
+        loaded = read_state(str(state_path))
+
+        assert loaded["pipeline_version"] == 1
+        assert len(loaded["ad_breaks"]) == 2
+
+
+class TestUpdateBreakAdverts:
+    @pytest.fixture
+    def state(self, tmp_path):
+        meta_path = tmp_path / "sample_metadata.json"
+        meta_path.write_text(json.dumps(SAMPLE_METADATA))
+        return create_initial_state(str(meta_path), before_secs=10.0)
+
+    def test_update_coarse_1fps(self, state):
+        updates = [
+            {"coarse_1fps": {"last_timecode": "04:30", "last_seconds_clip": 270.0}},
+            {"coarse_1fps": {"last_timecode": "04:50", "last_seconds_clip": 290.0}},
+        ]
+        update_break_adverts(state, ad_break_index=1, updates=updates)
+
+        adv0 = state["ad_breaks"][0]["adverts"][0]
+        assert adv0["coarse_1fps"]["last_timecode"] == "04:30"
+        assert adv0["coarse_1fps"]["last_seconds_clip"] == 270.0
+
+    def test_update_refined_25fps_computes_adjusted_start(self, state):
+        updates = [
+            {
+                "refined_25fps": {
+                    "last_timecode": "00:04:30.080",
+                    "last_seconds_clip": 270.08,
+                    "clip_frame": 40,
+                }
+            },
+        ]
+        update_break_adverts(state, ad_break_index=1, updates=updates)
+
+        r25 = state["ad_breaks"][0]["adverts"][0]["refined_25fps"]
+        # clip_offset = 2900, last_seconds_clip = 270.08
+        # last_seconds_broadcast = 2900 + 270.08 = 3170.08
+        # adjusted_start_broadcast = 3170.08 - 30 = 3140.08
+        assert r25["last_seconds_broadcast"] == pytest.approx(3170.08, abs=0.001)
+        assert r25["adjusted_start_broadcast"] == pytest.approx(3140.08, abs=0.001)
+
+    def test_update_refined_missing_duration_no_compute(self, state):
+        # Set duration to None for first advert
+        state["ad_breaks"][0]["adverts"][0]["scheduled_duration_seconds"] = None
+        updates = [
+            {
+                "refined_25fps": {
+                    "last_timecode": "00:04:30.080",
+                    "last_seconds_clip": 270.08,
+                    "clip_frame": 40,
+                }
+            },
+        ]
+        update_break_adverts(state, ad_break_index=1, updates=updates)
+
+        r25 = state["ad_breaks"][0]["adverts"][0]["refined_25fps"]
+        assert r25.get("adjusted_start_broadcast") is None
+
+    def test_update_status(self, state):
+        updates = [{"status": "identified"}, {"status": "identified"}]
+        update_break_adverts(state, ad_break_index=1, updates=updates)
+        assert state["ad_breaks"][0]["adverts"][0]["status"] == "identified"
+
+    def test_update_second_break(self, state):
+        updates = [{"status": "refined"}]
+        update_break_adverts(state, ad_break_index=2, updates=updates)
+        assert state["ad_breaks"][1]["adverts"][0]["status"] == "refined"
+        # First break should be unchanged
+        assert state["ad_breaks"][0]["adverts"][0]["status"] == "metadata_extracted"
+
+    def test_invalid_break_index(self, state):
+        with pytest.raises(IndexError):
+            update_break_adverts(state, ad_break_index=99, updates=[])
+
+
+class TestGetAdjustedStarts:
+    @pytest.fixture
+    def state(self, tmp_path):
+        meta_path = tmp_path / "sample_metadata.json"
+        meta_path.write_text(json.dumps(SAMPLE_METADATA))
+        s = create_initial_state(str(meta_path), before_secs=10.0)
+        # Apply refinement to both adverts in break 1
+        update_break_adverts(s, ad_break_index=1, updates=[
+            {"refined_25fps": {"last_timecode": "00:04:30.080", "last_seconds_clip": 270.08, "clip_frame": 40}},
+            {"refined_25fps": {"last_timecode": "00:04:50.000", "last_seconds_clip": 290.0, "clip_frame": 50}},
+        ])
+        return s
+
+    def test_returns_adjusted_starts(self, state):
+        starts = get_adjusted_starts(state, ad_break_index=1)
+        assert len(starts) == 2
+        assert starts[0] is not None  # computed
+        assert starts[1] is not None  # computed
+
+    def test_returns_none_for_unrefined(self, state):
+        # Break 2 has no refinement
+        starts = get_adjusted_starts(state, ad_break_index=2)
+        assert len(starts) == 1
+        assert starts[0] is None
