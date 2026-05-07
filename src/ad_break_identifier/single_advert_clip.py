@@ -192,21 +192,22 @@ def calculate_durations(adverts: list[dict], default_duration: int = 30) -> list
                     f"Cannot calculate duration for first advert (index {advert['index']}): "
                     "no previous advert to reference"
                 )
-            prev_timecode = adverts[i - 1]["last_timecode"]
-            curr_timecode = advert["last_timecode"]
-            prev_secs = timecode_to_seconds(prev_timecode)
-            curr_secs = timecode_to_seconds(curr_timecode)
-            duration = curr_secs - prev_secs
-            if duration <= 0:
-                raise ValueError(
-                    f"Invalid duration calculation for advert {advert['index']}: "
-                    f"{curr_timecode} - {prev_timecode} = {duration}s"
+            else:
+                prev_timecode = adverts[i - 1]["last_timecode"]
+                curr_timecode = advert["last_timecode"]
+                prev_secs = timecode_to_seconds(prev_timecode)
+                curr_secs = timecode_to_seconds(curr_timecode)
+                duration = curr_secs - prev_secs
+                if duration <= 0:
+                    raise ValueError(
+                        f"Invalid duration calculation for advert {advert['index']}: "
+                        f"{curr_timecode} - {prev_timecode} = {duration}s"
+                    )
+                advert["duration_seconds"] = int(duration)
+                logger.info(
+                    f"Advert {advert['index']}: calculated duration = {duration}s "
+                    f"({prev_timecode} to {curr_timecode})"
                 )
-            advert["duration_seconds"] = int(duration)
-            logger.info(
-                f"Advert {advert['index']}: calculated duration = {duration}s "
-                f"({prev_timecode} to {curr_timecode})"
-            )
 
     return adverts
 
