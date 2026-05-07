@@ -64,16 +64,17 @@ advert-identifier-pipeline \
 **What happens:**
 1. Extracts metadata from CSV → JSON + pipeline state file
 2. Extracts video clips centered on ad breaks
-3. Runs AI analysis to identify adverts (updates pipeline state)
-4. Extracts individual advert clips (lossless, reads adjusted_start from state)
-5. Generates summary report
+3. Runs AI analysis to identify adverts at 1 FPS (updates pipeline state)
+4. Refines boundaries to frame accuracy at 25 FPS (updates pipeline state)
+5. Extracts individual advert clips (lossless, reads adjusted_start from state)
+6. Generates summary report
 
 **Output:**
 - `{video}_metadata.json` — scheduling metadata
 - `{video}_pipeline_state.json` — advert tracking across all stages
 - `{video}_{timecode}_CLIP.mp4` — 6-minute ad break clips
 - `{video}.xml` — 1 FPS detection results
-- `{video}_refined.xml` — 25 FPS refinement results (if run)
+- `{video}_refined.xml` — 25 FPS refinement results (auto-generated)
 - `{unique_id}_{category}_{brand}.mp4` — individual advert clips
 - `advert_identifier_pipeline_summary.txt` — pipeline report
 

@@ -52,9 +52,9 @@ advert-identifier-pipeline \
 ```
 
 The pipeline creates a **pipeline state file** (`{video}_pipeline_state.json`) at Stage 1
-and threads it through every subsequent stage. This file tracks each advert's progression
-from metadata extraction → 1 FPS identification → 25 FPS refinement → clip extraction,
-including the computed `adjusted_start_broadcast` used for accurate FFmpeg seek offsets.
+and threads it through every subsequent stage. It runs three analysis stages per ad break:
+**1 FPS identification** → **25 FPS frame refinement** → **lossless clip extraction**,
+with full coordinate transformation from clip-relative to broadcast-absolute timecodes.
 
 ## Installation
 
@@ -115,10 +115,11 @@ See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) for complete documentation.
 
 1. **Metadata Extraction**: Parses video filenames to find matching CSV scheduling data
 2. **Clip Extraction**: Uses FFmpeg to extract clips centered on ad break timestamps
-3. **AI Analysis**: Vision-language model identifies last frame of each advert
+3. **AI Analysis**: Vision-language model identifies last frame of each advert at 1 FPS
 4. **Ensemble Voting**: Multiple API calls with median voting for accuracy
-5. **Advert Clip Extraction**: Extracts individual advert clips using last timecode and duration
-6. **Pipeline State Tracking**: A persistent state file (`_pipeline_state.json`) tracks every
+5. **Frame Refinement** (optional): 25 FPS analysis refines boundaries to millisecond precision
+6. **Advert Clip Extraction**: Extracts individual advert clips using refined timecode and duration
+7. **Pipeline State Tracking**: A persistent state file (`_pipeline_state.json`) tracks every
    advert through all stages, maintaining coordinate transformations between clip-relative
    and broadcast-absolute timecodes with millisecond precision.
 

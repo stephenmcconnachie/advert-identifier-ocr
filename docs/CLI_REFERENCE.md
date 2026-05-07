@@ -136,12 +136,14 @@ For each video file, the pipeline:
 
 1. **Metadata Extraction**: Finds matching CSV, converts to JSON + pipeline state
 2. **Clip Extraction**: Extracts clips using FFmpeg
-3. **Advert Identification**: Runs AI analysis with ensemble voting (updates state)
-4. **Results Collection**: Parses XML outputs
-5. **Summary Report**: Creates `advert_identifier_pipeline_summary.txt`
+3. **Advert Identification**: Runs AI analysis at 1 FPS with ensemble voting (updates state)
+4. **Frame Refinement**: Runs 25 FPS analysis for millisecond-precision boundaries (updates state)
+5. **Clip Extraction**: Extracts individual advert clips using refined timecodes
+6. **Summary Report**: Creates `advert_identifier_pipeline_summary.txt`
 
 The pipeline computes `clip_offset` from the JSON metadata and passes it to
 the clip extraction stage, ensuring correct broadcast-absolute seek offsets.
+The 25 FPS refinement runs automatically between stages 3 and 5.
 
 ---
 

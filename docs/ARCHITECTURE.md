@@ -187,7 +187,7 @@ JSON metadata → Extract timestamps → FFmpeg → Video clips
 - Runs FFmpeg to extract clips
 - Optional: adds timecode or frame overlay
 
-### Stage 3: Advert Identification
+### Stage 3: Advert Identification (1 FPS)
 
 ```
 Video clip + Metadata → vLLM API → Parse XML → Vote → XML results
@@ -200,24 +200,21 @@ Video clip + Metadata → vLLM API → Parse XML → Vote → XML results
 - Outputs XML results
 - Updates pipeline state with `coarse_1fps` data
 
-### Stage 4: Frame Refinement (Optional)
+### Stage 4: Frame Refinement (25 FPS)
 
-For frame-accurate advert boundaries, the refinement stage runs after primary detection:
+The pipeline automatically runs frame-accurate refinement after 1 FPS detection:
 
 ```
-Coarse XML + Video URL → FFmpeg clip → 25 FPS VLLM → Ensemble vote → Refined XML
-                                                                       └→ Pipeline state update (refined_25fps)
+Coarse XML + Clip URL → FFmpeg clip → 25 FPS VLLM → Ensemble vote → Refined XML
+                                                                    └→ Pipeline state update (refined_25fps)
 ```
 
 **Process per advert:**
 1. Extract 3-second clip centered on coarse timecode (1.5s before/after)
 2. Send clip to VLLM at 25 FPS (75 frames) with brand/advertiser/category context
 3. Ensemble of 3 calls vote on precise last frame (0-74 within clip at 25fps)
-4. Calculate `refined_timecode = floor(clip_start + (frame / fps))` snapped to nearest frame boundary
-5. Millisecond value is always a clean multiple of `1/fps` (e.g., `.000`, `.040`, `.080` at 25 FPS)
-6. Floor semantics ensure timecode never advances into the next advert
-7. Updates pipeline state with `refined_25fps` including auto-computed `adjusted_start_broadcast`
-8. Fall back to coarse timecode on failure
+4. Compute refined HH:MM:SS.mmm timecode, floor-snapped to 1/fps boundary
+5. Updates pipeline state with `refined_25fps` including `adjusted_start_broadcast`
 
 **FPS Configuration:**
 - Default: 25 FPS (PAL video sources)
@@ -233,6 +230,14 @@ Coarse XML + Video URL → FFmpeg clip → 25 FPS VLLM → Ensemble vote → Ref
 | Context | Full advert sequence | Single advert with brand info |
 | Output | MM:SS timecode | HH:MM:SS.mmm (floor-snapped to 1/fps) |
 
+### Stage 5: Advert Clip Extraction
+
+Uses the refined XML (or coarse XML if refinement unavailable) to extract
+lossless H.264 clips of each individual advert from the full broadcast video.
+
+The `adjusted_start_broadcast` value from the pipeline state file (or computed
+from `refined_timecode + clip_offset - duration`) determines the FFmpeg seek offset.
+
 ---
 
 ## Pipeline State File
@@ -240,15 +245,6 @@ Coarse XML + Video URL → FFmpeg clip → 25 FPS VLLM → Ensemble vote → Ref
 The pipeline state file (`{video}_pipeline_state.json`) is the system of record
 for advert progression through all stages. It is created at Stage 1 and updated
 by each subsequent stage.
-
-### Purpose
-
-- **Persistent tracking**: Every advert's status is recorded from metadata extraction
-  through final clip extraction
-- **Coordinate transformation**: Converts between clip-relative timecodes and
-  broadcast-absolute seek offsets using pre-computed `clip_offset`
-- **Millisecond precision**: Maintains full precision of 25 FPS refinement results
-- **Audit trail**: Each advert has a complete history of detected values
 
 ### State Machine
 
