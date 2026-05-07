@@ -1,0 +1,97 @@
+<ad_break>
+    <advert>
+        <unique_id>LBEDISN002020</unique_id>
+        <brand>Disneyland Paris</brand>
+        <advertiser></advertiser>
+        <category></category>
+        <duration_seconds>20</duration_seconds>
+        <last_timecode>02:03</last_timecode>
+        <refined_timecode>00:02:04.240</refined_timecode>
+        <refined_clip_frame>69</refined_clip_frame>
+        <refinement_status>success</refinement_status>
+        <description>The Disneyland Paris ad is visible until approximately 26.0 seconds based on the provided timestamps, while the Google Pixel 8 ad begins at 26.0 seconds. Assuming the video content scales to fit the requested 75-frame range (derived from 27 seconds of content mapped to 75 frames), the transition occurs at frame index 72. Thus, frame 72 is the last frame showing Disneyland Paris.</description>
+    </advert>
+    <advert>
+        <unique_id>ANOANGP104020</unique_id>
+        <brand>Google Pixel 8</brand>
+        <advertiser></advertiser>
+        <category></category>
+        <duration_seconds>20</duration_seconds>
+        <last_timecode>02:24</last_timecode>
+        <refined_timecode>00:02:23.960</refined_timecode>
+        <refined_clip_frame>37</refined_clip_frame>
+        <refinement_status>success</refinement_status>
+        <description>The video displays the Google Pixel 8 &quot;Proud Partner&quot; screen from the beginning. The scene cuts to a Domestos product bottle between the 1.7s and 1.8s marks. At 1.7s the logo is visible, and at 1.8s the bottle is visible. Assuming 25fps, frame 44 corresponds to 1.76s, which falls right before the 1.8s mark, making it the likely last frame of the Pixel ad.</description>
+    </advert>
+    <advert>
+        <unique_id>MLLDOPF060020</unique_id>
+        <brand>Domestos Power Foam</brand>
+        <advertiser></advertiser>
+        <category></category>
+        <duration_seconds>20</duration_seconds>
+        <last_timecode>02:43</last_timecode>
+        <refined_timecode>00:02:43.720</refined_timecode>
+        <refined_clip_frame>56</refined_clip_frame>
+        <refinement_status>success</refinement_status>
+        <description>The prompt specifies a 3-second clip (75 frames at 25fps) covering 1.5s before and after the estimated end of the Domestos ad. Frame 0 is defined as 1.5s before the end, meaning the end of the ad coincides with Frame 0 + 1.5s = 37 frames. Thus, Frame 37 is the last frame of the Domestos ad, followed immediately by the next advertisement.</description>
+    </advert>
+    <advert>
+        <unique_id>ACBLIUK090020</unique_id>
+        <brand>Lidl Easter</brand>
+        <advertiser></advertiser>
+        <category></category>
+        <duration_seconds>20</duration_seconds>
+        <last_timecode>03:03</last_timecode>
+        <refined_timecode>00:03:02.960</refined_timecode>
+        <refined_clip_frame>37</refined_clip_frame>
+        <refinement_status>success</refinement_status>
+        <description>The prompt indicates the estimated end of the Lidl Easter advert is at frame 37 (1.5s into a 3s clip, since Frame 0 is 1.5s before the end). The visual content transitions from the Lidl &quot;Big on quality&quot; graphic to the &quot;Insure and Go&quot; pool scene at this midpoint. Thus, frame 37 is the last frame of the Lidl ad.</description>
+    </advert>
+    <advert>
+        <unique_id>DAAINSU007030</unique_id>
+        <brand>Insure &amp; Go</brand>
+        <advertiser></advertiser>
+        <category></category>
+        <duration_seconds>30</duration_seconds>
+        <last_timecode>03:34</last_timecode>
+        <refined_timecode>00:03:33.960</refined_timecode>
+        <refined_clip_frame>37</refined_clip_frame>
+        <refinement_status>success</refinement_status>
+        <description>The video shows an &#x27;Insure &amp; Go&#x27; advertisement from 0.0s to approximately 1.5s. The scene transitions to a different ad (Age UK/Kathy) at 1.6s. At 25fps, the 1.5s mark corresponds to frame 37 (or 37.5), making it the last frame of the first ad.</description>
+    </advert>
+    <advert>
+        <unique_id>WPNALIL049060</unique_id>
+        <brand>Age Uk Weekly Lottery</brand>
+        <advertiser></advertiser>
+        <category></category>
+        <duration_seconds>60</duration_seconds>
+        <last_timecode>04:34</last_timecode>
+        <refined_timecode>00:04:34.080</refined_timecode>
+        <refined_clip_frame>40</refined_clip_frame>
+        <refinement_status>success</refinement_status>
+        <description>The beach scene featuring the woman and the Age UK branding concludes at this frame. Frame 18 transitions immediately to a cheese advertisement.</description>
+    </advert>
+    <advert>
+        <unique_id>PCHPPGP001010</unique_id>
+        <brand>Consorzio Grana Padano</brand>
+        <advertiser></advertiser>
+        <category></category>
+        <duration_seconds>10</duration_seconds>
+        <last_timecode>04:44</last_timecode>
+        <refined_timecode>00:04:44.200</refined_timecode>
+        <refined_clip_frame>43</refined_clip_frame>
+        <refinement_status>success</refinement_status>
+        <description>The Grana Padano ad is visible until approximately 1.7 seconds. With 75 frames over 3 seconds (25 fps), frame 43 corresponds to 1.72s. The transition to the property ad happens between 1.7s and 1.8s. The thumbnail at 1.7s shows the cheese (Frame 42/43), and 1.8s shows the houses. Given the sequence, Frame 43 is the last frame containing the cheese ad.</description>
+    </advert>
+    <advert>
+        <unique_id>HASFCPA002030</unique_id>
+        <brand>Fast Cash Property</brand>
+        <advertiser></advertiser>
+        <category></category>
+        <last_timecode>05:14</last_timecode>
+        <refined_timecode>00:05:13.960</refined_timecode>
+        <refined_clip_frame>37</refined_clip_frame>
+        <refinement_status>success</refinement_status>
+        <description>The &quot;Fast Cash Property&quot; graphic is displayed from the start of the clip. The estimated end is frame 37, which corresponds to 1.5 seconds into the 3-second clip (75 frames / 25fps). The transition to the countdown &quot;1 1 1...&quot; and &quot;itv1&quot; occurs immediately after this point, confirming frame 37 as the final frame of the property advertisement.</description>
+    </advert>
+</ad_break>

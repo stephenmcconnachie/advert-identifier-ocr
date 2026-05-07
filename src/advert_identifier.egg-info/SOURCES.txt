@@ -5,8 +5,10 @@ src/ad_break_identifier/api_client.py
 src/ad_break_identifier/cli.py
 src/ad_break_identifier/config.py
 src/ad_break_identifier/ensemble.py
+src/ad_break_identifier/ensemble_filter.py
 src/ad_break_identifier/main.py
 src/ad_break_identifier/models.py
+src/ad_break_identifier/pipeline_state.py
 src/ad_break_identifier/prompts.py
 src/ad_break_identifier/prompts_v1.py
 src/ad_break_identifier/refinement.py
@@ -19,3 +21,9 @@ src/advert_identifier.egg-info/dependency_links.txt
 src/advert_identifier.egg-info/entry_points.txt
 src/advert_identifier.egg-info/requires.txt
 src/advert_identifier.egg-info/top_level.txt
+tests/test_cli_and_pipeline.py
+tests/test_ensemble_filter.py
+tests/test_model_vote_stats.py
+tests/test_pipeline_state.py
+tests/test_refinement_integration.py
+tests/test_single_advert_clip.py

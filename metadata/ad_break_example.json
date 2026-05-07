@@ -1,0 +1,27 @@
+{
+  "programme_before": {
+    "title": "Lorraine",
+    "channel": "ITV1"
+  },
+  "programme_after": {
+    "title": "Daybreak",
+    "channel": "ITV1"
+  },
+  "channel_ident_expected": true,
+  "adverts": [
+    {
+      "unique_id": "adv_001",
+      "advertiser": "Tesco PLC",
+      "brand": "Tesco",
+      "category": "retail",
+      "duration_seconds": 20
+    },
+    {
+      "unique_id": "adv_002",
+      "advertiser": "Walt Disney",
+      "brand": "Disneyland",
+      "category": "theme park",
+      "duration_seconds": 30
+    }
+  ]
+}

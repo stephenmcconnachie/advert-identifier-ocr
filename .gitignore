@@ -14,8 +14,8 @@ __pycache__/
 *.avi
 
 # Output files
-*.xml
-*.json
+#*.xml
+#*.json
 
 # Virtual environments
 .venv/

@@ -1,0 +1,288 @@
+{
+  "video_info": {
+    "filepath": "2024-03-26_ITV1HD_16:00:00.mp4",
+    "date": "2024-03-26",
+    "channel": "ITV1HD",
+    "start_time": "16:00:00",
+    "duration_seconds": 3625.04,
+    "end_time": "17:00:25"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "is_partial": false,
+      "programme_before": {
+        "title": "TIPPING POINT RPT",
+        "channel": "ITV1 HD"
+      },
+      "programme_after": {
+        "title": "TIPPING POINT RPT",
+        "channel": "ITV1 HD"
+      },
+      "start_time": "16:11:29",
+      "end_time": "16:13:09",
+      "adverts": [
+        {
+          "unique_id": "OGYDULX002020",
+          "advertiser": "I c i paints",
+          "brand": "Dulux colour",
+          "category": "Paints",
+          "duration_seconds": 20,
+          "start_time": "16:11:29",
+          "position_in_break": "First"
+        },
+        {
+          "unique_id": "TTBDGCH001030",
+          "advertiser": "Frieslandcampina",
+          "brand": "Chocomel milk drink",
+          "category": "Milk drinks",
+          "duration_seconds": 30,
+          "start_time": "16:11:49",
+          "position_in_break": "2nd"
+        },
+        {
+          "unique_id": "TBMMPHY459030",
+          "advertiser": "Merlin entertainment",
+          "brand": "Merlin annual pass",
+          "category": "Theme parks",
+          "duration_seconds": 30,
+          "start_time": "16:12:19",
+          "position_in_break": "3rd"
+        },
+        {
+          "unique_id": "AEDUNPN377010",
+          "advertiser": "Unilever bestfoods",
+          "brand": "Pot noodle",
+          "category": "Instant snack pasta/rice/noodles",
+          "duration_seconds": null,
+          "start_time": "16:12:49",
+          "position_in_break": "Last"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "is_partial": false,
+      "programme_before": {
+        "title": "TIPPING POINT RPT",
+        "channel": "ITV1 HD"
+      },
+      "programme_after": {
+        "title": "TIPPING POINT RPT",
+        "channel": "ITV1 HD"
+      },
+      "start_time": "16:23:53",
+      "end_time": "16:27:23",
+      "adverts": [
+        {
+          "unique_id": "MCPSTVO007060",
+          "advertiser": "Save the children fu",
+          "brand": "Save the children fund",
+          "category": "Children charities",
+          "duration_seconds": 60,
+          "start_time": "16:23:53",
+          "position_in_break": "First"
+        },
+        {
+          "unique_id": "BURTMOR079020",
+          "advertiser": "William morrison sup",
+          "brand": "Morrisons supermarket",
+          "category": "Hot cross buns",
+          "duration_seconds": 20,
+          "start_time": "16:24:53",
+          "position_in_break": "2nd"
+        },
+        {
+          "unique_id": "PGOGILE018030",
+          "advertiser": "Procter & gamble uk",
+          "brand": "Gillette labs razor & shave gel",
+          "category": "Razors - manual",
+          "duration_seconds": 30,
+          "start_time": "16:25:13",
+          "position_in_break": "3rd"
+        },
+        {
+          "unique_id": "BRITOTR077020",
+          "advertiser": "Storck uk",
+          "brand": "Toffifee",
+          "category": "Chocolate - boxed/tinned",
+          "duration_seconds": 20,
+          "start_time": "16:25:43",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "QSTOTBE279030",
+          "advertiser": "On the beach",
+          "brand": "Onthebeach.co.uk",
+          "category": "Travel agents",
+          "duration_seconds": 30,
+          "start_time": "16:26:03",
+          "position_in_break": "3rd last"
+        },
+        {
+          "unique_id": "HASFCPA002030",
+          "advertiser": "Fastcashproperty",
+          "brand": "Fast cash property",
+          "category": "General property services",
+          "duration_seconds": 30,
+          "start_time": "16:26:33",
+          "position_in_break": "2nd last"
+        },
+        {
+          "unique_id": "HOGBOSP779020",
+          "advertiser": "Boots company",
+          "brand": "Boots cosmetics",
+          "category": "Chemists",
+          "duration_seconds": null,
+          "start_time": "16:27:03",
+          "position_in_break": "Last"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "is_partial": false,
+      "programme_before": {
+        "title": "TIPPING POINT RPT",
+        "channel": "ITV1 HD"
+      },
+      "programme_after": {
+        "title": "TIPPING POINT RPT",
+        "channel": "ITV1 HD"
+      },
+      "start_time": "16:37:17",
+      "end_time": "16:40:37",
+      "adverts": [
+        {
+          "unique_id": "HKXDETE141030",
+          "advertiser": "Ccs",
+          "brand": "Ccs childcare careers",
+          "category": "Company & agency recruitment",
+          "duration_seconds": 30,
+          "start_time": "16:37:17",
+          "position_in_break": "First"
+        },
+        {
+          "unique_id": "VCCCOMP759030",
+          "advertiser": "Bisl",
+          "brand": "Comparethemarket.com",
+          "category": "Home & motor insurance",
+          "duration_seconds": 30,
+          "start_time": "16:37:47",
+          "position_in_break": "2nd"
+        },
+        {
+          "unique_id": "MCZVAXV089020",
+          "advertiser": "Vax",
+          "brand": "Vax cordless blade vacuum cleaner",
+          "category": "Small appliances - home",
+          "duration_seconds": 20,
+          "start_time": "16:38:17",
+          "position_in_break": "Cordless vacuum cleaners"
+        },
+        {
+          "unique_id": "MUMKNVA321010",
+          "advertiser": "Kentucky fried chick",
+          "brand": "Kfc original recipe deal",
+          "category": "Fast food restaurants - multi product",
+          "duration_seconds": 10,
+          "start_time": "16:38:37",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "LIPWARB002060",
+          "advertiser": "Warburtons",
+          "brand": "Warburtons bread",
+          "category": "Bread",
+          "duration_seconds": 60,
+          "start_time": "16:38:47",
+          "position_in_break": "3rd last"
+        },
+        {
+          "unique_id": "ANOCRUK414030",
+          "advertiser": "Cancer research uk",
+          "brand": "Cancer research race for life",
+          "category": "Cancer charities",
+          "duration_seconds": 30,
+          "start_time": "16:39:47",
+          "position_in_break": "2nd last"
+        },
+        {
+          "unique_id": "DVNPLMF020030",
+          "advertiser": "Poundland",
+          "brand": "Poundland stores",
+          "category": "Other retail",
+          "duration_seconds": null,
+          "start_time": "16:40:17",
+          "position_in_break": "Last"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "is_partial": false,
+      "programme_before": {
+        "title": "TIPPING POINT RPT",
+        "channel": "ITV1 HD"
+      },
+      "programme_after": {
+        "title": "THE CHASE RPT",
+        "channel": "ITV1 HD"
+      },
+      "start_time": "16:56:26",
+      "end_time": "16:59:16",
+      "adverts": [
+        {
+          "unique_id": "VCCCOMP760030",
+          "advertiser": "Bisl",
+          "brand": "Comparethemarket.com",
+          "category": "Home & motor insurance",
+          "duration_seconds": 30,
+          "start_time": "16:56:26",
+          "position_in_break": "First"
+        },
+        {
+          "unique_id": "ANOANCY154030",
+          "advertiser": "Ancestry.com uk",
+          "brand": "Ancestry.co.uk",
+          "category": "Internet services including isps",
+          "duration_seconds": 30,
+          "start_time": "16:56:56",
+          "position_in_break": "2nd"
+        },
+        {
+          "unique_id": "SSCEEDR028030",
+          "advertiser": "Everything everywher",
+          "brand": "Ee sim only",
+          "category": "Mobile pay monthly - sim only",
+          "duration_seconds": 30,
+          "start_time": "16:57:26",
+          "position_in_break": "3rd"
+        },
+        {
+          "unique_id": "CPBMARI008060",
+          "advertiser": "Marie curie cancer c",
+          "brand": "Marie curie cancer care",
+          "category": "Cancer charities",
+          "duration_seconds": 60,
+          "start_time": "16:57:56",
+          "position_in_break": "2nd last"
+        },
+        {
+          "unique_id": "AEDVEPW065060",
+          "advertiser": "Vegpower",
+          "brand": "Vegetable power awareness",
+          "category": "Media - brand building",
+          "duration_seconds": null,
+          "start_time": "16:58:56",
+          "position_in_break": "Last"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_ad_breaks": 4,
+    "partial_breaks": 0,
+    "total_adverts": 23
+  }
+}
