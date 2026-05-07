@@ -237,12 +237,13 @@ def run_advert_identifier(clip_path: Path, json_path: Path,
     # Get the bin directory (where this script is located)
     bin_dir = Path(__file__).parent
     
-    # Construct video URL: use relative path from parent of input_folder
-    # when available, so subfolders (e.g., dry-run/) are included in the URL
+    # Construct video URL: use relative path from input_folder to clip.
+    # This preserves any subfolder structure (e.g., dry-run/filename.mp4)
+    # so the video server can locate the file correctly.
     if input_folder:
         try:
             rel = clip_path.relative_to(input_folder)
-            video_url = f"{video_server_url.rstrip('/')}/{rel}"
+            video_url = f"{video_server_url.rstrip('/')}/{input_folder.name}/{rel}"
         except ValueError:
             video_url = f"{video_server_url.rstrip('/')}/{clip_path.name}"
     else:
