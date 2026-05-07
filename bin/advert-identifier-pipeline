@@ -183,11 +183,14 @@ def run_clipper(json_path: Path, before_secs: float, after_secs: float,
 
 def find_clip_files(video_dir: Path, video_name: str) -> List[Path]:
     """Find all extracted clip files for a video.
-    
+
+    The clipper produces files named ``{video_stem}_{index}of{total}.mp4``
+    when ``use_video_name=True`` (the default when called via the pipeline).
+
     Returns list of clip files sorted by filename.
     """
-    # Look for files matching pattern: {video_name}_*_CLIP.mp4
-    pattern = f"{video_name}_*_CLIP.mp4"
+    # Look for files matching pattern: {video_name}_*of*.mp4
+    pattern = f"{video_name}_*of*.mp4"
     clips = list(video_dir.glob(pattern))
     
     # Sort by filename to maintain order
