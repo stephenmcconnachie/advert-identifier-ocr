@@ -356,6 +356,57 @@ def run_single_advert_clipper(
         return False, 0
 
 
+def run_refinement(
+    xml_path: Path,
+    clip_url: str,
+    json_path: Path,
+    logger: logging.Logger,
+    verbose: bool = False,
+    debug: bool = False,
+) -> tuple[bool, Path | None]:
+    """Run advert-identifier-refine for 25 FPS frame-accurate boundaries.
+
+    Args:
+        xml_path: Coarse XML from 1 FPS detection.
+        clip_url: URL to the clip (same video used for 1 FPS).
+        json_path: Metadata JSON (for pipeline state update).
+        logger: Logger instance.
+        verbose: Pass --verbose to the refiner.
+        debug: Pass --debug to the refiner.
+
+    Returns:
+        Tuple of (success, refined_xml_path).
+    """
+    bin_dir = Path(__file__).parent
+    refined_path = xml_path.parent / f"{xml_path.stem}_refined.xml"
+
+    cmd = [
+        sys.executable,
+        str(bin_dir / "advert-identifier-refine"),
+        "--xml-file", str(xml_path),
+        "--video-url", clip_url,
+        "--json-file", str(json_path),
+    ]
+
+    if verbose:
+        cmd.append("--verbose")
+    if debug:
+        cmd.append("--debug")
+
+    logger.info(f"Running frame refinement: {' '.join(cmd)}")
+
+    try:
+        subprocess.run(cmd, capture_output=True, text=True, check=True)
+        if refined_path.exists():
+            logger.info(f"Refinement completed: {refined_path}")
+            return True, refined_path
+        logger.warning(f"Refinement ran but {refined_path} not found")
+        return False, None
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Refinement failed: {e.stderr}")
+        return False, None
+
+
 def parse_last_advert_info(xml_path: Path) -> Tuple[Optional[str], Optional[str]]:
     """Parse XML to find the last advert's timecode/frame."""
     try:
@@ -608,10 +659,19 @@ def main() -> int:
                 # Parse last advert info
                 last_time, last_type = parse_last_advert_info(xml_path)
 
-                # Step 4: Extract individual advert clips
+                # Step 4: Run 25 FPS frame refinement
+                clip_url = f"{args.video_server_url.rstrip('/')}/{clip_path.name}"
+                ref_success, refined_xml_path = run_refinement(
+                    xml_path, clip_url, json_path, logger,
+                    verbose=args.verbose, debug=args.debug,
+                )
+                # Use refined XML for clip extraction if available
+                clip_xml = refined_xml_path if ref_success and refined_xml_path else xml_path
+
+                # Step 5: Extract individual advert clips
                 original_video_url = f"{args.video_server_url.rstrip('/')}/{mp4_file.name}"
                 clips_success, clip_count = run_single_advert_clipper(
-                    xml_path, original_video_url, mp4_file.parent,
+                    clip_xml, original_video_url, mp4_file.parent,
                     json_path, ad_break_index, args.before_secs, logger,
                     state_file_path=state_file_path,
                     log_level=args.log_level,
