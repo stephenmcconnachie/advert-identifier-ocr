@@ -79,6 +79,16 @@ def create_parser() -> argparse.ArgumentParser:
         help="Logging level (default: INFO)"
     )
     parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show detailed progress information during sub-commands"
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Save debug output from sub-commands (debug.json, debug_refine.json)"
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Preview what would be processed without executing"
@@ -153,7 +163,8 @@ def run_metadata_extractor(video_path: Path, csv_folder: Path, output_dir: Path,
 
 
 def run_clipper(json_path: Path, before_secs: float, after_secs: float, 
-                logger: logging.Logger) -> Tuple[bool, Optional[Path]]:
+                logger: logging.Logger,
+                log_level: str = "INFO") -> Tuple[bool, Optional[Path]]:
     """Run advert-identifier-clip to extract video clips."""
     # The clipper creates clips in the same directory as the video
     # Clips are named: {video_name}_{timecode}_CLIP.mp4
@@ -169,6 +180,9 @@ def run_clipper(json_path: Path, before_secs: float, after_secs: float,
         "--after-secs", str(after_secs),
         "--overlay-type", "none"
     ]
+
+    if log_level and log_level != "INFO":
+        cmd.extend(["--log-level", log_level])
     
     logger.info(f"Running clipper: {' '.join(cmd)}")
     
@@ -199,7 +213,9 @@ def find_clip_files(video_dir: Path, video_name: str) -> List[Path]:
 
 def run_advert_identifier(clip_path: Path, json_path: Path, 
                           ad_break_index: int, video_server_url: str,
-                          logger: logging.Logger) -> Tuple[bool, Optional[Path], int]:
+                          logger: logging.Logger,
+                          verbose: bool = False,
+                          debug: bool = False) -> Tuple[bool, Optional[Path], int]:
     """Run advert-identifier to identify adverts in clip.
     
     Args:
@@ -208,6 +224,8 @@ def run_advert_identifier(clip_path: Path, json_path: Path,
         ad_break_index: Index of which ad break in the JSON to process
         video_server_url: Base URL for video server (e.g., http://server:port)
         logger: Logger instance
+        verbose: Pass --verbose to the identifier.
+        debug: Pass --debug to the identifier.
         
     Returns:
         Tuple of (success, xml_path, advert_count)
@@ -226,6 +244,11 @@ def run_advert_identifier(clip_path: Path, json_path: Path,
         "--ad-break-index", str(ad_break_index),
         "--mode", "timecode"
     ]
+
+    if verbose:
+        cmd.append("--verbose")
+    if debug:
+        cmd.append("--debug")
     
     logger.info(f"Running advert identifier for ad break {ad_break_index}: {' '.join(cmd)}")
     
@@ -263,6 +286,7 @@ def run_single_advert_clipper(
     before_secs: float,
     logger: logging.Logger,
     state_file_path: Path | None = None,
+    log_level: str = "INFO",
 ) -> Tuple[bool, int]:
     """Run advert-identifier-single-advert-clip to extract advert clips.
 
@@ -311,6 +335,9 @@ def run_single_advert_clipper(
     if state_file_path:
         cmd.extend(["--state-file", str(state_file_path)])
         logger.info(f"Using pipeline state file: {state_file_path}")
+
+    if log_level and log_level != "INFO":
+        cmd.extend(["--log-level", log_level])
 
     logger.info(f"Running advert clip extraction")
 
@@ -540,7 +567,8 @@ def main() -> int:
                 logger.info("No pipeline state file found (stages will write state as they run)")
         
         # Step 2: Extract clips
-        success, clips_dir = run_clipper(json_path, args.before_secs, args.after_secs, logger)
+        success, clips_dir = run_clipper(json_path, args.before_secs, args.after_secs, logger,
+                                          log_level=args.log_level)
         if not success:
             result['status'] = 'Failed - Clip extraction failed'
             result['error'] = 'See log for details'
@@ -567,7 +595,8 @@ def main() -> int:
             logger.info(f"\nProcessing ad break {ad_break_index + 1}/{len(clip_paths)}: {clip_path.name}")
             
             success, xml_path, advert_count = run_advert_identifier(
-                clip_path, json_path, ad_break_index, args.video_server_url, logger
+                clip_path, json_path, ad_break_index, args.video_server_url, logger,
+                verbose=args.verbose, debug=args.debug,
             )
             
             if success:
@@ -580,6 +609,7 @@ def main() -> int:
                     xml_path, original_video_url, mp4_file.parent,
                     json_path, ad_break_index, args.before_secs, logger,
                     state_file_path=state_file_path,
+                    log_level=args.log_level,
                 )
 
                 ad_break_results.append({
