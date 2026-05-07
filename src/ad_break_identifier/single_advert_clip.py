@@ -167,18 +167,27 @@ def parse_advert_xml(xml_path: str) -> list[dict]:
     return adverts
 
 
-def calculate_durations(adverts: list[dict]) -> list[dict]:
+def calculate_durations(adverts: list[dict], default_duration: int = 30) -> list[dict]:
     """Calculate duration_seconds for last advert if missing.
     
     Args:
         adverts: List of advert dicts.
+        default_duration: Default duration in seconds for a single-advert
+            break when no duration is available (default: 30).
         
     Returns:
         Updated adverts list with all durations filled.
     """
     for i, advert in enumerate(adverts):
         if advert["duration_seconds"] is None:
-            if i == 0:
+            if i == 0 and len(adverts) == 1:
+                # Single-advert break with no duration — use default
+                advert["duration_seconds"] = default_duration
+                logger.info(
+                    f"Advert {advert['index']}: single advert, no duration in XML, "
+                    f"using default {default_duration}s"
+                )
+            elif i == 0:
                 raise ValueError(
                     f"Cannot calculate duration for first advert (index {advert['index']}): "
                     "no previous advert to reference"
