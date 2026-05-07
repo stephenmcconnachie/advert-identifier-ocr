@@ -33,3 +33,7 @@ venv/
 
 # Egg info
 *.egg-info/
+
+# Application files
+.hermes
+.obsidian
