@@ -241,7 +241,7 @@ def run_advert_identifier(clip_path: Path, json_path: Path,
         str(bin_dir / "advert-identifier"),
         "-v", video_url,
         "--metadata-file", str(json_path),
-        "--ad-break-index", str(ad_break_index),
+        "--ad-break-index", str(ad_break_index + 1),  # CLI expects 1-based
         "--mode", "timecode"
     ]
 
