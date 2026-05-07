@@ -215,17 +215,21 @@ def run_advert_identifier(clip_path: Path, json_path: Path,
                           ad_break_index: int, video_server_url: str,
                           logger: logging.Logger,
                           verbose: bool = False,
-                          debug: bool = False) -> Tuple[bool, Optional[Path], int]:
+                          debug: bool = False,
+                          input_folder: Path | None = None) -> Tuple[bool, Optional[Path], int]:
     """Run advert-identifier to identify adverts in clip.
     
     Args:
-        clip_path: Path to video clip (filesystem path)
-        json_path: Path to metadata JSON
-        ad_break_index: Index of which ad break in the JSON to process
-        video_server_url: Base URL for video server (e.g., http://server:port)
-        logger: Logger instance
+        clip_path: Path to video clip (filesystem path).
+        json_path: Path to metadata JSON.
+        ad_break_index: Index of which ad break in the JSON to process.
+        video_server_url: Base URL for video server (e.g., http://server:port).
+        logger: Logger instance.
         verbose: Pass --verbose to the identifier.
         debug: Pass --debug to the identifier.
+        input_folder: Input folder for resolving relative video URLs.
+            When provided, clip URL is constructed relative to input_folder.parent
+            to support files in subdirectories.
         
     Returns:
         Tuple of (success, xml_path, advert_count)
@@ -233,9 +237,17 @@ def run_advert_identifier(clip_path: Path, json_path: Path,
     # Get the bin directory (where this script is located)
     bin_dir = Path(__file__).parent
     
-    # Construct HTTP URL from server base + clip filename
-    video_url = f"{video_server_url.rstrip('/')}/{clip_path.name}"
-    
+    # Construct video URL: use relative path from parent of input_folder
+    # when available, so subfolders (e.g., dry-run/) are included in the URL
+    if input_folder:
+        try:
+            rel = clip_path.relative_to(input_folder)
+            video_url = f"{video_server_url.rstrip('/')}/{rel}"
+        except ValueError:
+            video_url = f"{video_server_url.rstrip('/')}/{clip_path.name}"
+    else:
+        video_url = f"{video_server_url.rstrip('/')}/{clip_path.name}"
+
     cmd = [
         sys.executable,
         str(bin_dir / "advert-identifier"),
@@ -597,6 +609,7 @@ def main() -> int:
             success, xml_path, advert_count = run_advert_identifier(
                 clip_path, json_path, ad_break_index, args.video_server_url, logger,
                 verbose=args.verbose, debug=args.debug,
+                input_folder=input_folder,
             )
             
             if success:
