@@ -430,6 +430,7 @@ def main() -> int:
                 # Determine start time: prefer pipeline state adjusted_start,
                 # then fall back to clip-relative timecode + clip_offset
                 start_secs = None
+                duration = advert["duration_seconds"]
                 time_source_desc = ""
                 if args.state_file:
                     try:
@@ -449,7 +450,6 @@ def main() -> int:
                 if start_secs is None:
                     # Fall back to clip-relative timecode + clip_offset
                     time_source = advert.get("refined_timecode") or advert["last_timecode"]
-                    duration = advert["duration_seconds"]
                     last_secs = timecode_to_seconds(time_source)
                     start_secs = last_secs - duration + args.clip_offset
                     time_source_desc = (
