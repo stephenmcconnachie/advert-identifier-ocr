@@ -1,6 +1,10 @@
 # Advert Identifier
 
-AI-powered advert identification in TV broadcast videos using vision-language models.
+AI-powered advert identification in TV broadcast videos using vision-language models to identify advert start and end to frame-accurate levels.
+
+This pipeline requires basic description of each advert with approximate start time and duration. 
+
+It doesn't work without that prior descriptive metadata, so it won't identify adverts from a cold start.
 
 ## Quick Start
 
