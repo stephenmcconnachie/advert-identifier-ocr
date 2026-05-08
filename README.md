@@ -1,4 +1,4 @@
-# Ad Break Identifier
+# Advert Identifier
 
 AI-powered advert identification in TV broadcast videos using vision-language models.
 
