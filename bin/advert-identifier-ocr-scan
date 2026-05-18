@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+"""OCR-based 1 FPS advert boundary detection - Entry point."""
+
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from ad_break_identifier.ocr_scan import main
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -111,6 +111,20 @@ def refine_main():
     main()
 
 
+def ocr_scan_main():
+    """Entry point for advert-identifier-ocr-scan command."""
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from ad_break_identifier.ocr_scan import main
+    sys.exit(main())
+
+
+def ocr_refine_main():
+    """Entry point for advert-identifier-ocr-refine command."""
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from ad_break_identifier.ocr_refine import main
+    sys.exit(main())
+
+
 if __name__ == "__main__":
     # Default to identifier if called directly
     identifier_main()
