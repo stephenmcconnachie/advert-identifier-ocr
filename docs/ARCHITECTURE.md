@@ -6,10 +6,12 @@ How the ad break identifier system works.
 
 ## System Overview
 
-The ad break identifier uses a vision-language model (VLM) to analyze TV broadcast
-videos and identify the last frame of each advertisement in an ad break sequence.
+The ad break identifier supports two approaches for advert boundary detection:
 
-### Key Components
+- **VLM-based** (default): Uses a vision-language model to analyze video streams
+- **OCR-based** (experimental): Uses OCR models to read text from extracted frames and match against metadata
+
+### Key Components (VLM)
 
 1. **Metadata Extractor** — Parses CSV scheduling data
 2. **Video Clipper** — Extracts clips using FFmpeg
@@ -17,6 +19,17 @@ videos and identify the last frame of each advertisement in an ad break sequence
 4. **Ensemble Voter** — Combines multiple API responses
 5. **Frame Refiner** — High-precision boundary detection using 25 FPS analysis
 6. **Pipeline State Manager** — Persistent JSON tracking across all stages
+
+### Key Components (OCR)
+
+1. **Metadata Extractor** — Same as VLM pipeline
+2. **Video Clipper** — Same as VLM pipeline
+3. **Frame Extractor** — FFmpeg-based frame extraction at 1 FPS and 25 FPS
+4. **OCR Client** — vLLM chat completions with base64-encoded images
+5. **Text Matcher** — Regex-based matching of OCR output against brand/advertiser metadata
+6. **OCR Scanner (Stage 1)** — 1 FPS frame-by-frame OCR scan for coarse boundaries
+7. **OCR Refiner (Stage 2)** — 25 FPS frame-by-frame OCR scan for precise boundaries
+8. **Pipeline State Manager** — Same as VLM pipeline
 
 ---
 
@@ -30,15 +43,31 @@ The VLM receives:
    - Programme before and after the ad break
    - List of adverts with brands, durations, and categories
 
-### How Detection Works
+### OCR Detection Strategy
 
-1. **Frame-by-frame analysis**: Reviews all frames in the video clip
-2. **Brand logo detection**: Looks for brand names/logos in final frames of each advert
-3. **Duration-based sequencing**: Uses provided durations to identify advert boundaries
-4. **Last frame identification**: Reports the frame/timecode where each advert ends
+The OCR approach replaces the VLM with frame-by-frame text extraction and matching:
 
-The model focuses on finding where adverts end (brand logos typically appear in the
-last 2-3 seconds), not where they begin.
+1. **Frame extraction**: FFmpeg extracts PNG frames at the required FPS (1 or 25)
+2. **OCR inference**: Each frame is base64-encoded and sent to a vLLM-hosted OCR model via OpenAI-compatible chat completions
+3. **Text matching**: The OCR output text is regex-matched against each advert's brand, advertiser, and category fields
+4. **Boundary detection**: The *last* frame where the brand/advertiser text appears is the boundary
+5. **Advert ordering**: Enforced — advert N's last match must come before advert N+1's first match
+
+### Why OCR?
+
+- OCR models are much smaller than VLMs (e.g., LightOnOCR-2-1B at 2.1B params vs Qwen3.5-4B at 4B)
+- Direct text matching eliminates hallucination about frame content
+- No need for prompt engineering — the model just reads text
+- Each frame is an independent API call (can be parallelised or batched)
+- Grid images (multiple frames in one image) can be used for efficiency
+
+### Limitations
+
+- Requires brand/advertiser text to be visible in the video (not all adverts show text)
+- Short brand names (<3 chars) are excluded from multi-word matching
+- Punctuation and OCR errors can reduce match accuracy
+- Each frame = one API call (75 calls per advert at 25 FPS for 3s)
+- No ensemble voting (each frame is deterministic)
 
 ---
 
@@ -163,6 +192,8 @@ This filters out sporadic model outputs while keeping the ensemble's consensus.
 
 ## Pipeline Workflow
 
+### VLM Pipeline
+
 ### Stage 1: Metadata Extraction
 
 ```
@@ -237,6 +268,65 @@ lossless H.264 clips of each individual advert from the full broadcast video.
 
 The `adjusted_start_broadcast` value from the pipeline state file (or computed
 from `refined_timecode + clip_offset - duration`) determines the FFmpeg seek offset.
+
+### OCR Pipeline
+
+The OCR pipeline reuses Stages 1 (metadata), 2 (video clipping), and 5 (advert clip extraction)
+from the VLM pipeline. Only stages 3 and 4 are replaced:
+
+#### Stage 3 (OCR): Advert Identification (1 FPS)
+
+```                                                 
+Metadata JSON → Compute advert windows → FFmpeg 1 FPS → OCR all frames → Regex match per advert → XML
+                                ↓                                                        ↓
+                          Pipeline state                                         Pipeline state update
+```
+
+1. Load metadata JSON → compute per-advert scan windows from scheduled durations
+2. Extract frames at 1 FPS across the full clip via FFmpeg
+3. Send each frame to OCR model via vLLM chat completions (base64 PNG)
+4. For each advert (in order):
+   - Build regex patterns from brand + advertiser + category
+   - Scan OCR results within the advert's window
+   - Find the *last* frame where text matches
+5. Enforce ordering: advert N's last match < advert N+1's last match
+6. Output XML with same `<ad_break>`/`<advert>`/`<last_timecode>` schema
+7. Update pipeline state with `coarse_1fps` data
+
+#### Stage 4 (OCR): Frame Refinement (25 FPS)
+
+```                                                    
+Coarse XML + Metadata → For each advert: → FFmpeg 3s/25 FPS → OCR frames → Regex match → Refined XML
+                                                                                         ↓
+                                                                                  Pipeline state update
+```
+
+Per-advert process:
+
+1. Read coarse timecode from 1 FPS XML
+2. Extract 3-second clip at 25 FPS centred on coarse timecode
+3. OCR each frame (up to 75 frames)
+4. Find the last frame matching brand/advertiser text
+5. Compute refined timecode: `window_start + (last_match_index / 25)`
+6. Output refined XML with `<refined_timecode>` and `<refined_clip_frame>`
+7. Update pipeline state with `refined_25fps` data
+
+#### Comparison: VLM vs OCR
+
+| Aspect | VLM Pipeline | OCR Pipeline |
+|--------|-------------|--------------|
+| Stage 3 model | Qwen3.5-4B (VLM) | LightOnOCR-2-1B (OCR) |
+| Stage 4 model | Qwen3.5-4B (VLM) | LightOnOCR-2-1B (OCR) |
+| Stage 3 input | Video URL (1 FPS) | 1 FPS PNG frames |
+| Stage 4 input | 3s video clip (25 FPS) | 25 FPS PNG frames |
+| Boundary detection | VLM analyses frames visually | Regex matches OCR text against metadata |
+| Ensemble voting | Yes (5 calls Stage 3, 3 calls Stage 4) | No (deterministic per frame) |
+| Prompt engineering | Required (complex ad_break prompt) | None needed |
+| Hallucination risk | Moderate | Low (direct text matching) |
+| API calls per advert | 5 (Stage 3) + 3 (Stage 4) = 8 | ~frames_in_clip (180–480 for Stage 3, 75 for Stage 4) |
+| Fallback behaviour | Uses original timecode from CSV | `<ocr_match_fallback>true</ocr_match_fallback>` |
+| Output XML schema | Identical | Identical (+ fallback element) |
+| Pipeline state updates | Identical | Identical |
 
 ---
 

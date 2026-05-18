@@ -110,7 +110,7 @@ advert-identifier-clip \
 
 Creates: `video/2024-03-26_ITV1HD_13:30:00_01ofXX.mp4` (one per ad break)
 
-#### Identify Adverts
+#### Identify Adverts (VLM)
 
 ```bash
 advert-identifier \
@@ -121,6 +121,24 @@ advert-identifier \
 
 Creates: `metadata/2024-03-26_ITV1HD_13:30:00_01ofXX.xml`
 Also updates: pipeline state with `coarse_1fps` data (status → `identified`)
+
+#### Identify Adverts (OCR) — Experimental
+
+Alternatively, replace the VLM stage with OCR-based text matching:
+
+```bash
+advert-identifier-ocr-scan \
+  -v "http://your-vllm-server:8000/video/2024-03-26_ITV1HD_13:30:00_01ofXX.mp4" \
+  --metadata-file metadata/2024-03-26_ITV1HD_13:30:00_metadata.json \
+  --ocr-endpoint http://localhost:8000/v1/chat/completions \
+  --ocr-model lightonai/LightOnOCR-2-1B
+```
+
+This extracts frames at 1 FPS across the full clip, OCRs each, and regex-matches
+the extracted text against each advert's brand/advertiser. Outputs the same XML
+schema and updates pipeline state identically.
+
+Use `--dry-run` to test frame extraction without making OCR API calls.
 
 #### (Optional) Refine to Frame-Accurate Boundaries
 
@@ -141,6 +159,23 @@ Also updates: pipeline state with `refined_25fps` data including
 The refinement stage extracts 3-second clips (1.5s before/after each advert's expected
 end), analyzes them at 25 FPS with ensemble voting, and outputs precise `HH:MM:SS.mmm`
 timecodes. Use `--refine-fps 24.0` for NTSC video sources.
+
+#### (OCR) Refine to Frame-Accurate Boundaries
+
+Alternatively, use OCR-based 25 FPS refinement:
+
+```bash
+advert-identifier-ocr-refine \
+  --xml-file metadata/2024-03-26_ITV1HD_13:30:00_01ofXX.xml \
+  --video-url "http://your-vllm-server:8000/video/2024-03-26_ITV1HD_13:30:00_01ofXX.mp4" \
+  --json-file metadata/2024-03-26_ITV1HD_13:30:00_metadata.json \
+  --ocr-endpoint http://localhost:8000/v1/chat/completions \
+  --ocr-model lightonai/LightOnOCR-2-1B
+```
+
+This extracts 3-second clips at 25 FPS around each coarse boundary, OCRs every
+frame, and finds the last frame where the brand/advertiser text is visible.
+Outputs the same refined XML schema and updates pipeline state identically.
 
 #### Extract Individual Advert Clips
 

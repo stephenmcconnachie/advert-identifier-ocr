@@ -17,7 +17,9 @@ uv pip install -e .       # Same with uv
 | Command | Main file | Purpose |
 |---------|-----------|---------|
 | `advert-identifier` | `src/ad_break_identifier/main.py` | Identify adverts in a clip |
+| `advert-identifier-ocr-scan` | `src/ad_break_identifier/ocr_scan.py` | OCR-based 1 FPS detection (experimental) |
 | `advert-identifier-refine` | `src/ad_break_identifier/refinement_cli.py` | Frame-accurate refinement |
+| `advert-identifier-ocr-refine` | `src/ad_break_identifier/ocr_refine.py` | OCR-based 25 FPS refinement (experimental) |
 | `advert-identifier-clip` | `bin/advert-identifier-clip` | Extract ad break clips (FFmpeg) |
 | `advert-identifier-metadata-extract` | `bin/advert-identifier-metadata-extract` | CSV → JSON metadata |
 | `advert-identifier-single-advert-clip` | `src/ad_break_identifier/single_advert_clip.py` | Extract individual advert clips |

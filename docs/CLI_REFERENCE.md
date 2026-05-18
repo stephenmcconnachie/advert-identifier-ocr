@@ -492,6 +492,176 @@ advert-identifier-single-advert-clip \
 
 ---
 
+## advert-identifier-ocr-scan
+
+OCR-based 1 FPS advert boundary detection.  Replaces the VLM-based
+`advert-identifier` command with frame extraction + OCR + text matching.
+
+### Usage
+
+```bash
+advert-identifier-ocr-scan -v URL --metadata-file PATH [OPTIONS]
+```
+
+### Arguments
+
+| Argument | Short | Required | Default | Description |
+|----------|-------|----------|---------|-------------|
+| `--video-url` | `-v` | Yes | - | Video URL (same clip used by VLM stage) |
+| `--metadata-file` | | Yes | - | JSON file with ad break metadata |
+| `--ad-break-index` | | No | auto | 1-based ad break index (auto-detected from filename) |
+| `--ocr-endpoint` | | No | `http://localhost:8000/v1/chat/completions` | vLLM OCR endpoint |
+| `--ocr-model` | | No | `lightonai/LightOnOCR-2-1B` | OCR model name |
+| `--output-dir` | | No | - | Directory for extracted frame images (for debugging) |
+| `--output` | `-o` | No | auto | Output XML path |
+| `--verbose` | | No | False | Show detailed progress |
+| `--dry-run` | | No | False | Skip OCR API calls (test frame extraction only) |
+
+### How It Works
+
+1. **Frame extraction**: Uses FFmpeg to extract frames at 1 FPS across the full clip
+2. **OCR**: Each frame is sent to the OCR model via vLLM chat completions (base64-encoded images)
+3. **Text matching**: Extracted text is regex-matched against each advert's brand and advertiser fields
+4. **Boundary detection**: The last frame with a text match becomes the coarse boundary timecode
+5. **Output**: Same XML schema as `advert-identifier` (`<ad_break>` / `<advert>` / `<last_timecode>`)
+6. **Pipeline state**: Updates `coarse_1fps` with `last_timecode` and `last_seconds_clip`
+
+### Matching Strategy
+
+The scanner builds regex patterns from each advert's brand, advertiser, and category:
+
+- Full term (case-insensitive)
+- Individual words from multi-word terms (≥3 chars)
+- Apostrophe-stripped variants (e.g., `McDonald's` → `McDonalds`)
+
+Frames are scanned in order and the last matching frame is reported.
+
+### Fallback
+
+If an advert's brand/advertiser never appears in any OCR output, the advert is
+output with an empty `<last_timecode>` and `<ocr_match_fallback>true</ocr_match_fallback>`
+element.
+
+### Examples
+
+```bash
+# Basic usage
+advert-identifier-ocr-scan \
+  -v http://server/video_01of01.mp4 \
+  --metadata-file metadata.json
+
+# Custom OCR model and endpoint
+advert-identifier-ocr-scan \
+  -v http://server/video_01of01.mp4 \
+  --metadata-file metadata.json \
+  --ocr-endpoint http://localhost:8000/v1/chat/completions \
+  --ocr-model lightonai/LightOnOCR-2-1B \
+  --verbose
+
+# Dry-run (frame extraction only, no API calls)
+advert-identifier-ocr-scan \
+  -v http://server/video_01of01.mp4 \
+  --metadata-file metadata.json \
+  --dry-run
+
+# Save frame images for inspection
+advert-identifier-ocr-scan \
+  -v http://server/video_01of01.mp4 \
+  --metadata-file metadata.json \
+  --output-dir experiments/ocr_frames_test
+```
+
+---
+
+## advert-identifier-ocr-refine
+
+OCR-based 25 FPS frame-accurate refinement.  Replaces the VLM-based
+`advert-identifier-refine` command with frame extraction + OCR + text matching.
+
+### Usage
+
+```bash
+advert-identifier-ocr-refine --xml-file PATH --video-url URL [OPTIONS]
+```
+
+### Arguments
+
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `--xml-file` | Yes | - | Path to 1 FPS OCR scan XML |
+| `--video-url` | Yes | - | URL to video (same clip as 1 FPS stage) |
+| `--json-file` | No | - | Metadata JSON (for brand/advertiser enrichment + pipeline state) |
+| `--output` | No | `{xml}_refined.xml` | Output refined XML path |
+| `--ocr-endpoint` | No | `http://localhost:8000/v1/chat/completions` | vLLM OCR endpoint |
+| `--ocr-model` | No | `lightonai/LightOnOCR-2-1B` | OCR model name |
+| `--verbose` | No | False | Show detailed progress |
+| `--dry-run` | No | False | Skip OCR API calls |
+
+### How It Works
+
+1. Reads the 1 FPS OCR scan XML to get coarse timecodes per advert
+2. Enriches advert data with advertiser/category from the metadata JSON
+3. For each advert:
+   a. Extracts 3 seconds at 25 FPS centred on the coarse timecode
+   b. OCRs every frame (up to 75 frames)
+   c. Regex-matches text against brand/advertiser metadata
+   d. Finds the last frame with a match → computes refined timecode
+4. Outputs refined XML with `<refined_timecode>` and `<refined_clip_frame>`
+5. Updates pipeline state with `refined_25fps` data
+
+### Examples
+
+```bash
+# Basic usage
+advert-identifier-ocr-refine \
+  --xml-file results/video_clip.xml \
+  --video-url http://server/video.mp4
+
+# With metadata enrichment and pipeline state update
+advert-identifier-ocr-refine \
+  --xml-file results/video_clip.xml \
+  --video-url http://server/video.mp4 \
+  --json-file metadata/video_metadata.json
+
+# Custom OCR model
+advert-identifier-ocr-refine \
+  --xml-file results/video_clip.xml \
+  --video-url http://server/video.mp4 \
+  --json-file metadata/video_metadata.json \
+  --ocr-endpoint http://localhost:8000/v1/chat/completions \
+  --ocr-model lightonai/LightOnOCR-2-1B \
+  --verbose
+
+# Dry-run (frame extraction only)
+advert-identifier-ocr-refine \
+  --xml-file results/video_clip.xml \
+  --video-url http://server/video.mp4 \
+  --dry-run
+```
+
+### Output
+
+Creates `{original}_refined.xml` with the same schema as VLM-based refinement:
+
+```xml
+<ad_break>
+  <advert>
+    <unique_id>BBHTCPT536010</unique_id>
+    <brand>Tesco</brand>
+    <advertiser>Tesco stores</advertiser>
+    <category>retail</category>
+    <duration_seconds>20</duration_seconds>
+    <last_timecode>09:30</last_timecode>             <!-- coarse 1-FPS OCR -->
+    <refined_timecode>00:09:31.400</refined_timecode> <!-- precise 25-FPS OCR -->
+    <refined_clip_frame>43</refined_clip_frame>       <!-- 0-74 within 3s clip -->
+    <refinement_status>success</refinement_status>
+    <description>OCR matched: tesco</description>
+  </advert>
+</ad_break>
+```
+
+---
+
 ## advert-identifier-benchmark
 
 Run multiple detections and analyze accuracy against ground truth.
