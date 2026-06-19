@@ -1,7 +1,7 @@
-"""OCR API client for vLLM-hosted OCR models.
+"""OCR API client for vLLM-hosted PaddleOCR-VL model.
 
 Sends individual image frames to a vLLM endpoint using the OpenAI chat
-completions format with base64-encoded image data.
+completions format with base64-encoded image data and an "OCR:" text prompt.
 """
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ import base64
 import logging
 import time
 from pathlib import Path
+from urllib.parse import urlparse
 
 import requests
 
@@ -31,13 +32,23 @@ MIME_TYPE_MAP = {
 }
 
 DEFAULT_ENDPOINT = "http://localhost:8000/v1/chat/completions"
-DEFAULT_MODEL = "lightonai/LightOnOCR-2-1B"
+DEFAULT_MODEL = "PaddlePaddle/PaddleOCR-VL"
+DEFAULT_OCR_PROMPT = "OCR:"
 DEFAULT_MAX_TOKENS = 4096
-DEFAULT_TEMPERATURE = 0.2
-DEFAULT_TOP_P = 0.9
+DEFAULT_TEMPERATURE = 0.0
+DEFAULT_TOP_P = 1.0
 DEFAULT_TIMEOUT = 60
 MAX_RETRIES = 3
 RETRY_BASE_DELAY = 2
+
+
+def _validate_endpoint(endpoint: str) -> None:
+    """Validate that the endpoint URL uses an allowed scheme."""
+    parsed = urlparse(endpoint)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(
+            f"Invalid endpoint URL scheme: {parsed.scheme}. Only http and https are allowed."
+        )
 
 
 def _get_mime_type(image_path: Path) -> str:
@@ -56,7 +67,7 @@ def ocr_image(
     temperature: float = DEFAULT_TEMPERATURE,
     top_p: float = DEFAULT_TOP_P,
     timeout: int = DEFAULT_TIMEOUT,
-    system_prompt: str | None = None,
+    prompt: str = DEFAULT_OCR_PROMPT,
 ) -> str:
     """Send a single image frame to the OCR model and return extracted text.
 
@@ -67,6 +78,8 @@ def ocr_image(
     if not image_path.exists():
         raise FileNotFoundError(f"Image not found: {image_path}")
 
+    _validate_endpoint(endpoint)
+
     ext = image_path.suffix.lower()
     if ext not in SUPPORTED_EXTENSIONS:
         logger.warning("Unsupported extension %s, trying PNG", ext)
@@ -74,18 +87,21 @@ def ocr_image(
     image_b64 = _encode_image(image_path)
     mime_type = _get_mime_type(image_path)
 
-    messages: list[dict] = []
-    if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
-    messages.append({
-        "role": "user",
-        "content": [
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:{mime_type};base64,{image_b64}"},
-            },
-        ],
-    })
+    messages: list[dict] = [
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime_type};base64,{image_b64}"},
+                },
+                {
+                    "type": "text",
+                    "text": prompt,
+                },
+            ],
+        },
+    ]
 
     payload = {
         "model": model,
@@ -98,7 +114,7 @@ def ocr_image(
     last_error: Exception | None = None
     for attempt in range(MAX_RETRIES):
         try:
-            response = requests.post(endpoint, json=payload, timeout=timeout)
+            response = requests.post(endpoint, json=payload, timeout=timeout, allow_redirects=False)
             response.raise_for_status()
             result = response.json()
             text = (
@@ -132,7 +148,7 @@ def ocr_batch(
     temperature: float = DEFAULT_TEMPERATURE,
     top_p: float = DEFAULT_TOP_P,
     timeout: int = DEFAULT_TIMEOUT,
-    system_prompt: str | None = None,
+    prompt: str = DEFAULT_OCR_PROMPT,
     progress_callback=None,
 ) -> list[dict]:
     """Run OCR on multiple images sequentially.
@@ -154,7 +170,7 @@ def ocr_batch(
                 temperature=temperature,
                 top_p=top_p,
                 timeout=timeout,
-                system_prompt=system_prompt,
+                prompt=prompt,
             )
             results.append({
                 "frame_index": idx,

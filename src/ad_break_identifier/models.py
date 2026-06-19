@@ -1,7 +1,6 @@
 """Data models for ad break sequence identification."""
 
 from dataclasses import dataclass, field
-from typing import Literal
 
 
 @dataclass
@@ -66,44 +65,3 @@ class AdBreakResult:
     adverts: list[AdvertResult] = field(default_factory=list)
     total_found: int = 0
     total_expected: int = 0
-
-
-@dataclass
-class EnsembleStats:
-    """Statistics from ensemble voting."""
-    total_responses: int
-    valid_responses: int
-    invalid_responses: int
-    voting_method: str = "median"
-    advert_voting_details: list[dict] = field(default_factory=list)
-
-
-@dataclass
-class RefinedAdvertResult:
-    """Result for a single advert after frame refinement."""
-    original_timecode: str | None = None
-    refined_timecode: str | None = None
-    refined_clip_frame: int | None = None
-    confidence: str = "unknown"
-    refinement_status: str = "pending"
-    description: str = ""
-    ensemble_vote_stats: dict | None = None
-
-
-@dataclass
-class RefinedAdBreakResult:
-    """Complete result for frame refinement stage."""
-    success: bool = False
-    error: str | None = None
-    adverts: list[RefinedAdvertResult] = field(default_factory=list)
-    total_refined: int = 0
-    total_fallback: int = 0
-
-
-@dataclass
-class RefinementStats:
-    """Statistics from refinement ensemble voting."""
-    total_responses: int = 0
-    valid_responses: int = 0
-    invalid_responses: int = 0
-    advert_voting_details: list[dict] = field(default_factory=list)

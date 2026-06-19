@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
-"""Ad Break Identifier - Main entry point."""
+"""Entry point wrapper for advert-identifier (OCR detection)."""
 
 import sys
 from pathlib import Path
 
-# Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+from ad_break_identifier.detect import main
 
-from ad_break_identifier.main import main
-
-
-if __name__ == "__main__":
-    sys.exit(main())
+sys.exit(main())

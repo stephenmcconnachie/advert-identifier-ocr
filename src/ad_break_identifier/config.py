@@ -1,23 +1,24 @@
-"""Configuration for ad break analysis."""
+"""Configuration for ad break OCR detection."""
 
 import json
 import logging
-from dataclasses import dataclass, field
+import os
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 
 from .models import AdBreakMetadata, AdvertMetadata, ProgrammeMetadata
+from .ocr_client import DEFAULT_ENDPOINT, DEFAULT_MODEL
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class AdBreakConfig:
-    """Configuration for ad break analysis with ensemble support."""
-    
+    """Configuration for OCR-based ad break detection."""
+
     # Video
     video_url: str
-    
+
     # Metadata
     ad_break_metadata: AdBreakMetadata | None = None
     metadata_file: str | None = None
@@ -25,32 +26,18 @@ class AdBreakConfig:
     prog_before: str | None = None
     prog_after: str | None = None
     adverts_cli: list[str] | None = None
-    
-    # API
-    api_base_url: str = "http://localhost:8000/v1"
-    api_key: str = "EMPTY"
-    model_name: str = "Qwen/Qwen3.5-4B"
-    
-    # Video sampling
-    fps: float = 1.0
-    
-    # Mode: timecode or frame
-    mode: Literal["timecode", "frame"] = "timecode"
-    
-    # Ensemble
-    enable_ensemble: bool = True
-    ensemble_size: int = 5
-    ensemble_delay: float = 10.0
-    enable_thinking: bool = True
-    
-    # Output
-    output_format: Literal["json", "text"] = "json"
-    verbose: bool = False  # Show detailed progress information
 
-    def __post_init__(self):
-        """Validate mode after initialization."""
-        if self.mode not in ["timecode", "frame"]:
-            raise ValueError(f"Invalid mode: {self.mode}. Must be 'timecode' or 'frame'")
+    # OCR
+    ocr_endpoint: str = DEFAULT_ENDPOINT
+    ocr_model: str = DEFAULT_MODEL
+
+    # Frame extraction
+    detection_fps: float = 5.0
+    before_secs: float = 10.0
+    after_secs: float = 360.0
+
+    # Output
+    verbose: bool = False
 
 
 def parse_cli_metadata(
@@ -177,17 +164,14 @@ def load_config(config_dict: dict | None = None) -> AdBreakConfig:
     return AdBreakConfig(
         video_url=config_dict.get("video_url", ""),
         metadata_file=config_dict.get("metadata_file"),
-        ad_break_index=config_dict.get("ad_break_index", 0),
+        ad_break_index=config_dict.get("ad_break_index", 1),
         prog_before=config_dict.get("prog_before"),
         prog_after=config_dict.get("prog_after"),
         adverts_cli=config_dict.get("adverts_cli"),
-        api_base_url=config_dict.get("api_base_url", "http://localhost:8000/v1"),
-        api_key=config_dict.get("api_key", "EMPTY"),
-        model_name=config_dict.get("model_name", "Qwen/Qwen3.5-4B"),
-        fps=config_dict.get("fps", 1.0),
-        mode=config_dict.get("mode", "timecode"),
-        enable_ensemble=config_dict.get("enable_ensemble", True),
-        ensemble_size=config_dict.get("ensemble_size", 5),
-        ensemble_delay=config_dict.get("ensemble_delay", 10.0),
-        output_format=config_dict.get("output_format", "json"),
+        ocr_endpoint=config_dict.get("ocr_endpoint", os.environ.get("OCR_ENDPOINT", DEFAULT_ENDPOINT)),
+        ocr_model=config_dict.get("ocr_model", os.environ.get("OCR_MODEL", DEFAULT_MODEL)),
+        detection_fps=config_dict.get("detection_fps", float(os.environ.get("DETECTION_FPS", "5.0"))),
+        before_secs=config_dict.get("before_secs", float(os.environ.get("BEFORE_SECS", "10.0"))),
+        after_secs=config_dict.get("after_secs", float(os.environ.get("AFTER_SECS", "360.0"))),
+        verbose=config_dict.get("verbose", False),
     )

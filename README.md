@@ -1,15 +1,12 @@
 # Advert Identifier
 
-AI-powered advert identification in TV broadcast videos. Supports two approaches:
+OCR-based advert identification in TV broadcast videos. Uses PaddleOCR-VL via vLLM to read text from video frames and match against brand/advertiser metadata.
 
-- **VLM-based** (default): Uses vision-language models to identify advert boundaries by watching video at 1 FPS → 25 FPS
-- **OCR-based** (experimental): Uses OCR models to read text from extracted frames and match against brand/advertiser metadata
-
-Both approaches require basic description of each advert with approximate start time and duration. They don't work without that prior descriptive metadata, so they won't identify adverts from a cold start.
+Requires basic description of each advert with approximate start time and duration. It doesn't work without that prior descriptive metadata, so it won't identify adverts from a cold start.
 
 ## Quick Start
 
-Four commands to process a broadcast video:
+Three commands to process a broadcast video:
 
 ```bash
 # 1. Extract metadata from CSV scheduling data
@@ -17,42 +14,17 @@ advert-identifier-metadata-extract \
   --video video/2024-03-26_ITV1HD_13:30:00.mp4 \
   --output-dir video/
 
-# 2. Extract video clips centered on ad break timestamps
-advert-identifier-clip \
-  --json-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
-  --before-secs 60 \
+# 2. OCR detection (5 FPS frame extraction + PaddleOCR-VL + brand search)
+advert-identifier \
+  -v "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
+  --metadata-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
+  --ad-break-index 1 \
+  --before-secs 10 \
   --after-secs 360
 
-# 3a. [VLM] Identify individual adverts using AI (1 FPS detection)
-advert-identifier \
-  --video "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00_13-52-05.000_CLIP.mp4" \
-  --metadata-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
-  --ad-break-index 0
-
-# 3b. [OCR] Alternative: OCR-based 1 FPS detection (experimental)
-advert-identifier-ocr-scan \
-  -v "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00_13-52-05.000_CLIP.mp4" \
-  --metadata-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
-  --ocr-endpoint http://localhost:8000/v1/chat/completions \
-  --ocr-model lightonai/LightOnOCR-2-1B
-
-# 4a. [VLM] (Optional) Refine to frame-accurate boundaries using 25 FPS analysis
-advert-identifier-refine \
-  --xml-file video/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml \
-  --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00_01of01.mp4" \
-  --json-file video/2024-03-26_ITV1HD_13:30:00_metadata.json
-
-# 4b. [OCR] Alternative: OCR-based 25 FPS refinement (experimental)
-advert-identifier-ocr-refine \
-  --xml-file video/2024-03-26_ITV1HD_13-52-05.000_CLIP.xml \
-  --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00_01of01.mp4" \
-  --json-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
-  --ocr-endpoint http://localhost:8000/v1/chat/completions \
-  --ocr-model lightonai/LightOnOCR-2-1B
-
-# 5. Extract individual advert clips (lossless)
+# 3. Extract individual advert clips (lossless)
 advert-identifier-single-advert-clip \
-  --xml-file video/2024-03-26_ITV1HD_13-52-05.000_CLIP_refined.xml \
+  --xml-file video/2024-03-26_ITV1HD_13:30:00.xml \
   --json-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
   --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir video/clips
@@ -66,52 +38,52 @@ Process entire folders automatically:
 advert-identifier-pipeline \
   --input-folder /path/to/videos \
   --csv-folder /path/to/csv/files \
-  --before-secs 60 \
+  --before-secs 10 \
   --after-secs 360 \
-  --video-server-url http://your-server:1100
+  --video-server-url http://your-server:1100 \
+  --ocr-endpoint http://localhost:8000/v1/chat/completions \
+  --ocr-model PaddlePaddle/PaddleOCR-VL
 ```
 
 The pipeline creates a **pipeline state file** (`{video}_pipeline_state.json`) at Stage 1
-and threads it through every subsequent stage. It runs three analysis stages per ad break:
-**1 FPS identification** → **25 FPS frame refinement** → **lossless clip extraction**,
-with full coordinate transformation from clip-relative to broadcast-absolute timecodes.
+and threads it through every subsequent stage. It runs two stages per ad break:
+**OCR detection** → **lossless clip extraction**, with full coordinate transformation
+from clip-relative to broadcast-absolute timecodes.
+
+## vLLM Server Setup
+
+Deploy PaddleOCR-VL via vLLM:
+
+```bash
+vllm serve PaddlePaddle/PaddleOCR-VL \
+    --trust-remote-code \
+    --max-num-batched-tokens 16384 \
+    --no-enable-prefix-caching \
+    --mm-processor-cache-gb 0
+```
 
 ## Installation
 
 ### Option 1: Using uv (Recommended)
 
 ```bash
-# Clone the repository
 cd /path/to/advert-identifier
-
-# Install in editable mode with uv
 uv pip install -e .
-
-# Commands are now available in your PATH
 advert-identifier --help
 ```
 
 ### Option 2: Using pip
 
 ```bash
-# Clone the repository
 cd /path/to/advert-identifier
-
-# Install in editable mode
 pip install -e .
-
-# Commands are now available in your PATH
 advert-identifier --help
 ```
 
 ### Option 3: Direct Execution (No Installation)
 
-If you don't want to install the package, you can run scripts directly:
-
 ```bash
 cd /path/to/advert-identifier
-
-# Run any command directly
 python3 bin/advert-identifier --help
 python3 bin/advert-identifier-metadata-extract --help
 ```
@@ -120,54 +92,25 @@ python3 bin/advert-identifier-metadata-extract --help
 
 | Command | Purpose | Key Options |
 |---------|---------|-------------|
-| `advert-identifier` | Identify adverts in clips | `--mode timecode\|frame`, `--model`, `--no-thinking`, `--verbose`, `--debug`, `--refine` |
-| `advert-identifier-pipeline` | Full folder automation | `--input-folder`, `--csv-folder` |
+| `advert-identifier` | OCR detection (5 FPS + PaddleOCR-VL) | `--metadata-file`, `--ad-break-index`, `--before-secs`, `--after-secs`, `--fps`, `--ocr-endpoint`, `--ocr-model`, `--verbose`, `--dry-run` |
+| `advert-identifier-pipeline` | Full folder automation | `--input-folder`, `--csv-folder`, `--before-secs`, `--after-secs`, `--fps`, `--ocr-endpoint`, `--ocr-model` |
 | `advert-identifier-metadata-extract` | CSV → JSON metadata | `--video`, `--csv-folder`, `--before-secs` |
-| `advert-identifier-clip` | Extract video clips | `--before-secs`, `--after-secs` |
-| `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--index`, `--trim`, `--pad`, `--clip-offset`, `--state-file` |
-|| `advert-identifier-refine` | Frame-accurate boundary refinement | `--xml-file`, `--video-url`, `--json-file`, `--model`, `--refine-fps`, `--ensemble-filter`, `--no-thinking` |
-|| `advert-identifier-ocr-scan` | OCR-based 1 FPS detection (experimental) | `--video-url`, `--metadata-file`, `--ocr-endpoint`, `--ocr-model`, `--dry-run` |
-|| `advert-identifier-ocr-refine` | OCR-based 25 FPS refinement (experimental) | `--xml-file`, `--video-url`, `--json-file`, `--ocr-endpoint`, `--ocr-model`, `--dry-run` |
-| `advert-identifier-benchmark` | Test accuracy vs ground truth | `--ground-truth-first`, `-n 10` |
-| `advert-identifier-describe` | Generate video descriptions | `--video`, `--prompt` |
+| `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--json-file`, `--index`, `--trim`, `--pad`, `--clip-offset`, `--state-file` |
 
 See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) for complete documentation.
 
 ## How It Works
 
-### VLM-Based Pipeline
-
 1. **Metadata Extraction**: Parses video filenames to find matching CSV scheduling data
-2. **Clip Extraction**: Uses FFmpeg to extract clips centered on ad break timestamps
-3. **AI Analysis**: Vision-language model identifies last frame of each advert at 1 FPS
-4. **Ensemble Voting**: Multiple API calls with median voting for accuracy
-5. **Frame Refinement** (optional): 25 FPS analysis refines boundaries to millisecond precision
-6. **Advert Clip Extraction**: Extracts individual advert clips using refined timecode and duration
-7. **Pipeline State Tracking**: A persistent state file (`_pipeline_state.json`) tracks every
-   advert through all stages, maintaining coordinate transformations between clip-relative
-   and broadcast-absolute timecodes with millisecond precision.
+2. **OCR Detection**: Extracts frames at 5 FPS from the original broadcast video around each ad break, runs PaddleOCR-VL on every frame, stores results in a queryable JSON file
+3. **Two-Tier Brand Search**: For each advert in order, searches OCR text for brand/advertiser/category using:
+   - **Tier 1 (exact)**: Word-boundary regex (`\bgalaxy\b`) for precise matches
+   - **Tier 2 (substring)**: Unbounded regex (`galaxy`) as fallback for concatenated forms like `galaxychocolate.com`
+4. **Ordering Enforcement**: Each advert's last matching frame must be after the previous advert's last matching frame
+5. **Advert Clip Extraction**: Extracts individual advert clips using detected timecodes and durations
+6. **Pipeline State Tracking**: A persistent state file (`_pipeline_state.json`) tracks every advert through all stages
 
-### OCR-Based Pipeline (Experimental)
-
-An alternative approach on the `feat/ocr-experiment` branch that replaces VLM calls
-with frame extraction + OCR + text matching:
-
-1. **Stage 1 (OCR Scan)**: Extracts frames at 1 FPS across the full clip, runs each
-   through an OCR model via vLLM, and regex-matches the extracted text against each
-   advert's brand/advertiser metadata. The last frame with a match becomes the coarse
-   boundary. Outputs the same XML schema as the VLM stage.
-2. **Stage 2 (OCR Refine)**: Reads the 1 FPS XML, extracts 3-second clips at 25 FPS
-   around each coarse boundary, OCRs every frame, and finds the last frame where the
-   brand/advertiser text is visible. Outputs refined XML with `<refined_timecode>` and
-   `<refined_clip_frame>`.
-3. **Fallback**: Adverts with no OCR match receive empty timecodes and an
-   `<ocr_match_fallback>true</ocr_match_fallback>` element for traceability.
-
-The OCR approach uses much smaller models (e.g., `LightOnOCR-2-1B` vs `Qwen3.5-4B`)
-and replaces VLM inference with direct text matching.
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed breakdown of the detection
-strategy, ensemble voting, and output formats.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed breakdown.
 
 ## Coordinate Systems
 
@@ -177,7 +120,7 @@ clip extraction:
 | Frame | Origin | Used by |
 |-------|--------|---------|
 | **Broadcast-absolute** | Start of full broadcast `.mp4` | FFmpeg `-ss` seeks |
-| **Clip-relative** | Start of 6-minute extracted clip | 1 FPS LLM output, 25 FPS refinement |
+| **Clip-relative** | Start of the extracted frame range | OCR detection output |
 | **Time-of-day** | Wall clock HH:MM:SS | CSV metadata |
 
 The pipeline state file automatically converts between these frames. See
@@ -185,53 +128,21 @@ The pipeline state file automatically converts between these frames. See
 
 ## Example Output
 
-```json
-{
-  "success": true,
-  "adverts": [
-    {
-      "timecode": "13:52:05",
-      "advert_id": "BBHTCPT536010",
-      "brand": "Tesco",
-      "duration_seconds": 10,
-      "description": "Tesco logo visible in final frame"
-    }
-  ],
-  "total_found": 1,
-  "total_expected": 1
-}
+```xml
+<ad_break>
+    <!-- OCR-based detection (5 FPS, PaddleOCR-VL) -->
+    <advert>
+        <unique_id>BBHTCPT536010</unique_id>
+        <brand>Tesco</brand>
+        <advertiser>Tesco PLC</advertiser>
+        <category>retail</category>
+        <duration_seconds>10</duration_seconds>
+        <last_timecode>02:15.000</last_timecode>
+        <match_tier>exact</match_tier>
+        <matched_terms>tesco</matched_terms>
+    </advert>
+</ad_break>
 ```
-
-### Multiple Ad Breaks
-
-When your metadata JSON contains multiple ad breaks, use `--ad-break-index` to select which one to process:
-
-```bash
-# Process the first ad break (index 0, default)
-advert-identifier -v video.mp4 --metadata-file meta.json --ad-break-index 0
-
-# Process the second ad break (index 1)
-advert-identifier -v video.mp4 --metadata-file meta.json --ad-break-index 1
-```
-
-### Debugging with Verbose Mode
-
-If the tool appears to hang or produces no output, use `--verbose` to see detailed progress:
-
-```bash
-advert-identifier \
-  --video "http://server/video.mp4" \
-  --metadata-file metadata.json \
-  --verbose
-```
-
-This shows real-time progress through each stage:
-- Step 1/5: Loading metadata
-- Step 2/5: Building prompt  
-- Step 3/5: Initializing API client
-- Step 4/5: Making API calls
-
-For even more detail, combine with `--debug` to save raw API responses to `debug.json`.
 
 ## Pipeline State File
 
@@ -241,7 +152,7 @@ is progressively updated by each stage:
 
 ```json
 {
-  "pipeline_version": 1,
+  "pipeline_version": 2,
   "video_info": {
     "filepath": "video/2024-03-26_ITV1HD_13:30:00.mp4",
     "start_time": "13:30:00"
@@ -255,17 +166,15 @@ is progressively updated by each stage:
         {
           "unique_id": "BBHTCPT536010",
           "brand": "Tesco",
-          "status": "refined",
-          "coarse_1fps": {
-            "last_timecode": "22:05",
-            "last_seconds_clip": 1325.0
-          },
-          "refined_25fps": {
-            "last_timecode": "00:22:05.080",
-            "last_seconds_clip": 1325.08,
-            "clip_frame": 42,
-            "last_seconds_broadcast": 2620.08,
-            "adjusted_start_broadcast": 2610.08
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:15.000",
+            "last_seconds_clip": 135.0,
+            "last_frame": 675,
+            "match_tier": "exact",
+            "matched_terms": ["tesco"],
+            "last_seconds_broadcast": 1430.0,
+            "adjusted_start_broadcast": 1420.0
           }
         }
       ]
@@ -280,10 +189,10 @@ in `advert-identifier-single-advert-clip` (via `--state-file`).
 ## Requirements
 
 - Python 3.10+
-- **VLM pipeline**: vLLM server with vision-language model (Qwen3.5 recommended)
-- **OCR pipeline**: vLLM server with OCR model (LightOnOCR-2-1B recommended)
-- FFmpeg (for video clip extraction and frame extraction)
-- TV broadcast videos with timecode or frame overlays
+- **vLLM server** with PaddleOCR-VL model running (local or remote)
+- **FFmpeg** (for frame extraction and clip extraction)
+- **`requests`** Python package (for OCR API calls)
+- TV broadcast videos
 
 ## Documentation
 

@@ -11,7 +11,7 @@ State file naming convention:
 Coordinate reference:
     All ``*_broadcast`` values are seconds from the start of the full broadcast
     video file. All ``*_clip`` values are seconds from the start of the
-    extracted 6-minute clip (see ``docs/coordinate-systems.md`` for details).
+    extracted frame range (see ``docs/coordinate-systems.md`` for details).
 """
 
 import json
@@ -21,13 +21,11 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-PIPELINE_VERSION = 1
+PIPELINE_VERSION = 2
 
 # ── Status lifecycle ──────────────────────────────────────────────────────
 STATUS_METADATA_EXTRACTED = "metadata_extracted"
-STATUS_CLIP_EXTRACTED = "clip_extracted"
-STATUS_IDENTIFIED = "identified"          # after 1 FPS
-STATUS_REFINED = "refined"                # after 25 FPS
+STATUS_DETECTED = "detected"              # after OCR detection (5 FPS)
 STATUS_CLIPPED = "clipped"                # after final advert clip extraction
 
 
@@ -59,7 +57,7 @@ def create_initial_state(
 
     Args:
         metadata_json_path: Path to the ``_metadata.json`` file.
-        before_secs: Seconds before ad break start used in clip extraction.
+        before_secs: Seconds before ad break start used in frame extraction.
 
     Returns:
         The state dictionary (already containing ``pipeline_version``).
@@ -68,7 +66,10 @@ def create_initial_state(
         FileNotFoundError: If the metadata JSON doesn't exist.
         KeyError: If required fields are missing from the metadata.
     """
-    with open(metadata_json_path) as f:
+    resolved_path = Path(metadata_json_path).resolve()
+    if not resolved_path.exists():
+        raise FileNotFoundError(f"Metadata file not found: {metadata_json_path}")
+    with open(resolved_path) as f:
         data = json.load(f)
 
     video_info = data["video_info"]
@@ -90,8 +91,7 @@ def create_initial_state(
                 "category": adv.get("category", ""),
                 "scheduled_duration_seconds": adv.get("duration_seconds"),
                 "status": STATUS_METADATA_EXTRACTED,
-                "coarse_1fps": None,
-                "refined_25fps": None,
+                "detection": None,
             })
 
         ad_breaks.append({
@@ -121,7 +121,8 @@ def read_state(path: str) -> dict[str, Any]:
     Returns:
         The state dictionary.
     """
-    with open(path) as f:
+    resolved_path = Path(path).resolve()
+    with open(resolved_path) as f:
         return json.load(f)
 
 
@@ -132,7 +133,9 @@ def write_state(path: str, state: dict[str, Any]) -> None:
         path: Path to write the ``_pipeline_state.json`` file.
         state: The state dictionary.
     """
-    with open(path, "w") as f:
+    resolved_path = Path(path).resolve()
+    resolved_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(resolved_path, "w") as f:
         json.dump(state, f, indent=2)
 
 
@@ -140,6 +143,7 @@ def update_break_adverts(
     state: dict[str, Any],
     ad_break_index: int,
     updates: list[dict[str, Any]],
+    fps: float = 5.0,
 ) -> dict[str, Any]:
     """Update advert data for one ad break in the state.
 
@@ -148,17 +152,18 @@ def update_break_adverts(
     order.  Each dict may contain any of::
 
         {"status": "...",
-         "coarse_1fps": {...},
-         "refined_25fps": {...}}
+         "detection": {...}}
 
-    If ``refined_25fps`` is set, the module automatically computes
+    If ``detection`` is set, the module automatically computes
     ``adjusted_start_broadcast`` from the clip_offset, duration, and
-    refined last-seconds (clip-relative).
+    detection last-seconds (clip-relative).
 
     Args:
         state: The current pipeline state (mutated in-place and returned).
         ad_break_index: 1-based index of the ad break.
         updates: Per-advert update dicts in break order.
+        fps: Frame extraction rate (used for frame-to-seconds conversion
+            if last_seconds_clip is missing).
 
     Returns:
         The mutated state (same object as input).
@@ -176,20 +181,21 @@ def update_break_adverts(
         advert = break_data["adverts"][i]
         if "status" in update:
             advert["status"] = update["status"]
-        if "coarse_1fps" in update:
-            advert["coarse_1fps"] = update["coarse_1fps"]
-        if "refined_25fps" in update:
-            refined = update["refined_25fps"]
-            advert["refined_25fps"] = refined
+        if "detection" in update:
+            detection = update["detection"]
+            advert["detection"] = detection
 
             # Compute broadcast-absolute adjusted start
             duration: int | None = advert.get("scheduled_duration_seconds")
-            r25 = refined  # shorthand
-            if duration is not None and r25.get("last_seconds_clip") is not None:
-                last_bcast = clip_offset + r25["last_seconds_clip"]
+            last_seconds_clip = detection.get("last_seconds_clip")
+            if last_seconds_clip is None and detection.get("last_frame") is not None:
+                last_seconds_clip = detection["last_frame"] / fps
+
+            if duration is not None and last_seconds_clip is not None:
+                last_bcast = clip_offset + last_seconds_clip
                 adjusted_start = last_bcast - duration
-                r25["last_seconds_broadcast"] = round(last_bcast, 3)
-                r25["adjusted_start_broadcast"] = round(adjusted_start, 3)
+                detection["last_seconds_broadcast"] = round(last_bcast, 3)
+                detection["adjusted_start_broadcast"] = round(adjusted_start, 3)
 
     return state
 
@@ -200,7 +206,7 @@ def get_adjusted_starts(
 ) -> list[float | None]:
     """Get ``adjusted_start_broadcast`` for each advert in a break.
 
-    Returns ``None`` for adverts that haven't been refined yet.
+    Returns ``None`` for adverts that haven't been detected yet.
 
     Args:
         state: The pipeline state.
@@ -213,9 +219,9 @@ def get_adjusted_starts(
     break_data = state["ad_breaks"][ad_break_index - 1]
     results: list[float | None] = []
     for adv in break_data["adverts"]:
-        r25 = adv.get("refined_25fps")
-        if r25 and r25.get("adjusted_start_broadcast") is not None:
-            results.append(r25["adjusted_start_broadcast"])
+        det = adv.get("detection")
+        if det and det.get("adjusted_start_broadcast") is not None:
+            results.append(det["adjusted_start_broadcast"])
         else:
             results.append(None)
     return results

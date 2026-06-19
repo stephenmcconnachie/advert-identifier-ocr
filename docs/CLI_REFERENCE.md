@@ -6,72 +6,81 @@ Complete documentation for all ad break identifier commands.
 
 ## advert-identifier
 
-Identify individual adverts within video clips using vision-language models.
+OCR-based advert boundary detection using PaddleOCR-VL at 5 FPS.
 
 ### Usage
 
 ```bash
-advert-identifier --video URL --metadata-file PATH [OPTIONS]
+advert-identifier -v URL --metadata-file PATH [OPTIONS]
 ```
 
 ### Arguments
 
 | Argument | Short | Required | Default | Description |
 |----------|-------|----------|---------|-------------|
-| `--video` | `-v` | Yes | - | Video URL with frame/timecode overlay |
-| `--metadata-file` | `-m` | Yes | - | JSON file with ad break metadata |
-| `--mode` | | No | `timecode` | Analysis mode: `timecode` (MM:SS) or `frame` (frame count) |
-| `--ensemble-size` | | No | 5 | Number of ensemble API calls |
-| `--ensemble-delay` | | No | 10.0 | Seconds between ensemble requests |
-| `--no-ensemble` | | No | False | Disable ensemble, single API call |
-| `--no-thinking` | | No | False | Disable model thinking/reasoning (faster, less accurate) |
-| `--output-format` | `-o` | No | `json` | Output format: `json` or `text` |
-| `--debug` | | No | False | Save debug.json and debug.md |
-| `--fps` | `-f` | No | 1.0 | Frame sampling rate for vLLM |
-| `--api-base-url` | | No | env var | vLLM API endpoint |
-| `--model` | | No | `Qwen/Qwen3.5-4B` | Model name to use |
-| `--refine` | | No | False | Run frame refinement stage after detection |
+| `--video-url` | `-v` | Yes | - | URL to the original broadcast video |
+| `--metadata-file` | | No* | - | JSON file with ad break metadata |
+| `--ad-break-index` | | No | auto | 1-based ad break index (auto-detected from filename) |
+| `--prog-before` | | No* | - | Programme before ad break: "Title,Channel" |
+| `--prog-after` | | No* | - | Programme after ad break: "Title,Channel" |
+| `--advert` | | No* | - | Advert: "ID\|ADVERTISER\|BRAND\|CATEGORY\|DURATION" (can specify multiple) |
+| `--before-secs` | | No | 10.0 | Seconds before ad break start for frame extraction |
+| `--after-secs` | | No | 360.0 | Seconds after ad break start for frame extraction |
+| `--fps` | | No | 5.0 | Frame extraction rate |
+| `--ocr-endpoint` | | No | `http://localhost:8000/v1/chat/completions` | vLLM OCR endpoint |
+| `--ocr-model` | | No | `PaddlePaddle/PaddleOCR-VL` | OCR model name |
+| `--output-dir` | | No | - | Directory for frame images and OCR results JSON |
+| `--output` | `-o` | No | auto | Output XML path (default: beside metadata file) |
+| `--verbose` | | No | False | Show detailed progress |
+| `--dry-run` | | No | False | Skip OCR API calls (test frame extraction only) |
 
-The identifier automatically updates the pipeline state file with `coarse_1fps`
-results after voting when `--metadata-file` has a corresponding `_pipeline_state.json`.
+*Either `--metadata-file` or (`--prog-before` + `--prog-after` + `--advert`) is required.
+
+The identifier automatically updates the pipeline state file with `detection`
+results when `--metadata-file` has a corresponding `_pipeline_state.json`.
+
+### How It Works
+
+1. Downloads the original video to a temp file
+2. Extracts frames at 5 FPS from `[break_start - before_secs, break_start + after_secs]`
+3. OCRs every frame via PaddleOCR-VL (base64 PNG + "OCR:" prompt)
+4. Saves OCR results to `{video_stem}_ocr.json` (queryable)
+5. For each advert in order, performs two-tier brand search:
+   - **Tier 1 (exact)**: Word-boundary regex (`\bgalaxy\b`)
+   - **Tier 2 (substring)**: Unbounded regex (`galaxy`) as fallback
+6. Enforces ordering: each advert's last frame > previous advert's last frame
+7. Outputs XML with `<last_timecode>` (clip-relative MM:SS.mmm)
 
 ### Examples
 
 ```bash
-# Basic usage with ensemble voting (default)
+# Basic usage
 advert-identifier \
-  --video "http://server/video.mp4" \
-  --metadata-file metadata.json
-
-# Frame mode (outputs frame numbers instead of timecodes)
-advert-identifier \
-  --video "http://server/video.mp4" \
+  -v "http://server/video.mp4" \
   --metadata-file metadata.json \
-  --mode frame
+  --ad-break-index 1
 
-# Fast single call without ensemble
+# Custom frame range and OCR settings
 advert-identifier \
-  --video "http://server/video.mp4" \
+  -v "http://server/video.mp4" \
   --metadata-file metadata.json \
-  --no-ensemble
+  --before-secs 30 \
+  --after-secs 180 \
+  --ocr-endpoint http://localhost:8000/v1/chat/completions \
+  --ocr-model PaddlePaddle/PaddleOCR-VL \
+  --verbose
 
-# Fastest single call (no ensemble, no thinking)
+# Dry-run (frame extraction only, no OCR API calls)
 advert-identifier \
-  --video "http://server/video.mp4" \
+  -v "http://server/video.mp4" \
   --metadata-file metadata.json \
-  --no-ensemble --no-thinking
+  --dry-run
 
-# Debug mode with detailed output
+# Save frame images and OCR results for debugging
 advert-identifier \
-  --video "http://server/video.mp4" \
+  -v "http://server/video.mp4" \
   --metadata-file metadata.json \
-  --debug
-
-# Text output instead of JSON
-advert-identifier \
-  --video "http://server/video.mp4" \
-  --metadata-file metadata.json \
-  --output-format text
+  --output-dir debug_output/
 ```
 
 ---
@@ -92,15 +101,24 @@ advert-identifier-pipeline --input-folder PATH --csv-folder PATH [OPTIONS]
 |----------|----------|---------|-------------|
 | `--input-folder` | Yes | - | Folder containing .mp4 video files |
 | `--csv-folder` | Yes | - | Folder containing CSV files |
-| `--before-secs` | No | 10.0 | Seconds before ad break to include |
-| `--after-secs` | No | 360.0 | Seconds after ad break to include |
+| `--before-secs` | No | 10.0 | Seconds before ad break for frame extraction |
+| `--after-secs` | No | 360.0 | Seconds after ad break for frame extraction |
+| `--fps` | No | 5.0 | Frame extraction rate for OCR detection |
+| `--ocr-endpoint` | No | `http://localhost:8000/v1/chat/completions` | vLLM OCR endpoint |
+| `--ocr-model` | No | `PaddlePaddle/PaddleOCR-VL` | OCR model name |
 | `--video-server-url` | No | `http://172.18.7.236:1100` | Base URL for video server |
 | `--dry-run` | No | False | Preview what would be processed |
 | `--log-level` | No | INFO | DEBUG, INFO, WARNING, ERROR |
+| `--verbose` | No | False | Show detailed progress |
 
-The pipeline creates a pipeline state file at Stage 1 and threads it through
-all subsequent stages, enabling automatic coordinate transformation from
-clip-relative to broadcast-absolute timecodes.
+### Pipeline Workflow
+
+For each video file, the pipeline:
+
+1. **Metadata Extraction**: Finds matching CSV, converts to JSON + pipeline state
+2. **OCR Detection**: Runs PaddleOCR-VL at 5 FPS on the original video (updates state)
+3. **Clip Extraction**: Extracts individual advert clips using detected timecodes
+4. **Summary Report**: Creates `advert-identifier-pipeline-summary.txt`
 
 ### Examples
 
@@ -110,40 +128,21 @@ advert-identifier-pipeline \
   --input-folder /path/to/videos \
   --csv-folder /path/to/csv
 
-# Custom clip duration (30s before, 180s after)
+# Custom frame range and OCR settings
 advert-identifier-pipeline \
   --input-folder /path/to/videos \
   --csv-folder /path/to/csv \
-  --before-secs 30.0 \
-  --after-secs 180.0
+  --before-secs 30 \
+  --after-secs 180 \
+  --ocr-endpoint http://localhost:8000/v1/chat/completions \
+  --ocr-model PaddlePaddle/PaddleOCR-VL
 
 # Dry run to preview without executing
 advert-identifier-pipeline \
   --input-folder /path/to/videos \
   --csv-folder /path/to/csv \
   --dry-run
-
-# Debug logging
-advert-identifier-pipeline \
-  --input-folder /path/to/videos \
-  --csv-folder /path/to/csv \
-  --log-level DEBUG
 ```
-
-### Pipeline Workflow
-
-For each video file, the pipeline:
-
-1. **Metadata Extraction**: Finds matching CSV, converts to JSON + pipeline state
-2. **Clip Extraction**: Extracts clips using FFmpeg
-3. **Advert Identification**: Runs AI analysis at 1 FPS with ensemble voting (updates state)
-4. **Frame Refinement**: Runs 25 FPS analysis for millisecond-precision boundaries (updates state)
-5. **Clip Extraction**: Extracts individual advert clips using refined timecodes
-6. **Summary Report**: Creates `advert_identifier_pipeline_summary.txt`
-
-The pipeline computes `clip_offset` from the JSON metadata and passes it to
-the clip extraction stage, ensuring correct broadcast-absolute seek offsets.
-The 25 FPS refinement runs automatically between stages 3 and 5.
 
 ---
 
@@ -162,26 +161,15 @@ advert-identifier-metadata-extract --video PATH [OPTIONS]
 | Argument | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `--video` | Yes | - | Path to video file |
-| `--csv-folder` | No | `/path/to/csv/files` | Folder containing CSV files |
+| `--csv-folder` | No | `/mnt/qnap_04/Admin/datasets/adverts_techedge_no_dupes` | Folder containing CSV files |
 | `--output-dir` | No | Video directory | Where to save JSON metadata |
 | `--before-secs` | No | 10.0 | Seconds before ad break start (affects clip_offset in pipeline state) |
 
 ### Output
 
-Creates two files alongside the metadata JSON:
+Creates two files:
 - `{video_name}_metadata.json` — scheduling metadata from CSV
 - `{video_name}_pipeline_state.json` — per-advert tracking with `clip_offset`
-
-### CSV Matching
-
-The extractor parses the video filename to find matching CSV data:
-
-- **Video:** `2024-03-26_ITV1HD_13:30:00.mp4`
-- **Extracts:** Date: `2024-03-26`, Channel: `ITV1HD`
-- **Finds CSV:** `2024-03-26_BFIExport.csv` (date-based)
-- **Filters:** Rows matching channel and time range
-
-Channel matching is case-insensitive and ignores spaces.
 
 ### Examples
 
@@ -202,202 +190,6 @@ advert-identifier-metadata-extract \
   --before-secs 30.0
 ```
 
-### Output Format
-
-Creates `{video_name}_metadata.json` with:
-
-```json
-{
-  "video_info": {
-    "filepath": "video/2024-03-26_ITV1HD_13:30:00.mp4",
-    "date": "2024-03-26",
-    "channel": "ITV1HD",
-    "start_time": "13:30:00",
-    "duration_seconds": 1629.12
-  },
-  "ad_breaks": [
-    {
-      "index": 0,
-      "programme_before": {"title": "ITV LUNCHTIME NEWS", "channel": "ITV1 HD"},
-      "programme_after": {"title": "ITV LUNCHTIME NEWS", "channel": "ITV1 HD"},
-      "start_time": "13:52:05",
-      "adverts": [
-        {
-          "unique_id": "BBHTCPT536010",
-          "advertiser": "Tesco stores",
-          "brand": "Tesco easter",
-          "duration_seconds": 10
-        }
-      ]
-    }
-  ]
-}
-```
-
----
-
-## advert-identifier-clip
-
-Extract video clips centered on ad break timestamps.
-
-### Usage
-
-```bash
-advert-identifier-clip --json-file PATH [OPTIONS]
-```
-
-### Arguments
-
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `--json-file` | Yes | - | Path to JSON metadata file |
-| `--video-path` | No | From JSON | Override video path |
-| `--before-secs` | No | 10.0 | Seconds before ad break to include |
-| `--after-secs` | No | 360.0 | Seconds after ad break to include |
-| `--overlay-type` | No | `none` | Clip overlay: `none`, `timecode`, or `frame` |
-| `--clip-prefix` | No | `advert` | Prefix for output filenames |
-| `--log-level` | No | INFO | DEBUG, INFO, WARNING, ERROR |
-
-### Examples
-
-```bash
-# Basic usage - 10s before, 360s after
-advert-identifier-clip \
-  --json-file metadata/2024-03-26_ITV1HD_13:30:00_metadata.json
-
-# With timecode overlay (HH:MM:SS.mmm)
-advert-identifier-clip \
-  --json-file metadata/ad_breaks.json \
-  --overlay-type timecode
-
-# With frame count overlay
-advert-identifier-clip \
-  --json-file metadata/ad_breaks.json \
-  --overlay-type frame
-
-# Custom clip duration (60s before, 360s after)
-advert-identifier-clip \
-  --json-file metadata/ad_breaks.json \
-  --before-secs 60.0 \
-  --after-secs 360.0
-```
-
-### Output
-
-Creates clips named `{video_name}_{padded_index}of{padded_total}.mp4` in the
-video directory.
-
----
-
-## advert-identifier-refine
-
-Refine advert boundaries to frame-accurate precision using 25 FPS (configurable) analysis.
-
-### Usage
-
-```bash
-advert-identifier-refine --xml-file PATH --video-url URL [OPTIONS]
-```
-
-### Arguments
-
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `--xml-file` | Yes | - | Path to XML from primary detection |
-| `--video-url` | Yes | - | URL to video (same clip as used in 1 FPS stage) |
-| `--json-file` | No | - | Original metadata JSON (for brand/advertiser/category enrichment + pipeline state update) |
-| `--output` | No | `{xml}_refined.xml` | Output XML path |
-| `--api-base-url` | No | `http://localhost:8000/v1` | vLLM API endpoint |
-| `--model` | No | `Qwen/Qwen3.5-4B` | Model name |
-| `--ensemble-size` | No | 3 | Ensemble calls per advert |
-| `--ensemble-delay` | No | 5.0 | Delay between ensemble requests |
-| `--refine-fps` | No | 25.0 | FPS for refinement stage (25 for PAL, 24 for NTSC) |
-| `--ensemble-filter` | No | `none` | Vote filter method: `none` or `mad` (MAD outlier rejection) |
-| `--ensemble-filter-threshold` | No | 3.0 | MAD multiplier for outlier fence. Higher = fewer filtered |
-| `--verbose` | No | False | Show detailed progress |
-| `--debug` | No | False | Save debug_refine.json with raw responses |
-| `--no-thinking` | No | False | Disable model thinking/reasoning (faster, less accurate) |
-| `--log-level` | No | INFO | DEBUG, INFO, WARNING, ERROR |
-
-The refinement automatically updates the pipeline state file with `refined_25fps`
-data when `--json-file` has a corresponding `_pipeline_state.json`. The state
-update includes the auto-computed `adjusted_start_broadcast` used by the clip
-extraction stage.
-
-### How It Works
-
-1. For each advert in the input XML, extracts a 3-second clip centered on the expected end timecode
-2. Sends the clip to VLLM at 25 FPS (75 frames) with advert brand/advertiser/category context
-3. Ensemble of 3 calls vote on the precise last frame (0-74 at 25fps)
-4. Calculates refined `HH:MM:SS.mmm` timecode from clip start + (frame/fps), floor-snapped to the nearest frame boundary
-5. Output milliseconds are always a clean multiple of `1/fps` (e.g., `.000`, `.040`, `.080` at 25 FPS)
-6. Optionally applies MAD-based outlier rejection before median voting (`--ensemble-filter mad`)
-7. Falls back to original timecode on failure
-8. Updates pipeline state with refined data and `adjusted_start_broadcast`
-
-### Examples
-
-```bash
-# Basic usage
-advert-identifier-refine \
-  --xml-file results/video_clip.xml \
-  --video-url "http://server/video.mp4"
-
-# With metadata enrichment and MAD outlier filter
-advert-identifier-refine \
-  --xml-file results/video_clip.xml \
-  --video-url "http://server/video.mp4" \
-  --json-file metadata/video_metadata.json \
-  --ensemble-filter mad
-
-# Custom ensemble and FPS settings
-advert-identifier-refine \
-  --xml-file results/video_clip.xml \
-  --video-url "http://server/video.mp4" \
-  --json-file metadata/video_metadata.json \
-  --ensemble-size 5 \
-  --ensemble-delay 3.0 \
-  --refine-fps 24.0
-
-# Override FPS for NTSC video sources
-advert-identifier-refine \
-  --xml-file results/video_clip.xml \
-  --video-url "http://server/video.mp4" \
-  --refine-fps 24.0
-```
-
-### Output
-
-Creates `{original}_refined.xml` with enhanced advert elements:
-
-```xml
-<ad_break>
-  <advert>
-    <unique_id>BBHTCPT536010</unique_id>
-    <brand>Tesco</brand>
-    <advertiser>Tesco stores</advertiser>
-    <category>retail</category>
-    <duration_seconds>20</duration_seconds>
-    <last_timecode>09:30</last_timecode>             <!-- coarse 1-FPS -->
-    <refined_timecode>00:09:31.400</refined_timecode> <!-- precise 25-FPS -->
-    <refined_clip_frame>43</refined_clip_frame>       <!-- 0-74 within 3s clip -->
-    <refinement_status>success</refinement_status>
-    <description>Brand visible in frames 40-43</description>
-  </advert>
-</ad_break>
-```
-
-### Ensemble Filter
-
-When `--ensemble-filter mad` is enabled, the refinement applies MAD-based
-outlier rejection before taking the final median vote:
-
-| Threshold | Behaviour |
-|-----------|-----------|
-| 2.0 | Aggressive — filters moderate outliers |
-| 3.0 (default) | Balanced — filters only extreme outliers |
-| 5.0+ | Conservative — rarely filters anything |
-
 ---
 
 ## advert-identifier-single-advert-clip
@@ -414,15 +206,15 @@ advert-identifier-single-advert-clip --xml-file PATH --video-url URL --json-file
 
 | Argument | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `--xml-file` | Yes | - | Path to XML (supports both coarse `_refined.xml`) |
+| `--xml-file` | Yes | - | Path to XML with advert detection results |
 | `--video-url` | Yes | - | URL or path to the **full broadcast** video |
 | `--json-file` | Yes | - | JSON metadata file (for category extraction) |
 | `--output-dir` | No | `.` | Output directory for clips |
 | `--index` | No | all | 1-based advert index to process |
 | `--trim` | No | 0.0 | Seconds to trim from start and end of each clip |
 | `--pad` | No | 0.0 | Seconds to add to start and end of each clip |
-| `--clip-offset` | No | 0.0 | Seconds from broadcast start to clip start. Converts clip-relative timecodes to broadcast-absolute |
-| `--state-file` | No | - | Path to pipeline state file. Reads `adjusted_start_broadcast` directly (supersedes `--clip-offset`) |
+| `--clip-offset` | No | 0.0 | Seconds from broadcast start to clip start |
+| `--state-file` | No | - | Path to pipeline state file. Reads `adjusted_start_broadcast` directly |
 | `--log-level` | No | INFO | DEBUG, INFO, WARNING, ERROR |
 
 ### Timecode Resolution
@@ -430,28 +222,15 @@ advert-identifier-single-advert-clip --xml-file PATH --video-url URL --json-file
 The tool selects the most precise timecode available using this priority:
 
 1. **Pipeline state file** (`--state-file`): Uses `adjusted_start_broadcast` directly.
-   No `clip_offset` computation needed. Full ms precision.
-2. **Refined XML** (`<refined_timecode>`): Uses the 25 FPS refined timecode,
-   applies `--clip-offset`. HH:MM:SS.mmm precision.
-3. **Coarse XML** (`<last_timecode>`): Uses the 1 FPS timecode,
-   applies `--clip-offset`. MM:SS precision.
-
-### Coordinate Systems
-
-**Important:** The XML timecodes are **clip-relative** (e.g., `04:30` = 4 min 30 s
-from the start of the 6-minute clip). To convert to broadcast-absolute FFmpeg offsets:
-
-- `--clip-offset`: Pre-computed offset from broadcast start to clip start.
-  Formula: `(break_start_tod - video_start_tod) - before_secs`
-- `--state-file`: Reads pre-computed `adjusted_start_broadcast` from the pipeline
-  state file, which includes the offset, refined timecode, and duration.
+   No `clip_offset` computation needed.
+2. **XML** (`<last_timecode>`): Uses the detection timecode, applies `--clip-offset`.
 
 ### Examples
 
 ```bash
-# Basic usage with refined XML (prefers refined_timecode)
+# Basic usage with clip offset
 advert-identifier-single-advert-clip \
-  --xml-file results/video_clip_refined.xml \
+  --xml-file results/video.xml \
   --json-file metadata/video_metadata.json \
   --video-url "http://server/full_broadcast.mp4" \
   --output-dir clips/ \
@@ -459,7 +238,7 @@ advert-identifier-single-advert-clip \
 
 # Using pipeline state file (auto-computes seek offset)
 advert-identifier-single-advert-clip \
-  --xml-file results/video_clip_refined.xml \
+  --xml-file results/video.xml \
   --json-file metadata/video_metadata.json \
   --video-url "http://server/full_broadcast.mp4" \
   --output-dir clips/ \
@@ -467,7 +246,7 @@ advert-identifier-single-advert-clip \
 
 # Extract a single advert by index
 advert-identifier-single-advert-clip \
-  --xml-file results/video_clip.xml \
+  --xml-file results/video.xml \
   --json-file metadata/video_metadata.json \
   --video-url "http://server/full_broadcast.mp4" \
   --output-dir clips/ \
@@ -475,298 +254,26 @@ advert-identifier-single-advert-clip \
 
 # With trimming (remove 0.5s from start and end)
 advert-identifier-single-advert-clip \
-  --xml-file results/video_clip.xml \
+  --xml-file results/video.xml \
   --json-file metadata/video_metadata.json \
   --video-url "http://server/full_broadcast.mp4" \
   --output-dir clips/ \
   --trim 0.5
-
-# With padding (add 0.5s to start and end)
-advert-identifier-single-advert-clip \
-  --xml-file results/video_clip.xml \
-  --json-file metadata/video_metadata.json \
-  --video-url "http://server/full_broadcast.mp4" \
-  --output-dir clips/ \
-  --pad 0.5
-```
-
----
-
-## advert-identifier-ocr-scan
-
-OCR-based 1 FPS advert boundary detection.  Replaces the VLM-based
-`advert-identifier` command with frame extraction + OCR + text matching.
-
-### Usage
-
-```bash
-advert-identifier-ocr-scan -v URL --metadata-file PATH [OPTIONS]
-```
-
-### Arguments
-
-| Argument | Short | Required | Default | Description |
-|----------|-------|----------|---------|-------------|
-| `--video-url` | `-v` | Yes | - | Video URL (same clip used by VLM stage) |
-| `--metadata-file` | | Yes | - | JSON file with ad break metadata |
-| `--ad-break-index` | | No | auto | 1-based ad break index (auto-detected from filename) |
-| `--ocr-endpoint` | | No | `http://localhost:8000/v1/chat/completions` | vLLM OCR endpoint |
-| `--ocr-model` | | No | `lightonai/LightOnOCR-2-1B` | OCR model name |
-| `--output-dir` | | No | - | Directory for extracted frame images (for debugging) |
-| `--output` | `-o` | No | auto | Output XML path |
-| `--verbose` | | No | False | Show detailed progress |
-| `--dry-run` | | No | False | Skip OCR API calls (test frame extraction only) |
-
-### How It Works
-
-1. **Frame extraction**: Uses FFmpeg to extract frames at 1 FPS across the full clip
-2. **OCR**: Each frame is sent to the OCR model via vLLM chat completions (base64-encoded images)
-3. **Text matching**: Extracted text is regex-matched against each advert's brand and advertiser fields
-4. **Boundary detection**: The last frame with a text match becomes the coarse boundary timecode
-5. **Output**: Same XML schema as `advert-identifier` (`<ad_break>` / `<advert>` / `<last_timecode>`)
-6. **Pipeline state**: Updates `coarse_1fps` with `last_timecode` and `last_seconds_clip`
-
-### Matching Strategy
-
-The scanner builds regex patterns from each advert's brand, advertiser, and category:
-
-- Full term (case-insensitive)
-- Individual words from multi-word terms (≥3 chars)
-- Apostrophe-stripped variants (e.g., `McDonald's` → `McDonalds`)
-
-Frames are scanned in order and the last matching frame is reported.
-
-### Fallback
-
-If an advert's brand/advertiser never appears in any OCR output, the advert is
-output with an empty `<last_timecode>` and `<ocr_match_fallback>true</ocr_match_fallback>`
-element.
-
-### Examples
-
-```bash
-# Basic usage
-advert-identifier-ocr-scan \
-  -v http://server/video_01of01.mp4 \
-  --metadata-file metadata.json
-
-# Custom OCR model and endpoint
-advert-identifier-ocr-scan \
-  -v http://server/video_01of01.mp4 \
-  --metadata-file metadata.json \
-  --ocr-endpoint http://localhost:8000/v1/chat/completions \
-  --ocr-model lightonai/LightOnOCR-2-1B \
-  --verbose
-
-# Dry-run (frame extraction only, no API calls)
-advert-identifier-ocr-scan \
-  -v http://server/video_01of01.mp4 \
-  --metadata-file metadata.json \
-  --dry-run
-
-# Save frame images for inspection
-advert-identifier-ocr-scan \
-  -v http://server/video_01of01.mp4 \
-  --metadata-file metadata.json \
-  --output-dir experiments/ocr_frames_test
-```
-
----
-
-## advert-identifier-ocr-refine
-
-OCR-based 25 FPS frame-accurate refinement.  Replaces the VLM-based
-`advert-identifier-refine` command with frame extraction + OCR + text matching.
-
-### Usage
-
-```bash
-advert-identifier-ocr-refine --xml-file PATH --video-url URL [OPTIONS]
-```
-
-### Arguments
-
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `--xml-file` | Yes | - | Path to 1 FPS OCR scan XML |
-| `--video-url` | Yes | - | URL to video (same clip as 1 FPS stage) |
-| `--json-file` | No | - | Metadata JSON (for brand/advertiser enrichment + pipeline state) |
-| `--output` | No | `{xml}_refined.xml` | Output refined XML path |
-| `--ocr-endpoint` | No | `http://localhost:8000/v1/chat/completions` | vLLM OCR endpoint |
-| `--ocr-model` | No | `lightonai/LightOnOCR-2-1B` | OCR model name |
-| `--verbose` | No | False | Show detailed progress |
-| `--dry-run` | No | False | Skip OCR API calls |
-
-### How It Works
-
-1. Reads the 1 FPS OCR scan XML to get coarse timecodes per advert
-2. Enriches advert data with advertiser/category from the metadata JSON
-3. For each advert:
-   a. Extracts 3 seconds at 25 FPS centred on the coarse timecode
-   b. OCRs every frame (up to 75 frames)
-   c. Regex-matches text against brand/advertiser metadata
-   d. Finds the last frame with a match → computes refined timecode
-4. Outputs refined XML with `<refined_timecode>` and `<refined_clip_frame>`
-5. Updates pipeline state with `refined_25fps` data
-
-### Examples
-
-```bash
-# Basic usage
-advert-identifier-ocr-refine \
-  --xml-file results/video_clip.xml \
-  --video-url http://server/video.mp4
-
-# With metadata enrichment and pipeline state update
-advert-identifier-ocr-refine \
-  --xml-file results/video_clip.xml \
-  --video-url http://server/video.mp4 \
-  --json-file metadata/video_metadata.json
-
-# Custom OCR model
-advert-identifier-ocr-refine \
-  --xml-file results/video_clip.xml \
-  --video-url http://server/video.mp4 \
-  --json-file metadata/video_metadata.json \
-  --ocr-endpoint http://localhost:8000/v1/chat/completions \
-  --ocr-model lightonai/LightOnOCR-2-1B \
-  --verbose
-
-# Dry-run (frame extraction only)
-advert-identifier-ocr-refine \
-  --xml-file results/video_clip.xml \
-  --video-url http://server/video.mp4 \
-  --dry-run
-```
-
-### Output
-
-Creates `{original}_refined.xml` with the same schema as VLM-based refinement:
-
-```xml
-<ad_break>
-  <advert>
-    <unique_id>BBHTCPT536010</unique_id>
-    <brand>Tesco</brand>
-    <advertiser>Tesco stores</advertiser>
-    <category>retail</category>
-    <duration_seconds>20</duration_seconds>
-    <last_timecode>09:30</last_timecode>             <!-- coarse 1-FPS OCR -->
-    <refined_timecode>00:09:31.400</refined_timecode> <!-- precise 25-FPS OCR -->
-    <refined_clip_frame>43</refined_clip_frame>       <!-- 0-74 within 3s clip -->
-    <refinement_status>success</refinement_status>
-    <description>OCR matched: tesco</description>
-  </advert>
-</ad_break>
-```
-
----
-
-## advert-identifier-benchmark
-
-Run multiple detections and analyze accuracy against ground truth.
-
-### Usage
-
-```bash
-advert-identifier-benchmark --video-url URL --metadata-file PATH [OPTIONS]
-```
-
-### Arguments
-
-| Argument | Short | Required | Default | Description |
-|----------|-------|----------|---------|-------------|
-| `--video-url` | `-v` | Yes | - | Video URL to analyze |
-| `--metadata-file` | `-m` | Yes | - | JSON metadata file |
-| `--mode` | | No | `timecode` | Analysis mode: `timecode` or `frame` |
-| `--ground-truth-first` | | No | - | Ground truth for first advert |
-| `--num-runs` | `-n` | No | 10 | Number of benchmark runs |
-| `--ensemble-size` | | No | 5 | Ensemble members per run |
-| `--ensemble-delay` | | No | 10.0 | Delay between requests (seconds) |
-| `--output-csv` | `-o` | No | auto | Output CSV file path |
-
-### Examples
-
-```bash
-# Timecode mode with ground truth
-advert-identifier-benchmark \
-  --video-url "http://server/video.mp4" \
-  --metadata-file metadata.json \
-  --mode timecode \
-  --ground-truth-first 01:56 \
-  --num-runs 10
-
-# Frame mode with ground truth
-advert-identifier-benchmark \
-  --video-url "http://server/video.mp4" \
-  --metadata-file metadata.json \
-  --mode frame \
-  --ground-truth-first 116 \
-  --num-runs 10
-
-# Custom ensemble settings
-advert-identifier-benchmark \
-  --video-url "http://server/video.mp4" \
-  --metadata-file metadata.json \
-  --ground-truth-first 01:56 \
-  --num-runs 20 \
-  --ensemble-size 3 \
-  --ensemble-delay 5
-```
-
-### Output
-
-Creates CSV file with detailed results including:
-- Accuracy statistics vs ground truth
-- Mean/median/min/max differences
-- Closest and furthest runs
-
----
-
-## advert-identifier-describe
-
-Generate natural language descriptions of video content.
-
-### Usage
-
-```bash
-advert-identifier-describe [OPTIONS]
-```
-
-### Arguments
-
-| Argument | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `--video` | Yes | - | Path to video file |
-| `--prompt` | No | Built-in | Custom description prompt |
-
-### Examples
-
-```bash
-# Describe a video clip
-advert-identifier-describe \
-  --video /path/to/video.mp4
-
-# Custom prompt
-advert-identifier-describe \
-  --video /path/to/video.mp4 \
-  --prompt "What products are advertised in this video?"
 ```
 
 ---
 
 ## Environment Variables
 
-All commands respect these environment variables:
+All commands respect these environment variables (CLI flags override):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `API_BASE_URL` | `http://localhost:8000/v1` | vLLM API endpoint |
-| `API_KEY` | `EMPTY` | API authentication key |
-| `MODEL_NAME` | `Qwen/Qwen3.5-4B` | Model to use |
-| `FPS` | `1.0` | Frame sampling rate |
-| `ENSEMBLE_SIZE` | `5` | Default ensemble size |
-| `ENSEMBLE_DELAY` | `10.0` | Default ensemble delay |
+| `OCR_ENDPOINT` | `http://localhost:8000/v1/chat/completions` | vLLM OCR endpoint |
+| `OCR_MODEL` | `PaddlePaddle/PaddleOCR-VL` | OCR model name |
+| `DETECTION_FPS` | `5.0` | Frame extraction rate |
+| `BEFORE_SECS` | `10.0` | Seconds before ad break start |
+| `AFTER_SECS` | `360.0` | Seconds after ad break start |
 
 ---
 
@@ -786,13 +293,15 @@ Examples:
 - `2024-03-26_BFIExport.csv`
 - `2024-03-27_BFIExport.csv`
 
-Note: CSV files are date-based and contain data for multiple channels. The tools
-filter by channel and time range.
-
 ### Pipeline State Files
 Format: `{video_stem}_pipeline_state.json`
 
 Created by `advert-identifier-metadata-extract` alongside the metadata JSON.
-Updated by `advert-identifier` (coarse_1fps) and `advert-identifier-refine`
-(refined_25fps). Read by `advert-identifier-single-advert-clip` for
+Updated by `advert-identifier` (detection). Read by `advert-identifier-single-advert-clip` for
 broadcast-absolute seek offsets.
+
+### OCR Results Files
+Format: `{video_stem}_ocr.json`
+
+Created by `advert-identifier` alongside the metadata JSON.
+Contains per-frame OCR text, timestamps, and frame indices. Queryable for debugging.

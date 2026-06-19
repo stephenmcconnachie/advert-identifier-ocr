@@ -37,11 +37,10 @@ def _get_bin_dir():
 
 
 def identifier_main():
-    """Entry point for advert-identifier command."""
-    # Add src to path for imports
+    """Entry point for advert-identifier command (OCR detection)."""
     sys.path.insert(0, str(Path(__file__).parent.parent))
-    from ad_break_identifier.main import main
-    main()
+    from ad_break_identifier.detect import main
+    sys.exit(main())
 
 
 def pipeline_main():
@@ -64,64 +63,10 @@ def extractor_main():
     sys.exit(result.returncode)
 
 
-def clipper_main():
-    """Entry point for advert-identifier-clip command."""
-    import subprocess
-    
-    bin_dir = _get_bin_dir()
-    script = bin_dir / "advert-identifier-clip"
-    result = subprocess.run([sys.executable, str(script)] + sys.argv[1:])
-    sys.exit(result.returncode)
-
-
-def benchmark_main():
-    """Entry point for advert-identifier-benchmark command."""
-    import subprocess
-    
-    bin_dir = _get_bin_dir()
-    script = bin_dir / "advert-identifier-benchmark"
-    result = subprocess.run([sys.executable, str(script)] + sys.argv[1:])
-    sys.exit(result.returncode)
-
-
-def describer_main():
-    """Entry point for advert-identifier-describe command."""
-    import subprocess
-
-    bin_dir = _get_bin_dir()
-    script = bin_dir / "advert-identifier-describe"
-    result = subprocess.run([sys.executable, str(script)] + sys.argv[1:])
-    sys.exit(result.returncode)
-
-
 def single_advert_clip_main():
     """Entry point for advert-identifier-single-advert-clip command."""
-    import subprocess
-
-    bin_dir = _get_bin_dir()
-    script = bin_dir / "advert-identifier-single-advert-clip"
-    result = subprocess.run([sys.executable, str(script)] + sys.argv[1:])
-    sys.exit(result.returncode)
-
-
-def refine_main():
-    """Entry point for advert-identifier-refine command."""
     sys.path.insert(0, str(Path(__file__).parent.parent))
-    from ad_break_identifier.refinement_cli import main
-    main()
-
-
-def ocr_scan_main():
-    """Entry point for advert-identifier-ocr-scan command."""
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from ad_break_identifier.ocr_scan import main
-    sys.exit(main())
-
-
-def ocr_refine_main():
-    """Entry point for advert-identifier-ocr-refine command."""
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    from ad_break_identifier.ocr_refine import main
+    from ad_break_identifier.single_advert_clip import main
     sys.exit(main())
 
 
