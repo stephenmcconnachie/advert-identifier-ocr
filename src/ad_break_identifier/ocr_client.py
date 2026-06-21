@@ -7,7 +7,9 @@ completions format with base64-encoded image data and an "OCR:" text prompt.
 from __future__ import annotations
 
 import base64
+import concurrent.futures
 import logging
+import threading
 import time
 from pathlib import Path
 from urllib.parse import urlparse
@@ -68,6 +70,7 @@ def ocr_image(
     top_p: float = DEFAULT_TOP_P,
     timeout: int = DEFAULT_TIMEOUT,
     prompt: str = DEFAULT_OCR_PROMPT,
+    session: requests.Session | None = None,
 ) -> str:
     """Send a single image frame to the OCR model and return extracted text.
 
@@ -114,7 +117,8 @@ def ocr_image(
     last_error: Exception | None = None
     for attempt in range(MAX_RETRIES):
         try:
-            response = requests.post(endpoint, json=payload, timeout=timeout, allow_redirects=False)
+            http = session.post if session else requests.post
+            response = http(endpoint, json=payload, timeout=timeout, allow_redirects=False)
             response.raise_for_status()
             result = response.json()
             text = (
@@ -140,6 +144,51 @@ def ocr_image(
     )
 
 
+def _ocr_single_worker(
+    idx: int,
+    path: Path,
+    session: requests.Session,
+    semaphore: threading.Semaphore,
+    endpoint: str,
+    model: str,
+    max_tokens: int,
+    temperature: float,
+    top_p: float,
+    timeout: int,
+    prompt: str,
+) -> dict:
+    """Run OCR on a single frame inside a thread pool worker."""
+    with semaphore:
+        try:
+            text = ocr_image(
+                image_path=path,
+                session=session,
+                endpoint=endpoint,
+                model=model,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                timeout=timeout,
+                prompt=prompt,
+            )
+            return {
+                "frame_index": idx,
+                "frame_name": path.name,
+                "path": str(path),
+                "text": text,
+                "error": None,
+            }
+        except Exception as e:
+            logger.error("OCR failed for %s: %s", path.name, e)
+            return {
+                "frame_index": idx,
+                "frame_name": path.name,
+                "path": str(path),
+                "text": "",
+                "error": str(e),
+            }
+
+
 def ocr_batch(
     image_paths: list[Path],
     endpoint: str = DEFAULT_ENDPOINT,
@@ -150,46 +199,55 @@ def ocr_batch(
     timeout: int = DEFAULT_TIMEOUT,
     prompt: str = DEFAULT_OCR_PROMPT,
     progress_callback=None,
+    max_workers: int = 4,
 ) -> list[dict]:
-    """Run OCR on multiple images sequentially.
+    """Run OCR on multiple images concurrently using a thread pool.
 
-    Returns list of dicts: ``frame_index``, ``frame_name``, ``text``,
-    ``path``, ``error``.
+    Uses ``concurrent.futures.ThreadPoolExecutor`` to parallelise HTTP
+    requests and a ``requests.Session`` for TCP connection reuse.  A
+    semaphore caps the number of in-flight requests to ``max_workers``
+    to avoid overwhelming the vLLM server.
+
+    Args:
+        image_paths: List of paths to image frames.
+        endpoint: vLLM OCR endpoint URL.
+        model: OCR model name.
+        max_tokens: Maximum tokens in OCR response.
+        temperature: Sampling temperature (0.0 = deterministic).
+        top_p: Nucleus sampling parameter.
+        timeout: HTTP request timeout in seconds.
+        prompt: Text prompt sent alongside each image.
+        progress_callback: Optional ``callable(current, total)``.
+        max_workers: Maximum concurrent OCR requests (default 4).
+
+    Returns:
+        List of dicts sorted by ``frame_index``, each with keys:
+        ``frame_index``, ``frame_name``, ``path``, ``text``, ``error``.
     """
-    results: list[dict] = []
     total = len(image_paths)
+    if total == 0:
+        return []
 
-    for idx, path in enumerate(image_paths):
-        logger.info("OCR [%d/%d] %s", idx + 1, total, path.name)
-        try:
-            text = ocr_image(
-                image_path=path,
-                endpoint=endpoint,
-                model=model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                top_p=top_p,
-                timeout=timeout,
-                prompt=prompt,
-            )
-            results.append({
-                "frame_index": idx,
-                "frame_name": path.name,
-                "path": str(path),
-                "text": text,
-                "error": None,
-            })
-        except Exception as e:
-            logger.error("OCR failed for %s: %s", path.name, e)
-            results.append({
-                "frame_index": idx,
-                "frame_name": path.name,
-                "path": str(path),
-                "text": "",
-                "error": str(e),
-            })
+    semaphore = threading.Semaphore(max_workers)
+    with requests.Session() as session:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures: dict[concurrent.futures.Future, int] = {}
+            for idx, path in enumerate(image_paths):
+                future = executor.submit(
+                    _ocr_single_worker,
+                    idx, path, session, semaphore,
+                    endpoint, model, max_tokens,
+                    temperature, top_p, timeout, prompt,
+                )
+                futures[future] = idx
 
-        if progress_callback:
-            progress_callback(idx + 1, total)
+            results: list[dict] = [None] * total
+            completed = 0
+            for future in concurrent.futures.as_completed(futures):
+                idx = futures[future]
+                results[idx] = future.result()
+                completed += 1
+                if progress_callback:
+                    progress_callback(completed, total)
 
     return results
