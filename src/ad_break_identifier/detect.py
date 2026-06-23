@@ -748,6 +748,16 @@ def clamp_correct(
                 bwd -= int(adverts[j].duration_seconds * fps)
             if abs(fwd - bwd) <= 1:
                 snapped = _snap(fwd)
+            elif abs(prev_trusted - i) <= 1 or abs(next_trusted - i) <= 1:
+                # One neighbour is adjacent — trust the adjacent estimate
+                if abs(prev_trusted - i) <= 1:
+                    snapped = _snap(fwd)
+                    logger.info("  %s fwd/bwd disagree (fwd=%d bwd=%d) — adjacent prev, trusting forward",
+                                adverts[i].brand, fwd, bwd)
+                else:
+                    snapped = _snap(bwd)
+                    logger.info("  %s fwd/bwd disagree (fwd=%d bwd=%d) — adjacent next, trusting backward",
+                                adverts[i].brand, fwd, bwd)
             else:
                 logger.info("  %s clamp forward=%d backward=%d disagree — keeping original",
                             adverts[i].brand, fwd, bwd)
