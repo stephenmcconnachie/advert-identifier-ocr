@@ -102,7 +102,9 @@ def build_substring_patterns(
     """Build unbounded regex patterns for fuzzy substring matching.
 
     Only the brand name is used (not advertiser or category).  Catches
-    concatenated forms like "galaxychocolate.com".
+    concatenated forms like "galaxychocolate.com".  Individual words
+    shorter than 4 chars are excluded to avoid false positives from
+    short common substrings (e.g. "age" inside "image").
     """
     patterns: list[re.Pattern] = []
     seen: set[str] = set()
@@ -118,7 +120,7 @@ def build_substring_patterns(
     words = term.split()
     if len(words) > 1:
         for word in words:
-            if len(word) >= 3 and word not in seen:
+            if len(word) >= 4 and word not in seen:
                 seen.add(word)
                 patterns.append(re.compile(re.escape(word), re.IGNORECASE))
 
@@ -369,6 +371,75 @@ class BrandSearchResult:
     matched_terms: list[str]
 
 
+def _brand_variants(brand: str) -> list[tuple[str, str]]:
+    """Generate progressively relaxed brand variants for matching.
+
+    Each variant is a ``(text, label)`` pair where *label* describes
+    the transformation (used in match tier reporting).
+
+    Variants (in priority order):
+    1. Original brand text  → ``"original"``
+    2. ``&`` replaced with ``and``  → ``"ampersand->and"``
+    3. Spaces removed  → ``"concat"``
+    4. ``&``→``and`` + spaces removed  → ``"concat-and"``
+    5+ Prefixes of 3/4 (longest-first) so that e.g. ``Insure&gotravelinsurance``
+       yields prefixes ``Insure&gotravel``, ``Insure&go`` etc. for substring
+       matching when the full concatenated form is longer than what the OCR
+       captured.
+    """
+    variants: list[tuple[str, str]] = [(brand, "original")]
+    seen: set[str] = {brand}
+
+    spaced = brand.replace("&", "and")
+    if spaced != brand and spaced not in seen:
+        variants.append((spaced, "ampersand->and"))
+        seen.add(spaced)
+
+    concat = brand.replace(" ", "")
+    if concat != brand and concat not in seen:
+        variants.append((concat, "concat"))
+        seen.add(concat)
+
+    concat_and = spaced.replace(" ", "")
+    if concat_and not in seen:
+        variants.append((concat_and, "concat-and"))
+        seen.add(concat_and)
+
+    # Prefix variants for both concat forms — try longest first
+    # Split on spaces preserving the original words (including "&" as a word)
+    words = brand.split()
+    for use_and in (True, False):
+        base_label = "concat-and" if use_and else "concat"
+        for n in range(len(words) - 1, 1, -1):  # at least 2 words
+            parts = []
+            for w in words[:n]:
+                if use_and and w == "&":
+                    parts.append("and")
+                else:
+                    parts.append(w)
+            shortened = "".join(parts)
+            if len(shortened) >= 4 and shortened not in seen:
+                variants.append((shortened, f"concat({n})"))
+                seen.add(shortened)
+
+    # Possessive variants: for each word ending in 's' (but not 'ss'),
+    # try the possessive form ("Butlins" → "Butlin's") as a full
+    # phrase, so exact phrase matching catches the apostrophe form.
+    words = brand.split()
+    for i, word in enumerate(words):
+        if len(word) >= 4 and word.endswith("s") and not word.endswith("ss"):
+            possessive = word[:-1] + "'s"
+            if possessive != word:
+                parts = list(words)
+                parts[i] = possessive
+                variant = " ".join(parts)
+                if variant not in seen:
+                    variants.append((variant, f"poss({i})"))
+                    seen.add(variant)
+
+    return variants
+
+
 def search_with_ordering(
     ocr_results: list[dict],
     adverts: list[AdvertMetadata],
@@ -393,77 +464,99 @@ def search_with_ordering(
     prev_last_frame = -1  # Must be after previous; -1 means any frame >= 0
 
     for adv in adverts:
-        exact_patterns = build_exact_patterns(brand=adv.brand)
-        substring_patterns = build_substring_patterns(brand=adv.brand)
+        brand_variants = _brand_variants(adv.brand)
 
-        # Tier 1: exact word match
-        exact_matches: list[int] = []
-        exact_terms: set[str] = set()
+        matched = False
+        result: BrandSearchResult | None = None
 
-        for ocr_res in ocr_results:
-            idx = ocr_res["frame_index"]
-            if idx <= prev_last_frame:
-                continue
-            text = ocr_res.get("text", "")
-            matched, terms = match_ocr_text(text, exact_patterns)
-            if matched:
-                exact_matches.append(idx)
-                exact_terms.update(t.lower() for t in terms)
+        # ── Helper: scan with a set of patterns ────────────────────────
+        def _scan(
+            patterns: list[re.Pattern],
+        ) -> tuple[list[int], list[str]] | None:
+            frames: list[int] = []
+            terms: set[str] = set()
+            for ocr_res in ocr_results:
+                idx = ocr_res["frame_index"]
+                if idx <= prev_last_frame:
+                    continue
+                text = ocr_res.get("text", "")
+                hit, matched_terms = match_ocr_text(text, patterns)
+                if hit:
+                    frames.append(idx)
+                    terms.update(t.lower() for t in matched_terms)
+            if frames:
+                return frames, list(terms)
+            return None
 
-        if exact_matches:
-            last_frame = exact_matches[-1]
-            result = BrandSearchResult(
-                matched=True,
-                last_match_frame=last_frame,
-                last_match_seconds=last_frame / fps,
-                match_tier="exact",
-                match_count=len(exact_matches),
-                all_matching_frames=exact_matches,
-                matched_terms=list(exact_terms),
-            )
-            results.append(result)
-            prev_last_frame = last_frame
-            logger.info(
-                "  %s (%s): exact match at frame %d (tc=%s), %d frames matched",
-                adv.unique_id, adv.brand,
-                last_frame, seconds_to_timecode(last_frame / fps),
-                len(exact_matches),
-            )
-            continue
+        # ── Groups 1 & 2: try full-phrase then individual-word matching  ──
+        # across all variants, then pick whichever gives the latest frame.
+        best_result_g1: BrandSearchResult | None = None
+        best_result_g2: BrandSearchResult | None = None
 
-        # Tier 2: substring match
-        sub_matches: list[int] = []
-        sub_terms: set[str] = set()
+        for variant, label in brand_variants:
+            # Group 1 — full-phrase matching
+            for pat, tier in [
+                (rf"\b{re.escape(variant)}\b", f"exact({label})"),
+                (re.escape(variant), f"substr({label})"),
+            ]:
+                hit = _scan([re.compile(pat, re.IGNORECASE)])
+                if hit:
+                    frames, terms = hit
+                    cand = BrandSearchResult(True, frames[-1], frames[-1] / fps,
+                                             tier, len(frames), frames, terms)
+                    if best_result_g1 is None or cand.last_match_frame > best_result_g1.last_match_frame:
+                        best_result_g1 = cand
 
-        for ocr_res in ocr_results:
-            idx = ocr_res["frame_index"]
-            if idx <= prev_last_frame:
-                continue
-            text = ocr_res.get("text", "")
-            matched, terms = match_ocr_text(text, substring_patterns)
-            if matched:
-                sub_matches.append(idx)
-                sub_terms.update(t.lower() for t in terms)
+            # Group 2 — individual-word matching
+            for pat_fn, tier_prefix in [
+                (build_exact_patterns, "words"),
+                (build_substring_patterns, "subwords"),
+            ]:
+                hit = _scan(pat_fn(brand=variant))
+                if hit:
+                    frames, terms = hit
+                    cand = BrandSearchResult(True, frames[-1], frames[-1] / fps,
+                                             f"{tier_prefix}({label})", len(frames),
+                                             frames, terms)
+                    if best_result_g2 is None or cand.last_match_frame > best_result_g2.last_match_frame:
+                        best_result_g2 = cand
 
-        if sub_matches:
-            last_frame = sub_matches[-1]
-            result = BrandSearchResult(
-                matched=True,
-                last_match_frame=last_frame,
-                last_match_seconds=last_frame / fps,
-                match_tier="substring",
-                match_count=len(sub_matches),
-                all_matching_frames=sub_matches,
-                matched_terms=list(sub_terms),
-            )
-            results.append(result)
-            prev_last_frame = last_frame
-            logger.info(
-                "  %s (%s): substring match at frame %d (tc=%s), %d frames matched",
-                adv.unique_id, adv.brand,
-                last_frame, seconds_to_timecode(last_frame / fps),
-                len(sub_matches),
-            )
+        # Pick the best result.  Priority (highest = worst):
+        # 1 = G1 (full-phrase) with original/poss variant
+        # 2 = G1 with transformed variant
+        # 3 = G2 (individual words) with original/poss variant
+        # 4 = G2 with transformed variant
+        # Within each level, the later frame wins.
+        def _priority(result: BrandSearchResult, is_g1: bool) -> int:
+            label = result.match_tier.split("(")[-1].rstrip(")")
+            is_high = label in ("original",) or label.startswith("poss")
+            if is_g1 and is_high:
+                return 0
+            if not is_g1 and is_high:
+                return 1
+            if is_g1:
+                return 2
+            return 3
+
+        best_result = best_result_g1
+        if best_result_g2 is not None:
+            if best_result is None:
+                best_result = best_result_g2
+            else:
+                p1 = _priority(best_result, True)
+                p2 = _priority(best_result_g2, False)
+                if p2 < p1 or (p2 == p1 and best_result_g2.last_match_frame > best_result.last_match_frame):
+                    best_result = best_result_g2
+
+        if best_result is not None:
+            # Re-scan with the winning group's patterns to ensure we use
+            # the correct prev_last_frame for ordering enforcement
+            prev_last_frame = best_result.last_match_frame
+            logger.info("  %s (%s): %s at frame %d (%s)",
+                        adv.unique_id, adv.brand, best_result.match_tier,
+                        best_result.last_match_frame,
+                        ", ".join(best_result.matched_terms))
+            results.append(best_result)
             continue
 
         # Tier 3: advertiser fallback — retry with advertiser patterns when
@@ -576,6 +669,259 @@ def format_xml(
 
     lines.append("</ad_break>")
     return "\n".join(lines) + "\n"
+
+
+# ── QC HTML report ──────────────────────────────────────────────────────────
+
+
+_QC_CSS = """
+html { transition: background 0.3s, color 0.3s; }
+:root {
+  --bg: #2e3440; --bg-card: #3b4252; --bg-code: #242933;
+  --fg: #eceff4; --fg-muted: #81a1c1; --border: #4c566a;
+  --accent: #88c0d0; --link: #88c0d0;
+  --match-bg: #3a4a3a; --match-border: #a3be8c; --match-fg: #a3be8c;
+  --fail-bg: #3a2e34; --fail-fg: #bf616a; --fail-border: #bf616a;
+}
+[data-theme="light"] {
+  --bg: #eceff4; --bg-card: #ffffff; --bg-code: #e5e9f0;
+  --fg: #2e3440; --fg-muted: #5e81ac; --border: #d8dee9;
+  --accent: #5e81ac; --link: #5e81ac;
+  --match-bg: #e8f0e8; --match-border: #a3be8c; --match-fg: #3a6a3a;
+  --fail-bg: #f0e8e8; --fail-fg: #b84a4a; --fail-border: #bf616a;
+}
+[data-theme="gruvbox"] {
+  --bg: #1d2021; --bg-card: #282828; --bg-code: #0d0d0d;
+  --fg: #fbf1c7; --fg-muted: #a89984; --border: #665c54;
+  --accent: #fabd2f; --link: #8ec07c;
+  --match-bg: #1d221d; --match-border: #b8bb26; --match-fg: #b8bb26;
+  --fail-bg: #221d1d; --fail-fg: #fb4934; --fail-border: #fb4934;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); padding: 20px; line-height: 1.5; }
+h1 { font-size: 1.5rem; margin-bottom: 4px; }
+.subtitle { color: var(--fg-muted); font-size: 0.85rem; margin-bottom: 16px; }
+.theme-nav { display: flex; gap: 8px; margin-bottom: 20px; }
+.theme-btn { padding: 4px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-card); color: var(--fg); cursor: pointer; font-size: 0.8rem; }
+.theme-btn.active { border-color: var(--accent); color: var(--accent); }
+.toc { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; margin-bottom: 24px; }
+.toc h2 { font-size: 1rem; margin-bottom: 8px; }
+.toc ol { padding-left: 20px; }
+.toc a { color: var(--link); text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+details.advert-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 20px; padding: 0; }
+details.advert-section[open] { padding-bottom: 6px; }
+details.advert-section summary { padding: 14px 20px; cursor: pointer; font-size: 1.1rem; font-weight: 600; border-radius: 6px; list-style: none; display: flex; align-items: center; gap: 8px; }
+details.advert-section summary::-webkit-details-marker { display: none; }
+details.advert-section summary::before { content: "\u25b6"; font-size: 0.7rem; color: var(--accent); transition: transform 0.2s; }
+details.advert-section[open] summary::before { content: "\u25bc"; }
+details.advert-section summary:hover { background: var(--border); }
+details.advert-section .advert-body { padding: 0 20px 12px; }
+details.advert-section .advert-meta { color: var(--fg-muted); font-size: 0.85rem; margin-bottom: 12px; }
+.frame-row { display: flex; gap: 16px; padding: 8px 12px; border-bottom: 1px solid var(--border); align-items: stretch; }
+.frame-row:last-child { border-bottom: none; }
+.frame-row.match { background: var(--match-bg); border-left: 4px solid var(--match-border); border-radius: 4px; margin: 4px 0; }
+.frame-row img { width: 160px; height: auto; border-radius: 4px; flex-shrink: 0; object-fit: contain; }
+.frame-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.frame-tc { font-weight: 600; font-size: 0.85rem; color: var(--accent); }
+.match-badge { display: inline-block; background: var(--match-border); color: var(--bg); font-size: 0.7rem; font-weight: 700; padding: 1px 8px; border-radius: 3px; margin-left: 8px; }
+.fallback-badge { display: inline-block; background: var(--fail-border); color: var(--bg); font-size: 0.7rem; font-weight: 700; padding: 1px 8px; border-radius: 3px; }
+.frame-text { background: var(--bg-code); border-radius: 4px; padding: 8px; font-family: "SF Mono", "Fira Code", monospace; font-size: 0.78rem; white-space: pre-wrap; word-break: break-word; overflow-x: auto; max-height: 120px; overflow-y: auto; }
+.back-to-top { text-align: right; font-size: 0.8rem; margin-top: 8px; }
+.back-to-top a { color: var(--link); text-decoration: none; }
+.footer { text-align: center; color: var(--fg-muted); font-size: 0.75rem; margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border); }
+"""
+
+_QC_JS = """
+(function() {
+  var btns = document.querySelectorAll('.theme-btn');
+  var root = document.documentElement;
+  function setTheme(t) {
+    root.setAttribute('data-theme', t);
+    btns.forEach(function(b) { b.classList.toggle('active', b.dataset.theme === t); });
+    try { localStorage.setItem('report-theme', t); } catch(e) {}
+  }
+  var initial = 'dark';
+  try {
+    var saved = localStorage.getItem('report-theme');
+    if (saved) initial = saved;
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) initial = 'light';
+  } catch(e) {}
+  setTheme(initial);
+  btns.forEach(function(b) { b.addEventListener('click', function() { setTheme(b.dataset.theme); }); });
+  var hash = window.location.hash;
+  if (hash) {
+    var el = document.getElementById(hash.slice(1));
+    if (el && el.tagName === 'DETAILS') el.open = true;
+  }
+  window.addEventListener('hashchange', function() {
+    var h = window.location.hash;
+    if (h) {
+      var e = document.getElementById(h.slice(1));
+      if (e && e.tagName === 'DETAILS') e.open = true;
+    }
+  });
+})();
+"""
+
+
+def _thumbnail_data_uri(src_path: Path, width: int = 160) -> str:
+    """Generate a resized thumbnail and return it as a base64 data URI."""
+    try:
+        from PIL import Image
+        import base64
+        from io import BytesIO
+        with Image.open(src_path) as img:
+            w_percent = width / float(img.size[0])
+            height = int(float(img.size[1]) * w_percent)
+            thumb = img.resize((width, height), Image.LANCZOS)
+            thumb = thumb.quantize(colors=128, method=Image.Quantize.MEDIANCUT)
+            buf = BytesIO()
+            thumb.save(buf, "PNG", optimize=True)
+            b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+        return f"data:image/png;base64,{b64}"
+    except Exception as exc:
+        logger.warning("Thumbnail failed for %s: %s", src_path.name, exc)
+        return ""
+
+
+def generate_qc_html(
+    ocr_results: list[dict],
+    scan_results: list[BrandSearchResult],
+    adverts: list[AdvertMetadata],
+    fps: float,
+    output_dir: Path,
+    frames_dir: Path,
+    start_seconds: float = 0.0,
+) -> str:
+    """Generate a themed QC HTML report with frame images and OCR text.
+
+    For each advert with a match, shows 10 frames before and 10 frames
+    after the last matching frame, with the matched frame highlighted.
+    Thumbnails are embedded as base64 data URIs for fast single-file
+    loading in a browser.
+    """
+    toc_entries: list[str] = []
+    sections: list[str] = []
+    frame_count = len(ocr_results)
+
+    for i, adv in enumerate(adverts):
+        scan = scan_results[i] if i < len(scan_results) else None
+        anchor = f"advert-{i}"
+        brand_esc = html.escape(adv.brand)
+        advertiser_esc = html.escape(adv.advertiser)
+        status = ""
+        meta_extra = ""
+
+        if scan and scan.matched:
+            match_frame = scan.last_match_frame
+            assert match_frame is not None
+            start = max(0, match_frame - 10)
+            end = min(frame_count - 1, match_frame + 10)
+
+            tier_label = scan.match_tier
+            terms = ", ".join(scan.matched_terms) if scan.matched_terms else ""
+            meta_extra = f"Match tier: <strong>{tier_label}</strong>"
+            if terms:
+                meta_extra += f" &mdash; matched terms: <code>{html.escape(terms)}</code>"
+
+            frame_rows: list[str] = []
+            for idx in range(start, end + 1):
+                ocr_res = ocr_results[idx]
+                frame_name = ocr_res["frame_name"]
+                clip_ts = idx / fps
+                bcast_ts = start_seconds + clip_ts
+                text = ocr_res.get("text", "") or ""
+                text_esc = html.escape(text)
+
+                tc_clip = seconds_to_timecode(clip_ts)
+                tc_bcast = seconds_to_timecode(bcast_ts)
+
+                is_match = (idx == match_frame)
+                match_cls = ' class="match"' if is_match else ""
+                badge = '<span class="match-badge">MATCH</span>' if is_match else ""
+
+                # Generate thumbnail as base64 data URI
+                src = frames_dir / frame_name
+                img_data = _thumbnail_data_uri(src)
+                # Pre-close the img tag so it works as a data URI in all browsers
+                img_tag = f'<img src="{ img_data }" alt="Frame {idx}" loading="lazy">'
+
+                row = f"""<div{ match_cls }>
+  <div class="frame-row">
+    { img_tag }
+    <div class="frame-info">
+      <div class="frame-tc">Frame {idx:05d} &mdash; Clip TC: {tc_clip} &mdash; Broadcast TC: {tc_bcast}{ badge }</div>
+      <div class="frame-text">{ text_esc }</div>
+    </div>
+  </div>
+</div>"""
+                frame_rows.append(row)
+
+            frames_html = "\n".join(frame_rows)
+            section = f"""<details class="advert-section" id="{ anchor }">
+  <summary>{ brand_esc } <span class="status-pass">&#x2713; { tier_label }</span></summary>
+  <div class="advert-body">
+    <div class="advert-meta">Advertiser: { advertiser_esc } &mdash; { meta_extra }</div>
+    { frames_html }
+    <div class="back-to-top"><a href="#toc">&uarr; Back to top</a></div>
+  </div>
+</details>"""
+            status = "YES"
+        else:
+            section = f"""<details class="advert-section" id="{ anchor }">
+  <summary>{ brand_esc } <span class="status-fail">&#x2717; no match</span></summary>
+  <div class="advert-body">
+    <div class="advert-meta">Advertiser: { advertiser_esc }</div>
+    <p style="color: var(--fg-muted); padding: 12px 0;">No match found for this advert.</p>
+    <div class="back-to-top"><a href="#toc">&uarr; Back to top</a></div>
+  </div>
+</details>"""
+            status = "NO"
+
+        toc_entries.append(
+            f'<li><a href="#{ anchor }" onclick="document.getElementById(\'{ anchor }\').open=true">{ brand_esc }</a> &mdash; { status }</li>'
+        )
+        sections.append(section)
+
+    toc_html = "\n".join(toc_entries)
+    sections_html = "\n".join(sections)
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    html_str = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QC Report &mdash; { html.escape(output_dir.name) }</title>
+<style>{ _QC_CSS }</style>
+</head>
+<body>
+
+<h1>OCR approach instead of Vision Language Model &mdash; QC Report &mdash; { html.escape(output_dir.name) }</h1>
+<div class="subtitle">Generated: { now } &mdash; { frame_count } frames at { fps } FPS</div>
+
+<div class="theme-nav">
+  <button class="theme-btn" data-theme="light">Light</button>
+  <button class="theme-btn active" data-theme="dark">Dark</button>
+  <button class="theme-btn" data-theme="gruvbox">Gruvbox</button>
+</div>
+
+<div class="toc" id="toc">
+  <h2>Contents &mdash; Advert Matches</h2>
+  <ol>{ toc_html }</ol>
+</div>
+
+{ sections_html }
+
+<div class="footer">Advert Identifier OCR &mdash; PaddleOCR-VL @ { fps } FPS</div>
+
+<script>{ _QC_JS }</script>
+
+</body>
+</html>"""
+
+    return html_str
 
 
 # ── Pipeline state update ────────────────────────────────────────────────
@@ -751,7 +1097,22 @@ def run_detection(
     xml_output = format_xml(metadata, scan_results)
     _log("XML output: %d lines", len(xml_output.splitlines()))
 
-    # 7. Update pipeline state
+    # 7. Generate QC HTML report (only when frames are kept on disk)
+    if output_dir:
+        qc_html = generate_qc_html(
+            ocr_results=ocr_results,
+            scan_results=scan_results,
+            adverts=metadata.adverts,
+            fps=fps,
+            output_dir=output_dir,
+            frames_dir=frames_dir,
+            start_seconds=start_seconds,
+        )
+        qc_path = output_dir / f"{output_dir.name}_qc.html"
+        qc_path.write_text(qc_html, encoding="utf-8")
+        _log("QC HTML written to: %s", qc_path)
+
+    # 8. Update pipeline state
     if metadata_file and not dry_run:
         update_pipeline_state(
             metadata_file=metadata_file,
@@ -761,7 +1122,7 @@ def run_detection(
             fps=fps,
         )
 
-    # 8. Clean up frames (keep OCR JSON)
+    # 9. Clean up frames (keep OCR JSON)
     if not output_dir:
         for f in frames_dir.glob("*.png"):
             f.unlink()

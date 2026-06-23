@@ -34,6 +34,10 @@ venv/
 # Egg info
 *.egg-info/
 
+# Generated frame images and QC output
+*.png
+*_qc.html
+
 # Application files
 .hermes
 .obsidian
