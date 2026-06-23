@@ -369,6 +369,8 @@ class BrandSearchResult:
     match_count: int
     all_matching_frames: list[int]
     matched_terms: list[str]
+    correction: str | None = None  # set by clamp_correct() if adjusted
+    original_last_match_frame: int | None = None  # frame before correction
 
 
 def _brand_variants(brand: str) -> list[tuple[str, str]]:
@@ -619,6 +621,176 @@ def search_with_ordering(
     return results
 
 
+# ── Clamp/cage: pattern-based anomaly detection and correction ────────
+
+
+def _pattern_key(last_match_seconds: float) -> str:
+    """Return the ``sec_digit.mmm`` pattern key for a timecode.
+
+    At 5 FPS, every frame lands on .000, .200, .400, .600, .800.
+    Adverts have durations that are multiples of 10s, so every correct
+    match within a break shares the same ``sec_digit.mmm`` value.
+    """
+    total_sec = int(last_match_seconds)
+    sec_digit = total_sec % 10
+    millis = int(round((last_match_seconds - total_sec) * 1000))
+    return f"{sec_digit}.{millis:03d}"
+
+
+def clamp_check(
+    scan_results: list[BrandSearchResult],
+) -> list[bool]:
+    """Identify suspect matches by comparing their ``sec_digit.mmm``
+    pattern against the majority across the break.
+
+    Returns a list of booleans, one per advert: ``True`` means anomaly.
+    """
+    from collections import Counter
+
+    counts: Counter[str] = Counter()
+    for r in scan_results:
+        if r.matched and r.last_match_seconds is not None:
+            counts[_pattern_key(r.last_match_seconds)] += 1
+
+    if not counts:
+        return [False] * len(scan_results)
+
+    majority = counts.most_common(1)[0][0]
+    logger.info("Clamp majority pattern: %s (%d/%d matches)",
+                majority, counts[majority], sum(counts.values()))
+
+    anomalies: list[bool] = []
+    for r in scan_results:
+        if r.matched and r.last_match_seconds is not None:
+            anomalies.append(_pattern_key(r.last_match_seconds) != majority)
+        else:
+            anomalies.append(False)
+    return anomalies
+
+
+def clamp_correct(
+    scan_results: list[BrandSearchResult],
+    adverts: list[AdvertMetadata],
+    fps: float,
+) -> list[BrandSearchResult]:
+    """Apply duration-based correction to anomalies flagged by clamp_check.
+
+    Two strategies:
+    - **Duration available**: compute expected frame from nearest trusted
+      neighbours, then snap to the nearest frame matching the majority
+      ``sec_digit.mmm`` pattern.
+    - **No duration** (last advert): snap the original match to the nearest
+      frame matching the majority pattern.
+    """
+    from collections import Counter
+
+    # 1. Identify trusted indices and majority pattern
+    counts: Counter[str] = Counter()
+    for r in scan_results:
+        if r.matched and r.last_match_seconds is not None:
+            counts[_pattern_key(r.last_match_seconds)] += 1
+    if not counts:
+        return scan_results
+    majority = counts.most_common(1)[0][0]
+
+    trusted: set[int] = set()
+    for i, r in enumerate(scan_results):
+        if r.matched and r.last_match_seconds is not None:
+            if _pattern_key(r.last_match_seconds) == majority:
+                trusted.add(i)
+
+    snap_fps = fps  # frames per second for snapping
+
+    def _snap(frame: int) -> int:
+        """Snap *frame* to the nearest frame whose timecode matches the
+        majority ``sec_digit.mmm`` pattern."""
+        k_sec_digit, k_millis = majority.split(".")
+        k_sec_digit = int(k_sec_digit)
+        k_millis = int(k_millis)
+        best = frame
+        best_dist = abs(int(frame / fps * 1000) - (frame * 1000))
+        # Search ±5 seconds (25 frames @5fps)
+        for candidate in range(frame - 5 * int(fps), frame + 5 * int(fps) + 1):
+            if candidate < 0:
+                continue
+            ts = candidate / fps
+            total_sec = int(ts)
+            sec_digit = total_sec % 10
+            millis = int(round((ts - total_sec) * 1000))
+            if sec_digit == k_sec_digit and millis == k_millis:
+                dist = abs(candidate - frame)
+                if dist < best_dist:
+                    best = candidate
+                    best_dist = dist
+        return best
+
+    results = list(scan_results)
+
+    for i, r in enumerate(results):
+        if not r.matched or r.last_match_seconds is None:
+            continue
+        if i in trusted:
+            continue  # already trusted
+
+        # Find nearest trusted neighbours
+        prev_trusted = max((j for j in trusted if j < i), default=None)
+        next_trusted = min((j for j in trusted if j > i), default=None)
+        dur = adverts[i].duration_seconds
+
+        if dur is not None and prev_trusted is not None and next_trusted is not None:
+            # Both neighbours — compute forward AND backward estimates.
+            # Only correct if they agree within ±1 frame.
+            fwd = results[prev_trusted].last_match_frame
+            for j in range(prev_trusted + 1, i + 1):
+                fwd += int(adverts[j].duration_seconds * fps)
+            bwd = results[next_trusted].last_match_frame
+            for j in range(next_trusted - 1, i - 1, -1):
+                bwd -= int(adverts[j].duration_seconds * fps)
+            if abs(fwd - bwd) <= 1:
+                snapped = _snap(fwd)
+            else:
+                logger.info("  %s clamp forward=%d backward=%d disagree — keeping original",
+                            adverts[i].brand, fwd, bwd)
+                continue
+        elif dur is not None and prev_trusted is not None:
+            # Only forward estimate available
+            expected = results[prev_trusted].last_match_frame
+            for j in range(prev_trusted + 1, i + 1):
+                expected += int(adverts[j].duration_seconds * fps)
+            snapped = _snap(expected)
+        elif dur is not None and next_trusted is not None:
+            # Only backward estimate available
+            expected = results[next_trusted].last_match_frame
+            for j in range(next_trusted - 1, i - 1, -1):
+                expected -= int(adverts[j].duration_seconds * fps)
+            snapped = _snap(expected)
+        else:
+            # Strategy B — last advert with no duration: snap to nearest aligned
+            snapped = _snap(r.last_match_frame)
+
+        if snapped != r.last_match_frame:
+            dist = abs(snapped - r.last_match_frame)
+            if dist <= 2:
+                # Original is within 2 frames of the snap — this is
+                # within OCR noise, keep the original.
+                continue
+            new_ts = snapped / fps
+            results[i] = BrandSearchResult(
+                matched=True, last_match_frame=snapped,
+                last_match_seconds=new_ts,
+                match_tier=r.match_tier, match_count=r.match_count,
+                all_matching_frames=r.all_matching_frames,
+                matched_terms=r.matched_terms,
+                correction="duration" if dur is not None else "snap",
+                original_last_match_frame=r.last_match_frame,
+            )
+            logger.info("  %s corrected: frame %d → %d (%.3fs, pattern %s)",
+                        adverts[i].brand, r.last_match_frame, snapped,
+                        new_ts, majority)
+
+    return results
+
+
 # ── XML output ────────────────────────────────────────────────────────────
 
 
@@ -658,6 +830,8 @@ def format_xml(
             lines.append(f"        <match_tier>{scan.match_tier}</match_tier>")
             if scan.matched_terms:
                 lines.append(f"        <matched_terms>{_escape_xml(', '.join(scan.matched_terms))}</matched_terms>")
+            if scan.correction:
+                lines.append(f"        <correction>{_escape_xml(scan.correction)}</correction>")
         else:
             lines.append(f"        <last_timecode></last_timecode>")
 
@@ -721,11 +895,14 @@ details.advert-section .advert-meta { color: var(--fg-muted); font-size: 0.85rem
 .frame-row { display: flex; gap: 16px; padding: 8px 12px; border-bottom: 1px solid var(--border); align-items: stretch; }
 .frame-row:last-child { border-bottom: none; }
 .frame-row.match { background: var(--match-bg); border-left: 4px solid var(--match-border); border-radius: 4px; margin: 4px 0; }
+.frame-row.original-match { background: var(--diff-bg); border-left: 4px solid var(--diff-border); border-radius: 4px; margin: 4px 0; }
 .frame-row img { width: 160px; height: auto; border-radius: 4px; flex-shrink: 0; object-fit: contain; }
 .frame-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .frame-tc { font-weight: 600; font-size: 0.85rem; color: var(--accent); }
 .match-badge { display: inline-block; background: var(--match-border); color: var(--bg); font-size: 0.7rem; font-weight: 700; padding: 1px 8px; border-radius: 3px; margin-left: 8px; }
 .fallback-badge { display: inline-block; background: var(--fail-border); color: var(--bg); font-size: 0.7rem; font-weight: 700; padding: 1px 8px; border-radius: 3px; }
+.original-badge { display: inline-block; background: var(--diff-border); color: var(--bg); font-size: 0.7rem; font-weight: 700; padding: 1px 8px; border-radius: 3px; margin-left: 8px; }
+.correction-badge { display: inline-block; background: var(--accent); color: var(--bg); font-size: 0.7rem; font-weight: 700; padding: 1px 8px; border-radius: 3px; margin-left: 4px; }
 .frame-text { background: var(--bg-code); border-radius: 4px; padding: 8px; font-family: "SF Mono", "Fira Code", monospace; font-size: 0.78rem; white-space: pre-wrap; word-break: break-word; overflow-x: auto; max-height: 120px; overflow-y: auto; }
 .back-to-top { text-align: right; font-size: 0.8rem; margin-top: 8px; }
 .back-to-top a { color: var(--link); text-decoration: none; }
@@ -815,13 +992,22 @@ def generate_qc_html(
 
         if scan and scan.matched:
             match_frame = scan.last_match_frame
+            orig_frame = scan.original_last_match_frame
             assert match_frame is not None
+
+            # Determine frame range: show ±10 around the corrected frame,
+            # but also include the original anomalous frame if outside.
             start = max(0, match_frame - 10)
             end = min(frame_count - 1, match_frame + 10)
+            if orig_frame is not None and orig_frame is not match_frame:
+                start = min(start, max(0, orig_frame - 2))
+                end = max(end, min(frame_count - 1, orig_frame + 2))
 
             tier_label = scan.match_tier
             terms = ", ".join(scan.matched_terms) if scan.matched_terms else ""
             meta_extra = f"Match tier: <strong>{tier_label}</strong>"
+            if scan.correction:
+                meta_extra += f' <span class="correction-badge">&#x2705; { scan.correction } corrected</span>'
             if terms:
                 meta_extra += f" &mdash; matched terms: <code>{html.escape(terms)}</code>"
 
@@ -838,16 +1024,24 @@ def generate_qc_html(
                 tc_bcast = seconds_to_timecode(bcast_ts)
 
                 is_match = (idx == match_frame)
-                match_cls = ' class="match"' if is_match else ""
-                badge = '<span class="match-badge">MATCH</span>' if is_match else ""
+                is_orig = (orig_frame is not None and idx == orig_frame and idx != match_frame)
+
+                if is_match:
+                    row_cls = ' class="match"'
+                    badge = '<span class="match-badge">MATCH</span>'
+                elif is_orig:
+                    row_cls = ' class="original-match"'
+                    badge = f'<span class="original-badge">&#x26A0; Original (frame { orig_frame })</span>'
+                else:
+                    row_cls = ''
+                    badge = ''
 
                 # Generate thumbnail as base64 data URI
                 src = frames_dir / frame_name
                 img_data = _thumbnail_data_uri(src)
-                # Pre-close the img tag so it works as a data URI in all browsers
                 img_tag = f'<img src="{ img_data }" alt="Frame {idx}" loading="lazy">'
 
-                row = f"""<div{ match_cls }>
+                row = f"""<div{ row_cls }>
   <div class="frame-row">
     { img_tag }
     <div class="frame-info">
@@ -859,8 +1053,11 @@ def generate_qc_html(
                 frame_rows.append(row)
 
             frames_html = "\n".join(frame_rows)
+            summary_status = f'<span class="status-pass">&#x2713; { tier_label }</span>'
+            if scan.correction:
+                summary_status += f' <span class="correction-badge">&#x2705; corrected</span>'
             section = f"""<details class="advert-section" id="{ anchor }">
-  <summary>{ brand_esc } <span class="status-pass">&#x2713; { tier_label }</span></summary>
+  <summary>{ brand_esc } { summary_status }</summary>
   <div class="advert-body">
     <div class="advert-meta">Advertiser: { advertiser_esc } &mdash; { meta_extra }</div>
     { frames_html }
@@ -879,8 +1076,11 @@ def generate_qc_html(
 </details>"""
             status = "NO"
 
+        toc_text = brand_esc
+        if scan and scan.correction and scan.original_last_match_frame is not None:
+            toc_text += f" (corrected: { scan.original_last_match_frame } &rarr; { scan.last_match_frame })"
         toc_entries.append(
-            f'<li><a href="#{ anchor }" onclick="document.getElementById(\'{ anchor }\').open=true">{ brand_esc }</a> &mdash; { status }</li>'
+            f'<li><a href="#{ anchor }" onclick="document.getElementById(\'{ anchor }\').open=true">{ toc_text }</a> &mdash; { status }</li>'
         )
         sections.append(section)
 
@@ -1093,7 +1293,16 @@ def run_detection(
         fps=fps,
     )
 
-    # 6. Format XML
+    # 6. Clamp/cage: detect and correct pattern anomalies
+    anomalies = clamp_check(scan_results)
+    if any(anomalies):
+        logger.info("Clamp detected %d anomaly(ies), correcting...",
+                    sum(anomalies))
+        scan_results = clamp_correct(scan_results, metadata.adverts, fps)
+    else:
+        logger.info("Clamp: no anomalies detected")
+
+    # 7. Format XML
     xml_output = format_xml(metadata, scan_results)
     _log("XML output: %d lines", len(xml_output.splitlines()))
 
