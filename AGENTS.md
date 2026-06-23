@@ -2,13 +2,22 @@
 
 OCR-based ad break sequence identification in TV broadcast videos using PaddleOCR-VL via vLLM.
 
-## Install & Run
+## Environment & Install
+
+**Always use `uv` with a virtual environment.** Never install packages or run commands with the system Python directly.
+
+- `uv` is at `/home/datadigipres/.local/bin/uv`
+- Venvs go in `/home/datadigipres/code/venvs/<repo_name>`
+- If a venv already exists at that path, reuse it; otherwise create it first
+- Activate with `source /home/datadigipres/code/venvs/<repo_name>/bin/activate`
 
 ```bash
-pip install -e .          # Installs CLI commands into PATH
-# or
-uv pip install -e .       # Same with uv
+/home/datadigipres/.local/bin/uv venv /home/datadigipres/code/venvs/advert-identifier-ocr
+source /home/datadigipres/code/venvs/advert-identifier-ocr/bin/activate
+uv pip install -e .
 ```
+
+All commands below assume the venv is active. Run everything from the repo root.
 
 **No root-level `.py` files exist.** All code is in `src/ad_break_identifier/` (package) and `bin/` (standalone scripts).
 
@@ -22,6 +31,8 @@ uv pip install -e .       # Same with uv
 | `advert-identifier-pipeline` | `bin/advert-identifier-pipeline` | Full automation |
 
 Entry points are wired in `pyproject.toml` through `src/ad_break_identifier/cli.py`. `identifier_main` and `single_advert_clip_main` import directly from the package; `pipeline_main` and `extractor_main` subprocess into `bin/` scripts.
+
+`bin/` scripts can also be run directly without install: `python3 bin/advert-identifier --help`
 
 ## Pipeline Order (manual workflow)
 
@@ -57,17 +68,23 @@ All read by `src/ad_break_identifier/config.py`. CLI flags override these:
 
 ## Key Gotchas
 
-- **`ad_break_index` is 1-based** in `config.py` (`load_metadata_from_file`), not 0-based. The CLI flag `--ad-break-index` also uses 1-based indexing.
+- **`ad_break_index` is 1-based** in `config.py` (`load_metadata_from_file`), not 0-based. The CLI flag `--ad-break-index` also uses 1-based indexing. Auto-detects from filenames like `01of08.mp4` when omitted.
 - **Two-tier brand search**: Tier 1 uses word-boundary regex (`\bgalaxy\b`) for exact matches. Tier 2 (fallback) uses substring regex (`galaxy`) to catch concatenated forms like `galaxychocolate.com`.
 - **Ordering enforcement**: Each advert's last matching frame must be after the previous advert's last matching frame. The search range for advert N is `(prev_last_frame, end]`.
 - **OCR results JSON**: Detection saves a `{video_stem}_ocr.json` file alongside the metadata with per-frame OCR text, timestamps, and frame indices. This is queryable for debugging.
 - **Video URLs** must be served via HTTP (the detection command downloads the video to a temp file for FFmpeg frame extraction).
 - **No clip creation step**: The new pipeline extracts frames directly from the original broadcast video — no intermediate clip files are created.
 - **Pipeline state version 2**: Uses `detection` field (replacing the old `coarse_1fps` / `refined_25fps` fields). Status lifecycle: `metadata_extracted` → `detected` → `clipped`.
+- **`single_advert_clip` parses ad_break_index from URL** (`01of08.mp4` → 0-based index 0). Use `--state-file` to bypass clip_offset computation and read `adjusted_start_broadcast` from pipeline state.
+- **`advert-identifier-metadata-extract` has a hardcoded default CSV folder**: `/mnt/qnap_04/Admin/datasets/adverts_techedge_no_dupes` (override with `--csv-folder`).
 
-## No Testing, No Linting
+## Testing
 
-**No linting, no CI.** Tests exist in `tests/` using pytest. Python 3.10+ required (uses modern union syntax: `str | None`).
+Tests in `tests/` using pytest. No linting, no CI, no type-checking config. Python 3.10+ required.
+
+```bash
+pytest tests/
+```
 
 ## External Dependencies
 

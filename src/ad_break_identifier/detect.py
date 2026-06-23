@@ -28,12 +28,15 @@ import json
 import logging
 import os
 import re
+import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 from typing import Any
 
@@ -56,77 +59,73 @@ DEFAULT_AFTER_SECS = 360.0
 
 def build_exact_patterns(
     brand: str,
-    advertiser: str,
-    category: str = "",
 ) -> list[re.Pattern]:
     """Build word-boundary regex patterns for exact matching.
 
+    Only the brand name is used (not advertiser or category) to avoid
+    false positives from common English words in those fields.
     Generates case-insensitive patterns with \\b word boundaries for
-    brand, advertiser, category, and individual words from multi-word
-    terms.  Apostrophe-stripped variants are also included.
+    brand and individual words from multi-word terms.
+    Apostrophe-stripped variants are also included.
     """
     patterns: list[re.Pattern] = []
     seen: set[str] = set()
 
-    for term in (brand, advertiser, category):
-        term = term.strip()
-        if not term or term in seen:
-            continue
-        seen.add(term)
+    term = brand.strip()
+    if not term:
+        return patterns
+    seen.add(term)
 
-        escaped = re.escape(term)
-        patterns.append(re.compile(rf"\b{escaped}\b", re.IGNORECASE))
+    escaped = re.escape(term)
+    patterns.append(re.compile(rf"\b{escaped}\b", re.IGNORECASE))
 
-        words = term.split()
-        if len(words) > 1:
-            for word in words:
-                if len(word) >= 3 and word not in seen:
-                    seen.add(word)
-                    patterns.append(
-                        re.compile(rf"\b{re.escape(word)}\b", re.IGNORECASE)
-                    )
+    words = term.split()
+    if len(words) > 1:
+        for word in words:
+            if len(word) >= 3 and word not in seen:
+                seen.add(word)
+                patterns.append(
+                    re.compile(rf"\b{re.escape(word)}\b", re.IGNORECASE)
+                )
 
-        simplified = term.replace("'", "").replace("\u2019", "")
-        if simplified != term and simplified not in seen:
-            seen.add(simplified)
-            patterns.append(re.compile(rf"\b{re.escape(simplified)}\b", re.IGNORECASE))
+    simplified = term.replace("'", "").replace("\u2019", "")
+    if simplified != term and simplified not in seen:
+        seen.add(simplified)
+        patterns.append(re.compile(rf"\b{re.escape(simplified)}\b", re.IGNORECASE))
 
     return patterns
 
 
 def build_substring_patterns(
     brand: str,
-    advertiser: str,
-    category: str = "",
 ) -> list[re.Pattern]:
     """Build unbounded regex patterns for fuzzy substring matching.
 
-    Used as Tier 2 when exact word matching finds nothing.  Catches
+    Only the brand name is used (not advertiser or category).  Catches
     concatenated forms like "galaxychocolate.com".
     """
     patterns: list[re.Pattern] = []
     seen: set[str] = set()
 
-    for term in (brand, advertiser, category):
-        term = term.strip()
-        if not term or term in seen:
-            continue
-        seen.add(term)
+    term = brand.strip()
+    if not term:
+        return patterns
+    seen.add(term)
 
-        escaped = re.escape(term)
-        patterns.append(re.compile(escaped, re.IGNORECASE))
+    escaped = re.escape(term)
+    patterns.append(re.compile(escaped, re.IGNORECASE))
 
-        words = term.split()
-        if len(words) > 1:
-            for word in words:
-                if len(word) >= 3 and word not in seen:
-                    seen.add(word)
-                    patterns.append(re.compile(re.escape(word), re.IGNORECASE))
+    words = term.split()
+    if len(words) > 1:
+        for word in words:
+            if len(word) >= 3 and word not in seen:
+                seen.add(word)
+                patterns.append(re.compile(re.escape(word), re.IGNORECASE))
 
-        simplified = term.replace("'", "").replace("\u2019", "")
-        if simplified != term and simplified not in seen:
-            seen.add(simplified)
-            patterns.append(re.compile(re.escape(simplified), re.IGNORECASE))
+    simplified = term.replace("'", "").replace("\u2019", "")
+    if simplified != term and simplified not in seen:
+        seen.add(simplified)
+        patterns.append(re.compile(re.escape(simplified), re.IGNORECASE))
 
     return patterns
 
@@ -196,6 +195,42 @@ def download_video_to_temp(video_url: str, max_retries: int = 3) -> str:
                 time.sleep(2 ** attempt)
 
     raise RuntimeError(f"Failed to download video after {max_retries} attempts")
+
+
+def _start_local_video_server(video_path: str) -> tuple[str, HTTPServer]:
+    """Start a temporary HTTP server for a local video file.
+
+    When a local file path is provided instead of an HTTP URL, this
+    function serves the file's parent directory over HTTP so the rest
+    of the pipeline (which expects a downloadable URL) can proceed.
+
+    Returns:
+        Tuple of (http_url, server_instance).  Call ``server.shutdown()``
+        to stop the server when done.
+    """
+    path = Path(video_path).resolve()
+    parent = path.parent
+    filename = path.name
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+
+    class _SilentHandler(SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(parent), **kwargs)
+
+        def log_message(self, fmt, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", port), _SilentHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+
+    url = f"http://127.0.0.1:{port}/{filename}"
+    logger.info("Started local video server at %s serving %s", url, parent)
+    return url, server
 
 
 def extract_5fps_frames(
@@ -358,16 +393,8 @@ def search_with_ordering(
     prev_last_frame = -1  # Must be after previous; -1 means any frame >= 0
 
     for adv in adverts:
-        exact_patterns = build_exact_patterns(
-            brand=adv.brand,
-            advertiser=adv.advertiser,
-            category=adv.category,
-        )
-        substring_patterns = build_substring_patterns(
-            brand=adv.brand,
-            advertiser=adv.advertiser,
-            category=adv.category,
-        )
+        exact_patterns = build_exact_patterns(brand=adv.brand)
+        substring_patterns = build_substring_patterns(brand=adv.brand)
 
         # Tier 1: exact word match
         exact_matches: list[int] = []
@@ -436,6 +463,47 @@ def search_with_ordering(
                 adv.unique_id, adv.brand,
                 last_frame, seconds_to_timecode(last_frame / fps),
                 len(sub_matches),
+            )
+            continue
+
+        # Tier 3: advertiser fallback — retry with advertiser patterns when
+        # brand-only failed (catches cases like "Disneyland" brand where
+        # OCR only sees "Disney" from "Walt disney company").
+        adv_exact = build_exact_patterns(brand=adv.advertiser)
+        adv_sub = build_substring_patterns(brand=adv.advertiser)
+        adv_matches: list[int] = []
+        adv_terms: set[str] = set()
+
+        for ocr_res in ocr_results:
+            idx = ocr_res["frame_index"]
+            if idx <= prev_last_frame:
+                continue
+            text = ocr_res.get("text", "")
+            matched, terms = match_ocr_text(text, adv_exact)
+            if not matched:
+                matched, terms = match_ocr_text(text, adv_sub)
+            if matched:
+                adv_matches.append(idx)
+                adv_terms.update(t.lower() for t in terms)
+
+        if adv_matches:
+            last_frame = adv_matches[-1]
+            result = BrandSearchResult(
+                matched=True,
+                last_match_frame=last_frame,
+                last_match_seconds=last_frame / fps,
+                match_tier="advertiser",
+                match_count=len(adv_matches),
+                all_matching_frames=adv_matches,
+                matched_terms=list(adv_terms),
+            )
+            results.append(result)
+            prev_last_frame = last_frame
+            logger.info(
+                "  %s (%s): advertiser match at frame %d (tc=%s), %d frames matched",
+                adv.unique_id, adv.brand,
+                last_frame, seconds_to_timecode(last_frame / fps),
+                len(adv_matches),
             )
             continue
 
@@ -657,8 +725,8 @@ def run_detection(
 
     # 4. Save OCR results to JSON
     if output_dir:
-        video_stem = Path(video_path).stem
-        ocr_json_path = output_dir / f"{video_stem}_ocr.json"
+        stem = output_dir.name
+        ocr_json_path = output_dir / f"{stem}_ocr.json"
     else:
         ocr_json_path = Path(tempfile.mktemp(suffix="_ocr.json"))
 
@@ -865,9 +933,17 @@ def main(args: list[str] | None = None) -> int:
         # index to estimate. This is a fallback for CLI-only metadata.
         break_start_secs = 0.0
 
+    # Detect local video paths and serve them over HTTP
+    video_url = parsed.video_url
+    local_server: HTTPServer | None = None
+    if Path(video_url).is_file():
+        video_url, local_server = _start_local_video_server(video_url)
+    else:
+        logger.info("Video URL (remote): %s", video_url)
+
     # Download video
-    logger.info("Downloading video: %s", parsed.video_url)
-    local_video = download_video_to_temp(parsed.video_url)
+    logger.info("Downloading video: %s", video_url)
+    local_video = download_video_to_temp(video_url)
 
     # Output directory
     output_dir: Path | None = None
@@ -910,6 +986,9 @@ def main(args: list[str] | None = None) -> int:
     finally:
         if os.path.exists(local_video):
             os.unlink(local_video)
+        if local_server:
+            local_server.shutdown()
+            logger.info("Local video server stopped")
 
     return 0
 
