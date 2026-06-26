@@ -56,13 +56,13 @@ results when `--metadata-file` has a corresponding `_pipeline_state.json`.
 ```bash
 # Basic usage
 advert-identifier \
-  -v "http://server/video.mp4" \
+  -v "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --metadata-file metadata.json \
   --ad-break-index 1
 
 # Custom frame range and OCR settings
 advert-identifier \
-  -v "http://server/video.mp4" \
+  -v "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --metadata-file metadata.json \
   --before-secs 30 \
   --after-secs 180 \
@@ -72,13 +72,13 @@ advert-identifier \
 
 # Dry-run (frame extraction only, no OCR API calls)
 advert-identifier \
-  -v "http://server/video.mp4" \
+  -v "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --metadata-file metadata.json \
   --dry-run
 
 # Save frame images and OCR results for debugging
 advert-identifier \
-  -v "http://server/video.mp4" \
+  -v "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --metadata-file metadata.json \
   --output-dir debug_output/
 ```
@@ -106,7 +106,6 @@ advert-identifier-pipeline --input-folder PATH --csv-folder PATH [OPTIONS]
 | `--fps` | No | 5.0 | Frame extraction rate for OCR detection |
 | `--ocr-endpoint` | No | `http://localhost:8000/v1/chat/completions` | vLLM OCR endpoint |
 | `--ocr-model` | No | `PaddlePaddle/PaddleOCR-VL` | OCR model name |
-| `--video-server-url` | No | `http://172.18.7.236:1100` | Base URL for video server |
 | `--dry-run` | No | False | Preview what would be processed |
 | `--log-level` | No | INFO | DEBUG, INFO, WARNING, ERROR |
 | `--verbose` | No | False | Show detailed progress |
@@ -232,7 +231,7 @@ The tool selects the most precise timecode available using this priority:
 advert-identifier-single-advert-clip \
   --xml-file results/video.xml \
   --json-file metadata/video_metadata.json \
-  --video-url "http://server/full_broadcast.mp4" \
+  --video-url "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir clips/ \
   --clip-offset 200.0
 
@@ -240,7 +239,7 @@ advert-identifier-single-advert-clip \
 advert-identifier-single-advert-clip \
   --xml-file results/video.xml \
   --json-file metadata/video_metadata.json \
-  --video-url "http://server/full_broadcast.mp4" \
+  --video-url "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir clips/ \
   --state-file metadata/video_pipeline_state.json
 
@@ -248,7 +247,7 @@ advert-identifier-single-advert-clip \
 advert-identifier-single-advert-clip \
   --xml-file results/video.xml \
   --json-file metadata/video_metadata.json \
-  --video-url "http://server/full_broadcast.mp4" \
+  --video-url "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir clips/ \
   --index 1
 
@@ -256,7 +255,7 @@ advert-identifier-single-advert-clip \
 advert-identifier-single-advert-clip \
   --xml-file results/video.xml \
   --json-file metadata/video_metadata.json \
-  --video-url "http://server/full_broadcast.mp4" \
+  --video-url "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir clips/ \
   --trim 0.5
 ```

@@ -56,15 +56,18 @@ The OCR client sends base64-encoded frames to the OpenAI-compatible `/v1/chat/co
 
 ## Environment Variables
 
-All read by `src/ad_break_identifier/config.py`. CLI flags override these:
+CLI flags override these. Config vars are read by `src/ad_break_identifier/config.py`;
+pipeline vars are read by `bin/advert-identifier-pipeline`.
 
-| Variable | Default |
-|----------|---------|
-| `OCR_ENDPOINT` | `http://localhost:8000/v1/chat/completions` |
-| `OCR_MODEL` | `PaddlePaddle/PaddleOCR-VL` |
-| `DETECTION_FPS` | `5.0` (frame extraction rate) |
-| `BEFORE_SECS` | `10.0` (seconds before ad break start) |
-| `AFTER_SECS` | `360.0` (seconds after ad break start) |
+| Variable | Default | Applies to |
+|----------|---------|------------|
+| `OCR_ENDPOINT` | `http://localhost:8000/v1/chat/completions` | Config / all commands |
+| `OCR_MODEL` | `PaddlePaddle/PaddleOCR-VL` | Config / all commands |
+| `DETECTION_FPS` | `5.0` (frame extraction rate) | Config / all commands |
+| `BEFORE_SECS` | `10.0` (seconds before ad break start) | Config / all commands |
+| `AFTER_SECS` | `360.0` (seconds after ad break start) | Config / all commands |
+| `INPUT_FOLDER` | *(none)* | Pipeline (`--input-folder`) |
+| `CSV_FOLDER` | *(none)* | Pipeline (`--csv-folder`) |
 
 ## Key Gotchas
 

@@ -16,7 +16,7 @@ advert-identifier-metadata-extract \
 
 # 2. OCR detection (5 FPS frame extraction + PaddleOCR-VL + brand search)
 advert-identifier \
-  -v "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
+  -v "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --metadata-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
   --ad-break-index 1 \
   --before-secs 10 \
@@ -26,7 +26,7 @@ advert-identifier \
 advert-identifier-single-advert-clip \
   --xml-file video/2024-03-26_ITV1HD_13:30:00.xml \
   --json-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
-  --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
+  --video-url "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir video/clips
 ```
 
@@ -40,10 +40,19 @@ advert-identifier-pipeline \
   --csv-folder /path/to/csv/files \
   --before-secs 10 \
   --after-secs 360 \
-  --video-server-url http://your-server:1100 \
   --ocr-endpoint http://localhost:8000/v1/chat/completions \
   --ocr-model PaddlePaddle/PaddleOCR-VL
 ```
+
+Alternatively, set `--input-folder` and `--csv-folder` via environment variables:
+
+```bash
+export INPUT_FOLDER=/path/to/videos
+export CSV_FOLDER=/path/to/csv/files
+advert-identifier-pipeline --before-secs 10 --after-secs 360
+```
+
+CLI flags always take precedence over environment variables.
 
 The pipeline creates a **pipeline state file** (`{video}_pipeline_state.json`) at Stage 1
 and threads it through every subsequent stage. It runs two stages per ad break:
@@ -92,7 +101,7 @@ python3 bin/advert-identifier-metadata-extract --help
 
 | Command | Purpose | Key Options |
 |---------|---------|-------------|
-| `advert-identifier` | OCR detection (5 FPS + PaddleOCR-VL) | `--metadata-file`, `--ad-break-index`, `--before-secs`, `--after-secs`, `--fps`, `--ocr-endpoint`, `--ocr-model`, `--verbose`, `--dry-run` |
+| `advert-identifier` | OCR detection (5 FPS + PaddleOCR-VL) | `--video-url` (local path or URL), `--metadata-file`, `--ad-break-index`, `--before-secs`, `--after-secs`, `--fps`, `--ocr-endpoint`, `--ocr-model`, `--verbose`, `--dry-run` |
 | `advert-identifier-pipeline` | Full folder automation | `--input-folder`, `--csv-folder`, `--before-secs`, `--after-secs`, `--fps`, `--ocr-endpoint`, `--ocr-model` |
 | `advert-identifier-metadata-extract` | CSV → JSON metadata | `--video`, `--csv-folder`, `--before-secs` |
 | `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--json-file`, `--index`, `--trim`, `--pad`, `--clip-offset`, `--state-file` |

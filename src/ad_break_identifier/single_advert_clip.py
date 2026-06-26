@@ -338,7 +338,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--video-url",
         required=True,
-        help="URL or path to source video",
+        help="Path or URL to the broadcast video (local paths auto-served by advert-identifier)",
     )
     parser.add_argument(
         "--output-dir",

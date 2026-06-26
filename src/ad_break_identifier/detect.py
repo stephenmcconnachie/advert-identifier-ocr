@@ -1364,7 +1364,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-v", "--video-url",
         required=True,
-        help="URL to the original broadcast video",
+        help="Path or URL to the broadcast video (local paths are auto-served)",
     )
     parser.add_argument(
         "--metadata-file",

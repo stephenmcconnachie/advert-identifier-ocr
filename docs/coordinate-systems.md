@@ -140,7 +140,7 @@ Where `clip_offset` = `(ad_break_start_time - video_start_time) - before_secs`.
 **Script:** `advert-identifier` (entry point → `main.py`)
 
 **Inputs:**
-- Clip video URL (e.g., `http://server/..._01of04.mp4`)
+- Local video path (e.g., `video/2024-03-26_ITV1HD_13:30:00_01of04.mp4`) — auto-served via temporary HTTP server
 - `_metadata.json` (for advert metadata + brand/advertiser/category)
 
 **Output:** `{clip_stem}.xml`

@@ -155,7 +155,7 @@ ERROR: No <ad_break> XML found in response
 - Model timeout or error
 
 **Solutions:**
-1. Verify video URL is accessible: `curl -I "http://server/video.mp4"`
+1. If using a remote URL, verify it's accessible: `curl -I "http://server/video.mp4"`; local paths are auto-served
 2. Check frame/timecode overlay is visible in video
 3. Try increasing FPS: `--fps 2.0`
 4. Enable debug mode to see raw response: `--debug`
@@ -328,7 +328,7 @@ When troubleshooting, always use `--debug` flag:
 
 ```bash
 advert-identifier \
-  --video "http://server/video.mp4" \
+  -v "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --metadata-file metadata.json \
   --debug
 ```

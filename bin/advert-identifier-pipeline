@@ -14,6 +14,7 @@ Usage:
 import argparse
 import json
 import logging
+import os
 import subprocess
 import sys
 import time
@@ -62,14 +63,14 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--input-folder",
         type=str,
-        required=True,
-        help="Path to folder containing .mp4 files"
+        default=os.environ.get("INPUT_FOLDER"),
+        help="Path to folder containing .mp4 files (env: INPUT_FOLDER)"
     )
     parser.add_argument(
         "--csv-folder",
         type=str,
-        required=True,
-        help="Path to folder containing CSV files (format: YYYY-MM-DD_CHANNEL.csv)"
+        default=os.environ.get("CSV_FOLDER"),
+        help="Path to folder containing CSV files, format YYYY-MM-DD_CHANNEL.csv (env: CSV_FOLDER)"
     )
     parser.add_argument(
         "--log-level",
@@ -118,13 +119,6 @@ def create_parser() -> argparse.ArgumentParser:
         default="PaddlePaddle/PaddleOCR-VL",
         help="OCR model name (default: PaddlePaddle/PaddleOCR-VL)"
     )
-    parser.add_argument(
-        "--video-server-url",
-        type=str,
-        default="http://172.18.7.236:1100",
-        help="Base URL for video server (default: http://172.18.7.236:1100)"
-    )
-    
     return parser
 
 
@@ -458,6 +452,11 @@ def main() -> int:
     parser = create_parser()
     args = parser.parse_args()
     
+    if not args.input_folder:
+        parser.error("--input-folder is required (or set INPUT_FOLDER env var)")
+    if not args.csv_folder:
+        parser.error("--csv-folder is required (or set CSV_FOLDER env var)")
+    
     logger = setup_logging(args.log_level)
     
     input_folder = Path(args.input_folder)
@@ -555,7 +554,7 @@ def main() -> int:
         logger.info(f"Found {num_ad_breaks} ad break(s) in metadata")
         
         # Step 2 + 3: Process each ad break
-        original_video_url = f"{args.video_server_url.rstrip('/')}/{mp4_file.name}"
+        original_video_url = str(mp4_file)
         total_adverts = 0
         all_ad_breaks_success = True
         ad_break_results = []
