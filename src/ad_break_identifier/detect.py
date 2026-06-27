@@ -833,6 +833,11 @@ def _refine_advert_end_frames(
 
     from ad_break_identifier.ocr_client import ocr_image
 
+    matched_count = sum(1 for r in scan_results if r.matched and r.last_match_frame is not None)
+    if matched_count == 0:
+        return scan_results
+    logger.info("Refining %d advert end frame(s) at %d FPS...", matched_count, SOURCE_FPS)
+
     results = list(scan_results)
 
     for i, r in enumerate(results):
@@ -868,11 +873,12 @@ def _refine_advert_end_frames(
             subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=30)
 
             refine_frames = sorted(refine_dir.glob("refine_*.png"))
-            # First frame (index 0) is the same 5fps match — skip it
-            candidate_frames = refine_frames[1:] if len(refine_frames) > 1 else []
-
-            if not candidate_frames:
+            # Include all 5 frames: frame 0 (the 5fps match as positive control)
+            # plus frames 1-4 (the intermediate source frames)
+            if len(refine_frames) < 5:
                 continue
+            # Frame indices: 0=5fps match, 1=+0.04s, 2=+0.08s, 3=+0.12s, 4=+0.16s
+            candidate_frames = refine_frames[:5]
 
             # OCR candidate frames
             import requests
@@ -890,29 +896,41 @@ def _refine_advert_end_frames(
                 except Exception:
                     ocr_texts.append("")
 
-            # Check each refinement frame for brand text
+            # Check each refinement frame for brand text.
+            # Frame 0 (the 5fps match) acts as a positive control.
             last_match_idx: int | None = None
             for j, text in enumerate(ocr_texts):
                 matched, _ = match_ocr_text(text, exact_pats)
                 if not matched:
                     matched, _ = match_ocr_text(text, sub_pats)
                 if matched:
-                    last_match_idx = j  # j is 0-based relative to candidate_frames[0]
+                    last_match_idx = j  # 0-based offset from the 5fps match point
                     if verbose:
                         logger.info(
                             "  %s refinement: frame +%d at +%.2fs matched",
-                            brand, j + 1, (j + 1) * 0.04,
+                            brand, j, j * 0.04,
                         )
 
             if last_match_idx is not None:
-                refinement_offset = (last_match_idx + 1) * (1.0 / SOURCE_FPS)
-                r.refined_end_seconds = T_clip + refinement_offset
-                if verbose:
+                r.refined_end_seconds = T_clip + last_match_idx * (1.0 / SOURCE_FPS)
+                adjusted = last_match_idx > 0
+                if adjusted:
                     logger.info(
-                        "  %s: refined end from %.3fs to %.3fs (+%.0f source frames)",
+                        "  %s: refined end from %.3fs to %.3fs (+%d source frame(s))",
                         brand, r.last_match_seconds, r.refined_end_seconds,
-                        (last_match_idx + 1),
+                        last_match_idx,
                     )
+                else:
+                    logger.info(
+                        "  %s: refinement checked, no change (confirmed at %.3fs)",
+                        brand, r.last_match_seconds,
+                    )
+            else:
+                logger.warning(
+                    "  %s: refinement produced no brand match in any of %d frames "
+                    "(5fps match lost?), keeping original end",
+                    brand, len(candidate_frames),
+                )
 
         except subprocess.TimeoutExpired:
             logger.warning("Refinement FFmpeg timed out for %s", brand)
@@ -1179,6 +1197,11 @@ def generate_qc_html(
             meta_extra = f"Match tier: <strong>{tier_label}</strong>"
             if scan.correction:
                 meta_extra += f' <span class="correction-badge">&#x2705; { scan.correction } corrected</span>'
+            if scan.refined_end_seconds is not None and scan.refined_end_seconds != scan.last_match_seconds:
+                meta_extra += (
+                    f' <span class="correction-badge">&#x1F50D; refined: '
+                    f'{seconds_to_timecode(scan.refined_end_seconds)}</span>'
+                )
             if terms:
                 meta_extra += f" &mdash; matched terms: <code>{html.escape(terms)}</code>"
 
