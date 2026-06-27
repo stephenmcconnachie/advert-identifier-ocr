@@ -371,6 +371,10 @@ class BrandSearchResult:
     matched_terms: list[str]
     correction: str | None = None  # set by clamp_correct() if adjusted
     original_last_match_frame: int | None = None  # frame before correction
+    refined_end_seconds: float | None = None  # set by refine_advert_end_frames()
+
+
+SOURCE_FPS = 25  # source video frame rate for refinement extraction
 
 
 def _brand_variants(brand: str) -> list[tuple[str, str]]:
@@ -801,6 +805,132 @@ def clamp_correct(
     return results
 
 
+# ── 25fps end-frame refinement ───────────────────────────────────────────
+
+
+def _refine_advert_end_frames(
+    scan_results: list[BrandSearchResult],
+    video_path: str,
+    start_seconds: float,
+    adverts: list[AdvertMetadata],
+    ocr_endpoint: str,
+    ocr_model: str,
+    fps: float,
+    verbose: bool = False,
+) -> list[BrandSearchResult]:
+    """Re-extract 4 source-rate frames after each advert's detected last
+    5fps frame and OCR them to refine the end position.
+
+    At 5fps there are up to 4 source 25fps frames (at +0.04, +0.08, +0.12,
+    +0.16 s) between consecutive 5fps samples.  If the brand text is visible
+    on any of these intermediate frames, the advert's end timecode is
+    advanced to the latest matching frame.
+
+    Uses ``-noaccurate_seek`` for frame-accurate FFmpeg positioning.
+    """
+    if not scan_results or not video_path:
+        return scan_results
+
+    from ad_break_identifier.ocr_client import ocr_image
+
+    results = list(scan_results)
+
+    for i, r in enumerate(results):
+        if not r.matched or r.last_match_frame is None:
+            continue
+
+        T_clip = r.last_match_frame / fps  # clip-relative timestamp of 5fps match
+        T_broadcast = start_seconds + T_clip
+
+        # Build brand patterns for this advert (same two-tier approach)
+        brand = adverts[i].brand if i < len(adverts) else ""
+        if not brand:
+            continue
+        exact_pats = build_exact_patterns(brand=brand)
+        sub_pats = build_substring_patterns(brand=brand)
+
+        # Create temp directory for refinement frames
+        refine_dir = Path(tempfile.mkdtemp(suffix="_refine"))
+        try:
+            pattern = str(refine_dir / "refine_%05d.png")
+            cmd = [
+                "ffmpeg", "-y",
+                "-ss", f"{T_broadcast:.6f}",
+                "-noaccurate_seek",
+                "-i", video_path,
+                "-t", "0.2",
+                "-r", str(SOURCE_FPS),
+                "-vsync", "vfr",
+                "-frame_pts", "1",
+                "-pix_fmt", "rgb24",
+                pattern,
+            ]
+            subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=30)
+
+            refine_frames = sorted(refine_dir.glob("refine_*.png"))
+            # First frame (index 0) is the same 5fps match — skip it
+            candidate_frames = refine_frames[1:] if len(refine_frames) > 1 else []
+
+            if not candidate_frames:
+                continue
+
+            # OCR candidate frames
+            import requests
+            session = requests.Session()
+            ocr_texts: list[str] = []
+            for cf in candidate_frames:
+                try:
+                    text = ocr_image(
+                        image_path=cf,
+                        endpoint=ocr_endpoint,
+                        model=ocr_model,
+                        session=session,
+                    )
+                    ocr_texts.append(text)
+                except Exception:
+                    ocr_texts.append("")
+
+            # Check each refinement frame for brand text
+            last_match_idx: int | None = None
+            for j, text in enumerate(ocr_texts):
+                matched, _ = match_ocr_text(text, exact_pats)
+                if not matched:
+                    matched, _ = match_ocr_text(text, sub_pats)
+                if matched:
+                    last_match_idx = j  # j is 0-based relative to candidate_frames[0]
+                    if verbose:
+                        logger.info(
+                            "  %s refinement: frame +%d at +%.2fs matched",
+                            brand, j + 1, (j + 1) * 0.04,
+                        )
+
+            if last_match_idx is not None:
+                refinement_offset = (last_match_idx + 1) * (1.0 / SOURCE_FPS)
+                r.refined_end_seconds = T_clip + refinement_offset
+                if verbose:
+                    logger.info(
+                        "  %s: refined end from %.3fs to %.3fs (+%.0f source frames)",
+                        brand, r.last_match_seconds, r.refined_end_seconds,
+                        (last_match_idx + 1),
+                    )
+
+        except subprocess.TimeoutExpired:
+            logger.warning("Refinement FFmpeg timed out for %s", brand)
+        except subprocess.CalledProcessError as e:
+            logger.warning("Refinement FFmpeg failed for %s: %s", brand, e.stderr[-300:])
+        except Exception as e:
+            logger.warning("Refinement failed for %s: %s", brand, e)
+        finally:
+            for f in refine_dir.glob("*.png"):
+                f.unlink(missing_ok=True)
+            try:
+                refine_dir.rmdir()
+            except OSError:
+                pass
+
+    return results
+
+
 # ── XML output ────────────────────────────────────────────────────────────
 
 
@@ -862,7 +992,8 @@ def format_xml(
                 start_tc = seconds_to_timecode(start_frame / fps)
                 lines.append(f"        <start_timecode>{_escape_xml(start_tc)}</start_timecode>")
 
-            tc = seconds_to_timecode(scan.last_match_seconds)
+            effective_last = scan.refined_end_seconds if scan.refined_end_seconds is not None else scan.last_match_seconds
+            tc = seconds_to_timecode(effective_last)
             lines.append(f"        <last_timecode>{_escape_xml(tc)}</last_timecode>")
             lines.append(f"        <match_tier>{scan.match_tier}</match_tier>")
             if scan.matched_terms:
@@ -877,7 +1008,7 @@ def format_xml(
 
         if scan and not scan.matched:
             lines.append(f"        <ocr_match_fallback>true</ocr_match_fallback>")
-            lines.append(f"        <description>OCR: no text match for {adv.brand}/{adv.advertiser}</description>")
+            lines.append(f"        <description>OCR: no text match for {_escape_xml(adv.brand)}/{_escape_xml(adv.advertiser)}</description>")
 
         lines.append("    </advert>")
 
@@ -1200,7 +1331,7 @@ def update_pipeline_state(
         matched_terms: list[str] = []
 
         if scan and scan.last_match_seconds is not None:
-            secs_clip = scan.last_match_seconds
+            secs_clip = scan.refined_end_seconds if scan.refined_end_seconds is not None else scan.last_match_seconds
             tc = seconds_to_timecode(secs_clip)
             last_frame = scan.last_match_frame
             match_tier = scan.match_tier
@@ -1342,7 +1473,20 @@ def run_detection(
     else:
         logger.info("Clamp: no anomalies detected")
 
-    # 7. Format XML
+    # 7. 25fps end-frame refinement (if not dry run)
+    if not dry_run and video_path:
+        scan_results = _refine_advert_end_frames(
+            scan_results=scan_results,
+            video_path=video_path,
+            start_seconds=start_seconds,
+            adverts=metadata.adverts,
+            ocr_endpoint=ocr_endpoint,
+            ocr_model=ocr_model,
+            fps=fps,
+            verbose=verbose,
+        )
+
+    # 8. Format XML
     xml_output = format_xml(metadata, scan_results, fps)
     _log("XML output: %d lines", len(xml_output.splitlines()))
 
