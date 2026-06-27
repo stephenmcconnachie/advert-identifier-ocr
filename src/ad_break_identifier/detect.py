@@ -811,18 +811,26 @@ def _escape_xml(text: str) -> str:
 def format_xml(
     ad_metadata: AdBreakMetadata,
     scan_results: list[BrandSearchResult],
+    fps: float = DEFAULT_FPS,
 ) -> str:
     """Format detection results as XML.
 
     Each ``<advert>`` contains ``<unique_id>``, ``<brand>``,
     ``<advertiser>``, ``<category>``, ``<duration_seconds>``,
+    ``<start_timecode>`` (clip-relative, computed from OCR frames),
     ``<last_timecode>`` (clip-relative), ``<match_tier>``, and
     ``<ocr_match_fallback>`` if no match was found.
+
+    For adverts with known durations, start is derived from the end frame
+    minus duration.  For the last advert in a multi-advert break (no
+    duration), start is one frame after the preceding advert's last frame.
+    Single-advert breaks and unmatched adverts omit ``<start_timecode>``.
     """
     lines = ["<ad_break>"]
     lines.append(f"    <!-- OCR-based detection (5 FPS, PaddleOCR-VL) -->")
     lines.append(f"    <!-- Generated: {datetime.now().isoformat()} -->")
 
+    prev_last_frame: int | None = None
     for i, adv in enumerate(ad_metadata.adverts):
         scan = scan_results[i] if i < len(scan_results) else None
 
@@ -831,10 +839,29 @@ def format_xml(
         lines.append(f"        <brand>{_escape_xml(adv.brand)}</brand>")
         lines.append(f"        <advertiser>{_escape_xml(adv.advertiser)}</advertiser>")
         lines.append(f"        <category>{_escape_xml(adv.category)}</category>")
-        if adv.duration_seconds:
-            lines.append(f"        <duration_seconds>{adv.duration_seconds}</duration_seconds>")
 
         if scan and scan.last_match_seconds is not None:
+            last_frame = scan.last_match_frame
+            duration_scheduled = adv.duration_seconds
+
+            if duration_scheduled is not None:
+                start_frame = last_frame - int(duration_scheduled * fps)
+                dur_to_write = duration_scheduled
+            elif prev_last_frame is not None:
+                start_frame = prev_last_frame + 1
+                detected_dur = (last_frame - start_frame + 1) / fps
+                dur_to_write = round(detected_dur)
+            else:
+                start_frame = None
+                dur_to_write = None
+
+            if dur_to_write is not None:
+                lines.append(f"        <duration_seconds>{dur_to_write}</duration_seconds>")
+
+            if start_frame is not None:
+                start_tc = seconds_to_timecode(start_frame / fps)
+                lines.append(f"        <start_timecode>{_escape_xml(start_tc)}</start_timecode>")
+
             tc = seconds_to_timecode(scan.last_match_seconds)
             lines.append(f"        <last_timecode>{_escape_xml(tc)}</last_timecode>")
             lines.append(f"        <match_tier>{scan.match_tier}</match_tier>")
@@ -842,6 +869,9 @@ def format_xml(
                 lines.append(f"        <matched_terms>{_escape_xml(', '.join(scan.matched_terms))}</matched_terms>")
             if scan.correction:
                 lines.append(f"        <correction>{_escape_xml(scan.correction)}</correction>")
+
+            if scan.last_match_frame is not None:
+                prev_last_frame = scan.last_match_frame
         else:
             lines.append(f"        <last_timecode></last_timecode>")
 
@@ -1313,7 +1343,7 @@ def run_detection(
         logger.info("Clamp: no anomalies detected")
 
     # 7. Format XML
-    xml_output = format_xml(metadata, scan_results)
+    xml_output = format_xml(metadata, scan_results, fps)
     _log("XML output: %d lines", len(xml_output.splitlines()))
 
     # 7. Generate QC HTML report (only when frames are kept on disk)

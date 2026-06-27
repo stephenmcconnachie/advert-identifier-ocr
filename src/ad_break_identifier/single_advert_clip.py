@@ -146,6 +146,7 @@ def parse_advert_xml(xml_path: str) -> list[dict]:
         unique_id = get_text("unique_id") or ""
         brand = get_text("brand") or f"advert_{i + 1}"
         last_timecode = get_text("last_timecode") or ""
+        start_timecode = get_text("start_timecode")
         duration_str = get_text("duration_seconds") or ""
         refined_timecode = get_text("refined_timecode")
         refined_clip_frame_str = get_text("refined_clip_frame")
@@ -155,6 +156,7 @@ def parse_advert_xml(xml_path: str) -> list[dict]:
             "unique_id": unique_id,
             "brand": brand,
             "last_timecode": last_timecode,
+            "start_timecode": start_timecode,
             "duration_seconds": None if not duration_str else int(duration_str),
             "refined_timecode": refined_timecode,
             "refined_clip_frame": None if not refined_clip_frame_str else int(refined_clip_frame_str),
@@ -427,12 +429,26 @@ def main() -> int:
                 if advert["index"] not in indices_to_process:
                     continue
 
-                # Determine start time: prefer pipeline state adjusted_start,
-                # then fall back to clip-relative timecode + clip_offset
+                # Determine start time: prefer XML start_timecode (directly
+                # from OCR frame data), then pipeline state adjusted_start,
+                # then clip-relative timecode + clip_offset fallback.
                 start_secs = None
                 duration = advert["duration_seconds"]
                 time_source_desc = ""
-                if args.state_file:
+
+                # Path 1: XML start_timecode from format_xml (most reliable)
+                start_tc = advert.get("start_timecode")
+                last_tc = advert.get("last_timecode")
+                if start_tc and last_tc:
+                    start_secs = timecode_to_seconds(start_tc) + args.clip_offset
+                    last_secs = timecode_to_seconds(last_tc)
+                    duration = last_secs - timecode_to_seconds(start_tc)
+                    time_source_desc = (
+                        f"start_timecode={start_tc} + clip_offset={args.clip_offset:.3f}s"
+                    )
+
+                # Path 2: pipeline state adjusted_start_broadcast
+                if start_secs is None and args.state_file:
                     try:
                         from ad_break_identifier.pipeline_state import (
                             read_state,
@@ -447,8 +463,8 @@ def main() -> int:
                     except Exception as e:
                         logger.warning(f"Could not read pipeline state: {e}")
 
+                # Path 3: clip-relative timecode + clip_offset (last resort)
                 if start_secs is None:
-                    # Fall back to clip-relative timecode + clip_offset
                     time_source = advert.get("refined_timecode") or advert["last_timecode"]
                     last_secs = timecode_to_seconds(time_source)
                     start_secs = last_secs - duration + args.clip_offset

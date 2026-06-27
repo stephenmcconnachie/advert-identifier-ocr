@@ -16,6 +16,7 @@ Coordinate reference:
 
 import json
 import logging
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -103,6 +104,7 @@ def create_initial_state(
 
     state: dict[str, Any] = {
         "pipeline_version": PIPELINE_VERSION,
+        "before_secs": before_secs,
         "video_info": {
             "filepath": video_info.get("filepath", ""),
             "start_time": video_start_tod,
@@ -154,9 +156,17 @@ def update_break_adverts(
         {"status": "...",
          "detection": {...}}
 
-    If ``detection`` is set, the module automatically computes
-    ``adjusted_start_broadcast`` from the clip_offset, duration, and
-    detection last-seconds (clip-relative).
+    **Pass 1** writes status and detection data.  **Pass 2** derives
+    ``adjusted_start_broadcast`` for every advert using OCR frame data:
+
+    - Adverts with known ``scheduled_duration_seconds``:
+      ``start_frame = last_frame - duration * fps``
+    - Last advert in a multi-advert break:
+      ``start_frame = prev_advert_last_frame + 1``
+      (the OCR-detected end frame of the preceding advert becomes the anchor)
+    - Single-advert breaks (no duration, no preceding advert):
+      logged to a per-video ``_single_advert_breaks.log`` file; no start
+      computed.
 
     Args:
         state: The current pipeline state (mutated in-place and returned).
@@ -173,29 +183,74 @@ def update_break_adverts(
     """
     break_data = state["ad_breaks"][ad_break_index - 1]
     clip_offset: float = break_data["clip_offset"]
+    before_secs: float = state.get("before_secs", 10.0)
 
+    # ── Pass 1: write status and detection data ──────────────────────
     for i, update in enumerate(updates):
         if i >= len(break_data["adverts"]):
-            break  # safety: fewer adverts in state than updates
-
+            break
         advert = break_data["adverts"][i]
         if "status" in update:
             advert["status"] = update["status"]
         if "detection" in update:
-            detection = update["detection"]
-            advert["detection"] = detection
+            advert["detection"] = update["detection"]
 
-            # Compute broadcast-absolute adjusted start
-            duration: int | None = advert.get("scheduled_duration_seconds")
-            last_seconds_clip = detection.get("last_seconds_clip")
-            if last_seconds_clip is None and detection.get("last_frame") is not None:
-                last_seconds_clip = detection["last_frame"] / fps
+    # ── Pass 2: derive start_frame for every advert ──────────────────
+    # Non-last adverts (known duration): start = last_frame - duration * fps
+    # Last advert (multi-advert break):
+    #     start = prev_advert_last_frame + 1
+    #     detected_duration_seconds stored for downstream use
+    # Single-advert break: logged and skipped
+    prev_last_frame: int | None = None
+    for i, advert in enumerate(break_data["adverts"]):
+        detection = advert.get("detection")
+        if detection is None or detection.get("last_frame") is None:
+            prev_last_frame = None
+            continue
 
-            if duration is not None and last_seconds_clip is not None:
-                last_bcast = clip_offset + last_seconds_clip
-                adjusted_start = last_bcast - duration
-                detection["last_seconds_broadcast"] = round(last_bcast, 3)
-                detection["adjusted_start_broadcast"] = round(adjusted_start, 3)
+        last_frame: int = detection["last_frame"]
+        duration: int | None = advert.get("scheduled_duration_seconds")
+
+        if duration is not None:
+            start_frame = last_frame - int(duration * fps)
+        elif prev_last_frame is not None:
+            start_frame = prev_last_frame + 1
+            detected_duration = (last_frame - start_frame + 1) / fps
+            detection["detected_duration_seconds"] = round(detected_duration, 1)
+        else:
+            # Single-advert break — no duration, no preceding advert
+            unique_id = advert.get("unique_id", "unknown")
+            brand = advert.get("brand", "unknown")
+            try:
+                log_path = _single_advert_log_path(state)
+                log_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(log_path, "a") as f:
+                    f.write(
+                        f"{datetime.now().isoformat()} | "
+                        f"Single-advert break: track_id={unique_id}, "
+                        f"brand={brand}, last_frame={last_frame}, "
+                        f"clip_offset={clip_offset}, fps={fps}\n"
+                    )
+                logger.warning(
+                    "Single-advert break: %s / %s — logged to %s",
+                    unique_id, brand, log_path,
+                )
+            except OSError:
+                logger.warning(
+                    "Single-advert break: %s / %s (could not write log)",
+                    unique_id, brand,
+                )
+            prev_last_frame = None
+            continue
+
+        start_seconds_clip = start_frame / fps
+        start_broadcast = clip_offset + start_seconds_clip
+
+        detection["start_frame_clip"] = start_frame
+        detection["start_seconds_clip"] = round(start_seconds_clip, 3)
+        detection["adjusted_start_broadcast"] = round(start_broadcast, 3)
+
+        prev_last_frame = last_frame
 
     return state
 
@@ -228,6 +283,12 @@ def get_adjusted_starts(
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────
+
+
+def _single_advert_log_path(state: dict[str, Any]) -> Path:
+    """Derive the single-advert break log path from the state video path."""
+    video_path = Path(state.get("video_info", {}).get("filepath", ""))
+    return video_path.parent / f"{video_path.stem}_single_advert_breaks.log"
 
 
 def _tod_to_seconds(tod: str) -> float:

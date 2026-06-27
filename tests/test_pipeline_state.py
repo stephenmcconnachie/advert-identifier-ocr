@@ -153,30 +153,32 @@ class TestUpdateBreakAdverts:
         updates = [
             {
                 "detection": {
-                    "last_timecode": "00:04:30.080",
-                    "last_seconds_clip": 270.08,
-                    "last_frame": 1354,
+                    "last_timecode": "00:04:30.000",
+                    "last_seconds_clip": 270.0,
+                    "last_frame": 1350,
                 }
             },
         ]
         update_break_adverts(state, ad_break_index=1, updates=updates)
 
         det = state["ad_breaks"][0]["adverts"][0]["detection"]
-        # clip_offset = 2900, last_seconds_clip = 270.08
-        # last_seconds_broadcast = 2900 + 270.08 = 3170.08
-        # adjusted_start_broadcast = 3170.08 - 30 = 3140.08
-        assert det["last_seconds_broadcast"] == pytest.approx(3170.08, abs=0.001)
-        assert det["adjusted_start_broadcast"] == pytest.approx(3140.08, abs=0.001)
+        # clip_offset = 2900
+        # Non-last advert: duration=30, last_frame=1350
+        # start_frame = 1350 - 30*5 = 1200
+        # adjusted_start_broadcast = 2900 + 1200/5 = 3140.0
+        assert det["adjusted_start_broadcast"] == pytest.approx(3140.0, abs=0.001)
+        assert det["start_frame_clip"] == 1200
 
-    def test_update_detection_missing_duration_no_compute(self, state):
-        # Set duration to None for first advert
+    def test_single_advert_break_no_start_computed(self, state):
+        # First advert with no duration and no preceding advert
+        # → single-advert break → logged and skipped → adjusted_start_broadcast is None
         state["ad_breaks"][0]["adverts"][0]["scheduled_duration_seconds"] = None
         updates = [
             {
                 "detection": {
-                    "last_timecode": "00:04:30.080",
-                    "last_seconds_clip": 270.08,
-                    "last_frame": 1354,
+                    "last_timecode": "00:04:30.000",
+                    "last_seconds_clip": 270.0,
+                    "last_frame": 1350,
                 }
             },
         ]
@@ -200,6 +202,37 @@ class TestUpdateBreakAdverts:
     def test_invalid_break_index(self, state):
         with pytest.raises(IndexError):
             update_break_adverts(state, ad_break_index=99, updates=[])
+
+    def test_last_advert_start_from_previous(self, state):
+        # Second advert has no duration (last advert in multi-advert break)
+        state["ad_breaks"][0]["adverts"][1]["scheduled_duration_seconds"] = None
+        updates = [
+            {"detection": {"last_timecode": "00:04:30.000", "last_seconds_clip": 270.0, "last_frame": 1350}},
+            {"detection": {"last_timecode": "00:04:50.000", "last_seconds_clip": 290.0, "last_frame": 1450}},
+        ]
+        update_break_adverts(state, ad_break_index=1, updates=updates)
+
+        det0 = state["ad_breaks"][0]["adverts"][0]["detection"]
+        assert det0["start_frame_clip"] == 1200
+        assert det0["adjusted_start_broadcast"] == pytest.approx(2900 + 1200 / 5, abs=0.001)
+
+        det1 = state["ad_breaks"][0]["adverts"][1]["detection"]
+        assert det1["start_frame_clip"] == 1351
+        assert det1["adjusted_start_broadcast"] == pytest.approx(2900 + 1351 / 5, abs=0.001)
+        assert det1["detected_duration_seconds"] == pytest.approx(20.0, abs=0.1)
+
+    def test_single_advert_break_no_detection_on_second(self, state):
+        # Only first advert gets detection data; second has none
+        # Second advert should be skipped in Pass 2 (no detection)
+        updates = [
+            {"detection": {"last_timecode": "00:04:30.000", "last_seconds_clip": 270.0, "last_frame": 1350}},
+        ]
+        update_break_adverts(state, ad_break_index=1, updates=updates)
+
+        det0 = state["ad_breaks"][0]["adverts"][0]["detection"]
+        assert det0["adjusted_start_broadcast"] is not None
+        det1 = state["ad_breaks"][0]["adverts"][1].get("detection")
+        assert det1 is None
 
 
 class TestGetAdjustedStarts:

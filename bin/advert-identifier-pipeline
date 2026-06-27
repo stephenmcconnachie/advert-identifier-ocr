@@ -119,6 +119,11 @@ def create_parser() -> argparse.ArgumentParser:
         default="PaddlePaddle/PaddleOCR-VL",
         help="OCR model name (default: PaddlePaddle/PaddleOCR-VL)"
     )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        help="Directory for frame images, OCR results JSON, and QC HTML report (passed to advert-identifier)"
+    )
     return parser
 
 
@@ -186,6 +191,7 @@ def run_advert_identifier(
     fps: float,
     ocr_endpoint: str,
     ocr_model: str,
+    output_dir: str | None,
     logger: logging.Logger,
     verbose: bool = False,
 ) -> Tuple[bool, Optional[Path], int]:
@@ -223,6 +229,8 @@ def run_advert_identifier(
 
     if verbose:
         cmd.append("--verbose")
+    if output_dir:
+        cmd.extend(["--output-dir", output_dir])
     
     logger.info(f"Running OCR detection for ad break {ad_break_index + 1}: {' '.join(cmd)}")
     
@@ -572,6 +580,7 @@ def main() -> int:
                 fps=args.fps,
                 ocr_endpoint=args.ocr_endpoint,
                 ocr_model=args.ocr_model,
+                output_dir=args.output_dir,
                 logger=logger,
                 verbose=args.verbose,
             )
