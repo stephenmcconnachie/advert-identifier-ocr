@@ -157,13 +157,14 @@ def update_break_adverts(
          "detection": {...}}
 
     **Pass 1** writes status and detection data.  **Pass 2** derives
-    ``adjusted_start_broadcast`` for every advert using OCR frame data:
+    ``adjusted_start_broadcast`` for every advert using the effective end
+    position (``last_seconds_clip``, which may be 25fps-refined):
 
     - Adverts with known ``scheduled_duration_seconds``:
-      ``start_frame = last_frame - duration * fps``
+      ``start = last_seconds_clip - duration``
     - Last advert in a multi-advert break:
-      ``start_frame = prev_advert_last_frame + 1``
-      (the OCR-detected end frame of the preceding advert becomes the anchor)
+      ``start = prev_advert_effective_end + 1 source frame (1/25s)``
+      (the effective end of the preceding advert becomes the anchor)
     - Single-advert breaks (no duration, no preceding advert):
       logged to a per-video ``_single_advert_breaks.log`` file; no start
       computed.
@@ -195,27 +196,30 @@ def update_break_adverts(
         if "detection" in update:
             advert["detection"] = update["detection"]
 
-    # ── Pass 2: derive start_frame for every advert ──────────────────
-    # Non-last adverts (known duration): start = last_frame - duration * fps
+    # ── Pass 2: derive start for every advert ────────────────────────
+    # Non-last adverts (known duration): start = effective_end - duration
+    #   where effective_end is last_seconds_clip (which may be refined to
+    #   25fps precision).  Previously this used last_frame / fps (the raw
+    #   5fps frame), which was up to 4 source frames too early when the
+    #   end had been refined, causing clips to open on the previous advert.
     # Last advert (multi-advert break):
-    #     start = prev_advert_last_frame + 1
-    #     detected_duration_seconds stored for downstream use
+    #     start = prev_effective_end + 1 source frame
     # Single-advert break: logged and skipped
-    prev_last_frame: int | None = None
+    prev_effective_end: float | None = None
     for i, advert in enumerate(break_data["adverts"]):
         detection = advert.get("detection")
-        if detection is None or detection.get("last_frame") is None:
-            prev_last_frame = None
+        if detection is None or detection.get("last_seconds_clip") is None:
+            prev_effective_end = None
             continue
 
-        last_frame: int = detection["last_frame"]
+        effective_end: float = detection["last_seconds_clip"]
         duration: int | None = advert.get("scheduled_duration_seconds")
 
         if duration is not None:
-            start_frame = last_frame - int(duration * fps)
-        elif prev_last_frame is not None:
-            start_frame = prev_last_frame + 1
-            detected_duration = (last_frame - start_frame + 1) / fps
+            start_seconds_clip = effective_end - duration
+        elif prev_effective_end is not None:
+            start_seconds_clip = prev_effective_end + (1.0 / 25.0)  # one source frame
+            detected_duration = effective_end - start_seconds_clip
             detection["detected_duration_seconds"] = round(detected_duration, 1)
         else:
             # Single-advert break — no duration, no preceding advert
@@ -228,7 +232,7 @@ def update_break_adverts(
                     f.write(
                         f"{datetime.now().isoformat()} | "
                         f"Single-advert break: track_id={unique_id}, "
-                        f"brand={brand}, last_frame={last_frame}, "
+                        f"brand={brand}, effective_end={effective_end}, "
                         f"clip_offset={clip_offset}, fps={fps}\n"
                     )
                 logger.warning(
@@ -240,17 +244,15 @@ def update_break_adverts(
                     "Single-advert break: %s / %s (could not write log)",
                     unique_id, brand,
                 )
-            prev_last_frame = None
+            prev_effective_end = None
             continue
 
-        start_seconds_clip = start_frame / fps
         start_broadcast = clip_offset + start_seconds_clip
 
-        detection["start_frame_clip"] = start_frame
         detection["start_seconds_clip"] = round(start_seconds_clip, 3)
         detection["adjusted_start_broadcast"] = round(start_broadcast, 3)
 
-        prev_last_frame = last_frame
+        prev_effective_end = effective_end
 
     return state
 

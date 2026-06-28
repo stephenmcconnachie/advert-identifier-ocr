@@ -978,7 +978,7 @@ def format_xml(
     lines.append(f"    <!-- OCR-based detection (5 FPS, PaddleOCR-VL) -->")
     lines.append(f"    <!-- Generated: {datetime.now().isoformat()} -->")
 
-    prev_last_frame: int | None = None
+    prev_effective_end: float | None = None
     for i, adv in enumerate(ad_metadata.adverts):
         scan = scan_results[i] if i < len(scan_results) else None
 
@@ -989,29 +989,32 @@ def format_xml(
         lines.append(f"        <category>{_escape_xml(adv.category)}</category>")
 
         if scan and scan.last_match_seconds is not None:
-            last_frame = scan.last_match_frame
+            effective_end = (
+                scan.refined_end_seconds
+                if scan.refined_end_seconds is not None
+                else scan.last_match_seconds
+            )
             duration_scheduled = adv.duration_seconds
 
             if duration_scheduled is not None:
-                start_frame = last_frame - int(duration_scheduled * fps)
+                start_seconds = effective_end - duration_scheduled
                 dur_to_write = duration_scheduled
-            elif prev_last_frame is not None:
-                start_frame = prev_last_frame + 1
-                detected_dur = (last_frame - start_frame + 1) / fps
+            elif prev_effective_end is not None:
+                start_seconds = prev_effective_end + (1.0 / SOURCE_FPS)
+                detected_dur = effective_end - start_seconds
                 dur_to_write = round(detected_dur)
             else:
-                start_frame = None
+                start_seconds = None
                 dur_to_write = None
 
             if dur_to_write is not None:
                 lines.append(f"        <duration_seconds>{dur_to_write}</duration_seconds>")
 
-            if start_frame is not None:
-                start_tc = seconds_to_timecode(start_frame / fps)
+            if start_seconds is not None:
+                start_tc = seconds_to_timecode(start_seconds)
                 lines.append(f"        <start_timecode>{_escape_xml(start_tc)}</start_timecode>")
 
-            effective_last = scan.refined_end_seconds if scan.refined_end_seconds is not None else scan.last_match_seconds
-            tc = seconds_to_timecode(effective_last)
+            tc = seconds_to_timecode(effective_end)
             lines.append(f"        <last_timecode>{_escape_xml(tc)}</last_timecode>")
             lines.append(f"        <match_tier>{scan.match_tier}</match_tier>")
             if scan.matched_terms:
@@ -1019,8 +1022,7 @@ def format_xml(
             if scan.correction:
                 lines.append(f"        <correction>{_escape_xml(scan.correction)}</correction>")
 
-            if scan.last_match_frame is not None:
-                prev_last_frame = scan.last_match_frame
+            prev_effective_end = effective_end
         else:
             lines.append(f"        <last_timecode></last_timecode>")
 

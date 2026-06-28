@@ -251,6 +251,68 @@ class TestFormatXml:
         assert "<last_timecode></last_timecode>" in xml
         assert "<ocr_match_fallback>true</ocr_match_fallback>" in xml
 
+    def test_refined_end_shifts_start(self):
+        """When refined_end_seconds is set, start_timecode must be derived
+        from the refined end, not the raw 5fps frame.
+
+        5fps match at frame 200 = 40.0s, refined to 40.12s (3 source frames).
+        With the fix: start = 40.12 - 30 = 10.12s.
+        Old buggy: start = 200/5 - 30 = 10.0s (3 source frames too early).
+        """
+        metadata = AdBreakMetadata(
+            programme_before=ProgrammeMetadata(title="News", channel="ITV1"),
+            programme_after=ProgrammeMetadata(title="News", channel="ITV1"),
+            adverts=[
+                AdvertMetadata(
+                    unique_id="ADV1", advertiser="Adv1", brand="Galaxy",
+                    category="chocolate", duration_seconds=30,
+                ),
+            ],
+        )
+        results = [
+            BrandSearchResult(
+                matched=True,
+                last_match_frame=200,
+                last_match_seconds=40.0,
+                refined_end_seconds=40.12,
+                match_tier="exact",
+                match_count=5,
+                all_matching_frames=[190, 195, 200],
+                matched_terms=["galaxy"],
+            ),
+        ]
+        xml = format_xml(metadata, results)
+        assert "<start_timecode>00:10.120</start_timecode>" in xml
+        assert "<last_timecode>00:40.120</last_timecode>" in xml
+
+    def test_unrefined_end_unchanged(self):
+        """Without refinement, start is derived from last_match_seconds."""
+        metadata = AdBreakMetadata(
+            programme_before=ProgrammeMetadata(title="News", channel="ITV1"),
+            programme_after=ProgrammeMetadata(title="News", channel="ITV1"),
+            adverts=[
+                AdvertMetadata(
+                    unique_id="ADV1", advertiser="Adv1", brand="Galaxy",
+                    category="chocolate", duration_seconds=30,
+                ),
+            ],
+        )
+        results = [
+            BrandSearchResult(
+                matched=True,
+                last_match_frame=200,
+                last_match_seconds=40.0,
+                refined_end_seconds=None,
+                match_tier="exact",
+                match_count=5,
+                all_matching_frames=[],
+                matched_terms=["galaxy"],
+            ),
+        ]
+        xml = format_xml(metadata, results)
+        # start = 40.0 - 30 = 10.0s → 00:10.000
+        assert "<start_timecode>00:10.000</start_timecode>" in xml
+
 
 class TestTimeHelpers:
     def test_seconds_to_timecode(self):
