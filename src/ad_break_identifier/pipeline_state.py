@@ -216,7 +216,7 @@ def update_break_adverts(
         duration: int | None = advert.get("scheduled_duration_seconds")
 
         if duration is not None:
-            start_seconds_clip = effective_end - duration
+            start_seconds_clip = effective_end - duration + (1.0 / 25.0)
         elif prev_effective_end is not None:
             start_seconds_clip = prev_effective_end + (1.0 / 25.0)  # one source frame
             detected_duration = effective_end - start_seconds_clip

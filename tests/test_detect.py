@@ -280,8 +280,8 @@ class TestFormatXml:
         from the refined end, not the raw 5fps frame.
 
         5fps match at frame 200 = 40.0s, refined to 40.12s (3 source frames).
-        With the fix: start = 40.12 - 30 = 10.12s.
-        Old buggy: start = 200/5 - 30 = 10.0s (3 source frames too early).
+        With the fix: start = 40.12 - 30 + 1/25 = 10.16s.
+        Old buggy: start = 200/5 - 30 = 10.0s (4 source frames too early).
         """
         metadata = AdBreakMetadata(
             programme_before=ProgrammeMetadata(title="News", channel="ITV1"),
@@ -309,7 +309,7 @@ class TestFormatXml:
             ),
         ]
         xml = format_xml(metadata, results)
-        assert "<start_timecode>00:10.120</start_timecode>" in xml
+        assert "<start_timecode>00:10.160</start_timecode>" in xml
         assert "<last_timecode>00:40.120</last_timecode>" in xml
 
     def test_unrefined_end_unchanged(self):
@@ -340,8 +340,8 @@ class TestFormatXml:
             ),
         ]
         xml = format_xml(metadata, results)
-        # start = 40.0 - 30 = 10.0s → 00:10.000
-        assert "<start_timecode>00:10.000</start_timecode>" in xml
+        # start = 40.0 - 30 + 1/25 = 10.04s → 00:10.040
+        assert "<start_timecode>00:10.040</start_timecode>" in xml
 
 
 class TestTimeHelpers:
