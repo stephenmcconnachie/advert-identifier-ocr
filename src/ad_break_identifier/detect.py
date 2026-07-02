@@ -1064,10 +1064,12 @@ def _refine_advert_end_frames(
 
             # Save refinement frames and OCR text if output_dir provided
             if refine_save_dir:
+                import shutil
+
                 safe_brand = re.sub(r'[\\/:*?"<>|]', "_", brand)
                 for j, cf in enumerate(candidate_frames):
                     saved = refine_save_dir / f"{safe_brand}_frame_{j}.png"
-                    cf.replace(saved)
+                    shutil.move(str(cf), str(saved))
                 refine_json_path = refine_save_dir / f"{safe_brand}_refinement.json"
                 import json as _json
 
