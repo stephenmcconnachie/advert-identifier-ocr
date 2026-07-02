@@ -28,6 +28,12 @@ advert-identifier-single-advert-clip \
   --json-file video/2024-03-26_ITV1HD_13:30:00_metadata.json \
   --video-url "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir video/clips
+
+# 4. Generate reference HTML grid from clipped videos (optional)
+advert-identifier-reference \
+  --clips-dir video/clips \
+  --output-dir video/ \
+  --video-stem "2024-03-26_ITV1HD_13:30:00"
 ```
 
 ## One-Command Pipeline
@@ -105,6 +111,7 @@ python3 bin/advert-identifier-metadata-extract --help
 | `advert-identifier-pipeline` | Full folder automation | `--input-folder`, `--csv-folder`, `--before-secs`, `--after-secs`, `--fps`, `--ocr-endpoint`, `--ocr-model` |
 | `advert-identifier-metadata-extract` | CSV → JSON metadata | `--video`, `--csv-folder`, `--before-secs` |
 | `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--json-file`, `--index`, `--trim`, `--pad`, `--clip-offset`, `--ad-break-index`, `--state-file` |
+| `advert-identifier-reference` | Generate reference HTML grid from clipped videos | `--clips-dir`, `--output-dir`, `--video-stem` |
 
 See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) for complete documentation.
 
@@ -119,7 +126,8 @@ See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) for complete documentation.
 5. **Clamp/Cage Correction**: Detects pattern anomalies in detected end frames by comparing each advert's `sec_digit.mmm` pattern against the majority across the break. Snaps anomalous matches to the nearest frame matching the majority pattern using scheduled durations.
 6. **25fps End-Frame Refinement**: After clamp correction, extracts 5 source-rate frames (25 FPS) starting at each advert's detected 5fps match frame. Uses **boundary detection** — compares each refinement frame's OCR text to the current and next 5fps frame's text — to find the exact advert boundary at sub-frame precision (up to 4 source frames = 0.16s). This works even when brand text is not visible at the match position (e.g. sponsorship endcards).
 7. **Advert Clip Extraction**: Extracts individual advert clips using refined timecodes and durations
-8. **Pipeline State Tracking**: A persistent state file (`_pipeline_state.json`) tracks every advert through all stages
+8. **Reference HTML Grid**: Post-run tool that scans clipped advert videos, extracts the first frame of each, and generates a themed responsive HTML grid with unique ID, category, and brand labels
+9. **Pipeline State Tracking**: A persistent state file (`_pipeline_state.json`) tracks every advert through all stages
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed breakdown.
 

@@ -28,9 +28,10 @@ All commands below assume the venv is active. Run everything from the repo root.
 | `advert-identifier` | `src/ad_break_identifier/detect.py` | OCR detection (5 FPS frame extraction + PaddleOCR-VL + brand search) |
 | `advert-identifier-metadata-extract` | `bin/advert-identifier-metadata-extract` | CSV → JSON metadata |
 | `advert-identifier-single-advert-clip` | `src/ad_break_identifier/single_advert_clip.py` | Extract individual advert clips |
+| `advert-identifier-reference` | `src/ad_break_identifier/reference.py` | Generate reference HTML grid from clipped videos |
 | `advert-identifier-pipeline` | `bin/advert-identifier-pipeline` | Full automation |
 
-Entry points are wired in `pyproject.toml` through `src/ad_break_identifier/cli.py`. `identifier_main` and `single_advert_clip_main` import directly from the package; `pipeline_main` and `extractor_main` subprocess into `bin/` scripts.
+Entry points are wired in `pyproject.toml` through `src/ad_break_identifier/cli.py`. `identifier_main`, `single_advert_clip_main`, and `reference_main` import directly from the package; `pipeline_main` and `extractor_main` subprocess into `bin/` scripts.
 
 `bin/` scripts can also be run directly without install: `python3 bin/advert-identifier --help`
 
@@ -39,6 +40,7 @@ Entry points are wired in `pyproject.toml` through `src/ad_break_identifier/cli.
 1. `advert-identifier-metadata-extract` — extract CSV scheduling data to JSON + pipeline state
 2. `advert-identifier` — OCR detection (5 FPS frames, PaddleOCR-VL, two-tier brand search with ordering enforcement)
 3. `advert-identifier-single-advert-clip` — lossless individual advert extraction
+4. `advert-identifier-reference` — generate reference HTML grid from clipped videos (optional post-run)
 
 ## vLLM Server Setup
 

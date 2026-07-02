@@ -12,7 +12,7 @@ from pathlib import Path
 
 def _get_bin_dir():
     """Find the bin directory containing scripts.
-    
+
     Works both in development (repo) and installed (site-packages) modes.
     """
     # In development mode, cli.py is in src/ad_break_identifier/
@@ -20,16 +20,16 @@ def _get_bin_dir():
     dev_bin = Path(__file__).parent.parent.parent / "bin"
     if dev_bin.exists():
         return dev_bin
-    
+
     # Fallback: check if running from repo root
     repo_root = Path.cwd()
     if (repo_root / "bin").exists() and (repo_root / "src").exists():
         return repo_root / "bin"
-    
+
     # Check environment variable
     if "AD_BREAK_IDENTIFIER_ROOT" in os.environ:
         return Path(os.environ["AD_BREAK_IDENTIFIER_ROOT"]) / "bin"
-    
+
     raise RuntimeError(
         "Could not find bin/ directory. "
         "Please run from the repository root or set AD_BREAK_IDENTIFIER_ROOT environment variable."
@@ -40,13 +40,14 @@ def identifier_main():
     """Entry point for advert-identifier command (OCR detection)."""
     sys.path.insert(0, str(Path(__file__).parent.parent))
     from ad_break_identifier.detect import main
+
     sys.exit(main())
 
 
 def pipeline_main():
     """Entry point for advert-identifier-pipeline command."""
     import subprocess
-    
+
     bin_dir = _get_bin_dir()
     script = bin_dir / "advert-identifier-pipeline"
     result = subprocess.run([sys.executable, str(script)] + sys.argv[1:])
@@ -56,7 +57,7 @@ def pipeline_main():
 def extractor_main():
     """Entry point for advert-identifier-metadata-extract command."""
     import subprocess
-    
+
     bin_dir = _get_bin_dir()
     script = bin_dir / "advert-identifier-metadata-extract"
     result = subprocess.run([sys.executable, str(script)] + sys.argv[1:])
@@ -67,6 +68,15 @@ def single_advert_clip_main():
     """Entry point for advert-identifier-single-advert-clip command."""
     sys.path.insert(0, str(Path(__file__).parent.parent))
     from ad_break_identifier.single_advert_clip import main
+
+    sys.exit(main())
+
+
+def reference_main():
+    """Entry point for advert-identifier-reference command."""
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from ad_break_identifier.reference import main
+
     sys.exit(main())
 
 

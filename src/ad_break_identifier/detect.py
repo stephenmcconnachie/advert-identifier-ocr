@@ -1000,11 +1000,7 @@ def _refine_advert_end_frames(
         # is outside the window and refinement cannot help.
         current_next_sim = _text_similarity(current_text, next_text)
         has_boundary = bool(
-            current_text
-            and (
-                not next_text
-                or current_next_sim < SIMILARITY_THRESHOLD
-            )
+            current_text and (not next_text or current_next_sim < SIMILARITY_THRESHOLD)
         )
 
         # Create temp directory for refinement frames
@@ -1780,6 +1776,7 @@ def run_detection(
     output_dir: Path | None = None,
     verbose: bool = False,
     dry_run: bool = False,
+    video_stem: str | None = None,
 ) -> tuple[str, list[BrandSearchResult]]:
     """Run the full OCR detection pipeline.
 
@@ -1911,7 +1908,7 @@ def run_detection(
             frames_dir=frames_dir,
             start_seconds=start_seconds,
         )
-        qc_path = output_dir / f"{output_dir.name}_qc.html"
+        qc_path = output_dir / f"{video_stem or output_dir.name}_qc.html"
         qc_path.write_text(qc_html, encoding="utf-8")
         _log("QC HTML written to: %s", qc_path)
 
@@ -2140,6 +2137,7 @@ def main(args: list[str] | None = None) -> int:
             output_dir=output_dir,
             verbose=parsed.verbose,
             dry_run=parsed.dry_run,
+            video_stem=video_stem,
         )
 
         # Write XML output
