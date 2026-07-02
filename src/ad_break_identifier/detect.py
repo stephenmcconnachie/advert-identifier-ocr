@@ -992,10 +992,19 @@ def _refine_advert_end_frames(
         if ocr_results and 0 <= match_frame + 1 < len(ocr_results):
             next_text = ocr_results[match_frame + 1].get("text", "") or ""
 
-        # If current and next 5fps texts are similar, no boundary to detect
+        # Determine whether a boundary exists in the refinement window.
+        # A boundary is present when the current 5fps frame has text and
+        # either (a) the next 5fps frame has dissimilar text, or (b) the
+        # next 5fps frame has no text at all (e.g. channel ident, black
+        # frame, transition).  When both texts are similar, the boundary
+        # is outside the window and refinement cannot help.
         current_next_sim = _text_similarity(current_text, next_text)
-        has_boundary = (
-            current_text and next_text and current_next_sim < SIMILARITY_THRESHOLD
+        has_boundary = bool(
+            current_text
+            and (
+                not next_text
+                or current_next_sim < SIMILARITY_THRESHOLD
+            )
         )
 
         # Create temp directory for refinement frames
@@ -1273,9 +1282,7 @@ def format_xml(
             duration_scheduled = adv.duration_seconds
 
             if duration_scheduled is not None:
-                start_seconds = (
-                    effective_end - duration_scheduled + (1.0 / SOURCE_FPS)
-                )
+                start_seconds = effective_end - duration_scheduled + (1.0 / SOURCE_FPS)
                 dur_to_write = duration_scheduled
             elif prev_effective_end is not None:
                 start_seconds = prev_effective_end + (1.0 / SOURCE_FPS)
@@ -2118,6 +2125,7 @@ def main(args: list[str] | None = None) -> int:
         output_dir.mkdir(parents=True, exist_ok=True)
 
     try:
+        video_stem = Path(parsed.video_url.split("?")[0]).stem
         xml_output, _ = run_detection(
             video_path=local_video,
             metadata=metadata,
@@ -2139,7 +2147,6 @@ def main(args: list[str] | None = None) -> int:
             xml_path = parsed.output
         elif parsed.metadata_file:
             base = Path(parsed.metadata_file).parent
-            video_stem = Path(parsed.video_url.split("?")[0]).stem
             xml_path = str(base / f"{video_stem}.xml")
         else:
             xml_path = "detect_output.xml"
