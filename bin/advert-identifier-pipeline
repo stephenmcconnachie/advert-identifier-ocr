@@ -260,6 +260,13 @@ def run_advert_identifier(
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         logger.info(f"OCR detection completed")
 
+        # Surface stderr (log output) from the subprocess so the
+        # user can see refinement diagnostics, clamp messages, etc.
+        if result.stderr:
+            for line in result.stderr.strip().splitlines():
+                if line.strip():
+                    logger.info(f"[advert-identifier] {line.strip()}")
+
         # XML is written to same directory as metadata file
         # The detect module uses video stem for the XML filename
         video_stem = Path(video_url.split("?")[0]).stem

@@ -12,7 +12,11 @@ from ad_break_identifier.detect import (
     tod_to_seconds,
     BrandSearchResult,
 )
-from ad_break_identifier.models import AdBreakMetadata, AdvertMetadata, ProgrammeMetadata
+from ad_break_identifier.models import (
+    AdBreakMetadata,
+    AdvertMetadata,
+    ProgrammeMetadata,
+)
 
 
 class TestBuildExactPatterns:
@@ -109,9 +113,18 @@ class TestSearchWithOrdering:
     @pytest.fixture
     def adverts(self):
         return [
-            AdvertMetadata(unique_id="ADV1", advertiser="Adv1", brand="Galaxy", category="chocolate"),
-            AdvertMetadata(unique_id="ADV2", advertiser="Adv2", brand="Mars", category="chocolate"),
-            AdvertMetadata(unique_id="ADV3", advertiser="Adv3", brand="Tesco", category="retail"),
+            AdvertMetadata(
+                unique_id="ADV1",
+                advertiser="Adv1",
+                brand="Galaxy",
+                category="chocolate",
+            ),
+            AdvertMetadata(
+                unique_id="ADV2", advertiser="Adv2", brand="Mars", category="chocolate"
+            ),
+            AdvertMetadata(
+                unique_id="ADV3", advertiser="Adv3", brand="Tesco", category="retail"
+            ),
         ]
 
     @pytest.fixture
@@ -204,7 +217,13 @@ class TestFormatXml:
             programme_before=ProgrammeMetadata(title="News", channel="ITV1"),
             programme_after=ProgrammeMetadata(title="News", channel="ITV1"),
             adverts=[
-                AdvertMetadata(unique_id="ADV1", advertiser="Adv1", brand="Galaxy", category="chocolate", duration_seconds=30),
+                AdvertMetadata(
+                    unique_id="ADV1",
+                    advertiser="Adv1",
+                    brand="Galaxy",
+                    category="chocolate",
+                    duration_seconds=30,
+                ),
             ],
         )
         results = [
@@ -233,7 +252,12 @@ class TestFormatXml:
             programme_before=ProgrammeMetadata(title="News", channel="ITV1"),
             programme_after=ProgrammeMetadata(title="News", channel="ITV1"),
             adverts=[
-                AdvertMetadata(unique_id="ADV1", advertiser="Adv1", brand="Unknown", category="misc"),
+                AdvertMetadata(
+                    unique_id="ADV1",
+                    advertiser="Adv1",
+                    brand="Unknown",
+                    category="misc",
+                ),
             ],
         )
         results = [
@@ -264,8 +288,11 @@ class TestFormatXml:
             programme_after=ProgrammeMetadata(title="News", channel="ITV1"),
             adverts=[
                 AdvertMetadata(
-                    unique_id="ADV1", advertiser="Adv1", brand="Galaxy",
-                    category="chocolate", duration_seconds=30,
+                    unique_id="ADV1",
+                    advertiser="Adv1",
+                    brand="Galaxy",
+                    category="chocolate",
+                    duration_seconds=30,
                 ),
             ],
         )
@@ -292,8 +319,11 @@ class TestFormatXml:
             programme_after=ProgrammeMetadata(title="News", channel="ITV1"),
             adverts=[
                 AdvertMetadata(
-                    unique_id="ADV1", advertiser="Adv1", brand="Galaxy",
-                    category="chocolate", duration_seconds=30,
+                    unique_id="ADV1",
+                    advertiser="Adv1",
+                    brand="Galaxy",
+                    category="chocolate",
+                    duration_seconds=30,
                 ),
             ],
         )
@@ -327,3 +357,31 @@ class TestTimeHelpers:
     def test_tod_to_seconds(self):
         assert tod_to_seconds("09:48:30") == 35310.0
         assert tod_to_seconds("00:00:00") == 0.0
+
+
+class TestTextSimilarity:
+    def test_identical_text(self):
+        from ad_break_identifier.detect import _text_similarity
+
+        assert _text_similarity("Google Pixel 8", "Google Pixel 8") == 1.0
+
+    def test_completely_different(self):
+        from ad_break_identifier.detect import _text_similarity
+
+        assert _text_similarity("Google Pixel 8", "Power Foam") < 0.5
+
+    def test_empty_strings(self):
+        from ad_break_identifier.detect import _text_similarity
+
+        assert _text_similarity("", "") == 1.0
+        assert _text_similarity("", "text") == 0.0
+
+    def test_whitespace_normalised(self):
+        from ad_break_identifier.detect import _text_similarity
+
+        assert _text_similarity("Google  Pixel", "Google Pixel") == 1.0
+
+    def test_case_insensitive(self):
+        from ad_break_identifier.detect import _text_similarity
+
+        assert _text_similarity("Google Pixel", "google pixel") == 1.0

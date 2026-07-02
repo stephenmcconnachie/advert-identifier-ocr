@@ -1,0 +1,17 @@
+# HD Channels for advert set-cover algorithm
+#
+# One channel per line. The two-phase greedy algorithm will first try to
+# cover all unique adverts using only breaks on these channels. Any adverts
+# not found on an HD channel will be covered in a second pass using all
+# remaining channels.
+#
+# Channel names are matched case-insensitively. Lines starting with '#' are
+# ignored. Blank lines are ignored.
+#
+# Delete or comment out any channel that is NOT an HD channel.
+
+5
+CH4
+Channel 5
+ITV1
+ITV1 HD

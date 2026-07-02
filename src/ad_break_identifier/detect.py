@@ -394,7 +394,10 @@ class BrandSearchResult:
     matched_terms: list[str]
     correction: str | None = None  # set by clamp_correct() if adjusted
     original_last_match_frame: int | None = None  # frame before correction
-    refined_end_seconds: float | None = None  # set by refine_advert_end_frames()
+    refined_end_seconds: float | None = None  # set by _refine_advert_end_frames()
+    refinement_data: dict | None = (
+        None  # diagnostic data from _refine_advert_end_frames()
+    )
 
 
 SOURCE_FPS = 25  # source video frame rate for refinement extraction
@@ -883,6 +886,25 @@ def clamp_correct(
 # ── 25fps end-frame refinement ───────────────────────────────────────────
 
 
+def _text_similarity(a: str, b: str) -> float:
+    """Return similarity ratio between two OCR texts (0.0 to 1.0).
+
+    Normalises whitespace and case before comparing.
+    """
+    from difflib import SequenceMatcher
+
+    a_norm = " ".join(a.strip().lower().split())
+    b_norm = " ".join(b.strip().lower().split())
+    if not a_norm and not b_norm:
+        return 1.0
+    if not a_norm or not b_norm:
+        return 0.0
+    return SequenceMatcher(None, a_norm, b_norm).ratio()
+
+
+SIMILARITY_THRESHOLD = 0.5
+
+
 def _refine_advert_end_frames(
     scan_results: list[BrandSearchResult],
     video_path: str,
@@ -891,17 +913,42 @@ def _refine_advert_end_frames(
     ocr_endpoint: str,
     ocr_model: str,
     fps: float,
+    ocr_results: list[dict] | None = None,
+    output_dir: Path | None = None,
     verbose: bool = False,
 ) -> list[BrandSearchResult]:
-    """Re-extract 4 source-rate frames after each advert's detected last
-    5fps frame and OCR them to refine the end position.
+    """Refine advert end positions by detecting text boundaries at 25fps.
 
-    At 5fps there are up to 4 source 25fps frames (at +0.04, +0.08, +0.12,
-    +0.16 s) between consecutive 5fps samples.  If the brand text is visible
-    on any of these intermediate frames, the advert's end timecode is
-    advanced to the latest matching frame.
+    Extracts 5 source-rate frames (0.2s) starting at each advert's
+    detected 5fps match frame.  Instead of looking for brand text,
+    this uses **boundary detection**: it compares each refinement
+    frame's OCR text to the current 5fps frame's text and the next
+    5fps frame's text.  The last frame whose text matches the current
+    frame is the refined end position.
 
-    Uses accurate seeking (default) for frame-accurate FFmpeg positioning.
+    This handles cases where the brand text disappears before the
+    advert ends (sponsorship endcards, logo-only screens, etc.).
+
+    Diagnostic data is stored in ``r.refinement_data`` for QC HTML
+    display.  When ``output_dir`` is provided, refinement frame
+    images and OCR text are saved to ``output_dir / "refine" /``.
+
+    Args:
+        scan_results: Brand search results after clamp correction.
+        video_path: Path to the local video file.
+        start_seconds: Broadcast-absolute start of the frame range.
+        adverts: Advert metadata list.
+        ocr_endpoint: vLLM OCR endpoint URL.
+        ocr_model: OCR model name.
+        fps: 5fps frame extraction rate.
+        ocr_results: OCR results from the 5fps pass (needed for
+            current/next frame text comparison).
+        output_dir: Directory to save refinement frames for inspection.
+        verbose: Enable verbose logging.
+
+    Returns:
+        Updated scan results with ``refined_end_seconds`` and
+        ``refinement_data`` set where refinement was applied.
     """
     if not scan_results or not video_path:
         return scan_results
@@ -919,19 +966,37 @@ def _refine_advert_end_frames(
 
     results = list(scan_results)
 
+    # Prepare refinement output directory
+    refine_save_dir: Path | None = None
+    if output_dir:
+        refine_save_dir = output_dir / "refine"
+        refine_save_dir.mkdir(parents=True, exist_ok=True)
+
     for i, r in enumerate(results):
         if not r.matched or r.last_match_frame is None:
             continue
 
-        T_clip = r.last_match_frame / fps  # clip-relative timestamp of 5fps match
+        match_frame = r.last_match_frame
+        T_clip = match_frame / fps
         T_broadcast = start_seconds + T_clip
 
-        # Build brand patterns for this advert (same two-tier approach)
         brand = adverts[i].brand if i < len(adverts) else ""
         if not brand:
             continue
-        exact_pats = build_exact_patterns(brand=brand)
-        sub_pats = build_substring_patterns(brand=brand)
+
+        # Get current and next 5fps frame OCR text
+        current_text = ""
+        next_text = ""
+        if ocr_results and 0 <= match_frame < len(ocr_results):
+            current_text = ocr_results[match_frame].get("text", "") or ""
+        if ocr_results and 0 <= match_frame + 1 < len(ocr_results):
+            next_text = ocr_results[match_frame + 1].get("text", "") or ""
+
+        # If current and next 5fps texts are similar, no boundary to detect
+        current_next_sim = _text_similarity(current_text, next_text)
+        has_boundary = (
+            current_text and next_text and current_next_sim < SIMILARITY_THRESHOLD
+        )
 
         # Create temp directory for refinement frames
         refine_dir = Path(tempfile.mkdtemp(suffix="_refine"))
@@ -959,11 +1024,27 @@ def _refine_advert_end_frames(
             subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=30)
 
             refine_frames = sorted(refine_dir.glob("refine_*.png"))
-            # Include all 5 frames: frame 0 (the 5fps match as positive control)
-            # plus frames 1-4 (the intermediate source frames)
             if len(refine_frames) < 5:
+                logger.warning(
+                    "  %s: refinement produced only %d frames (expected 5), skipping",
+                    brand,
+                    len(refine_frames),
+                )
+                r.refinement_data = {
+                    "brand": brand,
+                    "T_clip": round(T_clip, 3),
+                    "T_broadcast": round(T_broadcast, 3),
+                    "current_5fps_text": current_text,
+                    "next_5fps_text": next_text,
+                    "current_next_similarity": round(current_next_sim, 3),
+                    "has_boundary": has_boundary,
+                    "method": "boundary_detection",
+                    "status": "insufficient_frames",
+                    "frame_count": len(refine_frames),
+                    "frames": [],
+                }
                 continue
-            # Frame indices: 0=5fps match, 1=+0.04s, 2=+0.08s, 3=+0.12s, 4=+0.16s
+
             candidate_frames = refine_frames[:5]
 
             # OCR candidate frames
@@ -983,33 +1064,105 @@ def _refine_advert_end_frames(
                 except Exception:
                     ocr_texts.append("")
 
-            # Check each refinement frame for brand text.
-            # Frame 0 (the 5fps match) acts as a positive control.
-            last_match_idx: int | None = None
-            for j, text in enumerate(ocr_texts):
-                matched, _ = match_ocr_text(text, exact_pats)
-                if not matched:
-                    matched, _ = match_ocr_text(text, sub_pats)
-                if matched:
-                    last_match_idx = j  # 0-based offset from the 5fps match point
-                    if verbose:
-                        logger.info(
-                            "  %s refinement: frame +%d at +%.2fs matched",
-                            brand,
-                            j,
-                            j * 0.04,
-                        )
+            # Save refinement frames and OCR text if output_dir provided
+            if refine_save_dir:
+                safe_brand = re.sub(r'[\\/:*?"<>|]', "_", brand)
+                for j, cf in enumerate(candidate_frames):
+                    saved = refine_save_dir / f"{safe_brand}_frame_{j}.png"
+                    cf.replace(saved)
+                refine_json_path = refine_save_dir / f"{safe_brand}_refinement.json"
+                import json as _json
 
-            if last_match_idx is not None:
-                r.refined_end_seconds = T_clip + last_match_idx * (1.0 / SOURCE_FPS)
-                adjusted = last_match_idx > 0
+                refine_data_for_save = {
+                    "brand": brand,
+                    "T_clip": round(T_clip, 3),
+                    "T_broadcast": round(T_broadcast, 3),
+                    "current_5fps_text": current_text,
+                    "next_5fps_text": next_text,
+                    "current_next_similarity": round(current_next_sim, 3),
+                    "has_boundary": has_boundary,
+                    "method": "boundary_detection",
+                    "frames": [
+                        {
+                            "index": j,
+                            "time_offset": round(j * (1.0 / SOURCE_FPS), 3),
+                            "ocr_text": text,
+                            "sim_to_current": round(
+                                _text_similarity(text, current_text), 3
+                            ),
+                            "sim_to_next": round(_text_similarity(text, next_text), 3),
+                        }
+                        for j, text in enumerate(ocr_texts)
+                    ],
+                }
+                refine_json_path.write_text(
+                    _json.dumps(refine_data_for_save, indent=2, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+
+            # Boundary detection: find the last refinement frame whose text
+            # is similar to the current 5fps frame's text (still in the same ad).
+            last_current_idx: int | None = None
+            frame_sim_data: list[dict] = []
+            for j, text in enumerate(ocr_texts):
+                sim_current = _text_similarity(text, current_text)
+                sim_next = _text_similarity(text, next_text)
+                is_current = sim_current >= SIMILARITY_THRESHOLD
+                if is_current:
+                    last_current_idx = j
+                frame_sim_data.append(
+                    {
+                        "index": j,
+                        "time_offset": round(j * (1.0 / SOURCE_FPS), 3),
+                        "ocr_text": text,
+                        "sim_to_current": round(sim_current, 3),
+                        "sim_to_next": round(sim_next, 3),
+                        "is_current_ad": is_current,
+                    }
+                )
+
+            # Build refinement_data for QC HTML
+            r.refinement_data = {
+                "brand": brand,
+                "T_clip": round(T_clip, 3),
+                "T_broadcast": round(T_broadcast, 3),
+                "current_5fps_text": current_text,
+                "next_5fps_text": next_text,
+                "current_next_similarity": round(current_next_sim, 3),
+                "has_boundary": has_boundary,
+                "method": "boundary_detection",
+                "frames": frame_sim_data,
+            }
+
+            if not has_boundary:
+                # Current and next 5fps texts are similar — no boundary
+                # in this gap, refinement can't help.
+                r.refinement_data["status"] = "no_boundary"
+                r.refinement_data["refined_end_seconds"] = None
+                logger.info(
+                    "  %s: no boundary (5fps texts similar: %.2f), "
+                    "keeping original end at %.3fs",
+                    brand,
+                    current_next_sim,
+                    r.last_match_seconds,
+                )
+                continue
+
+            if last_current_idx is not None:
+                r.refined_end_seconds = T_clip + last_current_idx * (1.0 / SOURCE_FPS)
+                adjusted = last_current_idx > 0
+                r.refinement_data["status"] = "refined"
+                r.refinement_data["refined_end_seconds"] = round(
+                    r.refined_end_seconds, 3
+                )
+                r.refinement_data["last_current_idx"] = last_current_idx
                 if adjusted:
                     logger.info(
                         "  %s: refined end from %.3fs to %.3fs (+%d source frame(s))",
                         brand,
                         r.last_match_seconds,
                         r.refined_end_seconds,
-                        last_match_idx,
+                        last_current_idx,
                     )
                 else:
                     logger.info(
@@ -1018,21 +1171,49 @@ def _refine_advert_end_frames(
                         r.last_match_seconds,
                     )
             else:
+                # No refinement frame matched the current text — boundary
+                # is at or before the 5fps match frame.
+                r.refinement_data["status"] = "boundary_before_match"
+                r.refinement_data["refined_end_seconds"] = None
                 logger.warning(
-                    "  %s: refinement produced no brand match in any of %d frames "
-                    "(5fps match lost?), keeping original end",
+                    "  %s: boundary before match frame, keeping original end",
                     brand,
-                    len(candidate_frames),
                 )
 
         except subprocess.TimeoutExpired:
             logger.warning("Refinement FFmpeg timed out for %s", brand)
+            r.refinement_data = {
+                "brand": brand,
+                "T_clip": round(T_clip, 3),
+                "T_broadcast": round(T_broadcast, 3),
+                "method": "boundary_detection",
+                "status": "ffmpeg_timeout",
+                "frames": [],
+            }
         except subprocess.CalledProcessError as e:
             logger.warning(
                 "Refinement FFmpeg failed for %s: %s", brand, e.stderr[-300:]
             )
+            r.refinement_data = {
+                "brand": brand,
+                "T_clip": round(T_clip, 3),
+                "T_broadcast": round(T_broadcast, 3),
+                "method": "boundary_detection",
+                "status": "ffmpeg_failed",
+                "error": e.stderr[-300:],
+                "frames": [],
+            }
         except Exception as e:
             logger.warning("Refinement failed for %s: %s", brand, e)
+            r.refinement_data = {
+                "brand": brand,
+                "T_clip": round(T_clip, 3),
+                "T_broadcast": round(T_broadcast, 3),
+                "method": "boundary_detection",
+                "status": "error",
+                "error": str(e),
+                "frames": [],
+            }
         finally:
             for f in refine_dir.glob("*.png"):
                 f.unlink(missing_ok=True)
@@ -1203,6 +1384,16 @@ details.advert-section .advert-meta { color: var(--fg-muted); font-size: 0.85rem
 .back-to-top { text-align: right; font-size: 0.8rem; margin-top: 8px; }
 .back-to-top a { color: var(--link); text-decoration: none; }
 .footer { text-align: center; color: var(--fg-muted); font-size: 0.75rem; margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border); }
+.refine-section { margin-top: 12px; }
+.refine-section summary { font-size: 0.85rem; color: var(--fg-muted); cursor: pointer; padding: 4px 0; }
+.refine-body { padding: 8px 0 4px; }
+.refine-meta { font-size: 0.8rem; color: var(--fg-muted); margin-bottom: 8px; line-height: 1.6; }
+.refine-row { display: flex; gap: 12px; align-items: center; padding: 2px 0; font-size: 0.78rem; }
+.refine-tc { color: var(--accent); font-weight: 600; min-width: 70px; }
+.refine-sim { color: var(--fg-muted); font-size: 0.72rem; }
+.refine-badge { display: inline-block; background: var(--match-border); color: var(--bg); font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 3px; margin-left: 4px; }
+.refine-ok { color: var(--match-fg); font-weight: 600; }
+.refine-warn { color: var(--fail-fg); font-weight: 600; }
 """
 
 _QC_JS = """
@@ -1362,6 +1553,63 @@ def generate_qc_html(
                 frame_rows.append(row)
 
             frames_html = "\n".join(frame_rows)
+
+            # Build refinement diagnostic section
+            refine_html = ""
+            if scan.refinement_data:
+                rdata = scan.refinement_data
+                method = rdata.get("method", "")
+                status = rdata.get("status", "unknown")
+                frames_info = rdata.get("frames", [])
+                cur_text = html.escape(rdata.get("current_5fps_text", "") or "")
+                nxt_text = html.escape(rdata.get("next_5fps_text", "") or "")
+                sim = rdata.get("current_next_similarity", 0.0)
+                has_bnd = rdata.get("has_boundary", False)
+                refined_val = rdata.get("refined_end_seconds")
+
+                status_class = "refine-ok" if status == "refined" else "refine-warn"
+                refine_rows: list[str] = []
+                for finfo in frames_info:
+                    j = finfo.get("index", 0)
+                    off = finfo.get("time_offset", 0.0)
+                    ftext = html.escape(finfo.get("ocr_text", "") or "")
+                    sc = finfo.get("sim_to_current", 0.0)
+                    sn = finfo.get("sim_to_next", 0.0)
+                    is_cur = finfo.get("is_current_ad", False)
+                    badge = ""
+                    if is_cur:
+                        badge = '<span class="refine-badge">CURRENT</span>'
+                    refine_rows.append(
+                        f'<div class="refine-row">'
+                        f'<span class="refine-tc">+{off:.3f}s</span>'
+                        f'<span class="refine-sim">cur={sc:.2f} nxt={sn:.2f}</span>'
+                        f"{badge}</div>"
+                        f'<div class="frame-text">{ftext}</div>'
+                    )
+                refine_rows_html = "\n".join(refine_rows)
+
+                refined_display = ""
+                if refined_val is not None:
+                    refined_display = (
+                        f"<strong>Refined end:</strong> "
+                        f"{seconds_to_timecode(refined_val)} "
+                        f"(+{rdata.get('last_current_idx', 0)} frames)"
+                    )
+
+                refine_html = f"""<details class="refine-section">
+  <summary>25fps Refinement ({method}, {status})</summary>
+  <div class="refine-body">
+    <div class="refine-meta">
+      <strong>Current 5fps text:</strong> <code>{cur_text}</code><br>
+      <strong>Next 5fps text:</strong> <code>{nxt_text}</code><br>
+      <strong>Similarity:</strong> {sim:.3f} &mdash; boundary: {has_bnd}
+      &mdash; <span class="{status_class}">{status}</span>
+      {refined_display}
+    </div>
+    {refine_rows_html}
+  </div>
+</details>"""
+
             summary_status = f'<span class="status-pass">&#x2713; { tier_label }</span>'
             if scan.correction:
                 summary_status += (
@@ -1372,6 +1620,7 @@ def generate_qc_html(
   <div class="advert-body">
     <div class="advert-meta">Advertiser: { advertiser_esc } &mdash; { meta_extra }</div>
     { frames_html }
+    {refine_html}
     <div class="back-to-top"><a href="#toc">&uarr; Back to top</a></div>
   </div>
 </details>"""
@@ -1633,6 +1882,8 @@ def run_detection(
             ocr_endpoint=ocr_endpoint,
             ocr_model=ocr_model,
             fps=fps,
+            ocr_results=ocr_results,
+            output_dir=output_dir,
             verbose=verbose,
         )
 

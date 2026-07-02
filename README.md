@@ -104,7 +104,7 @@ python3 bin/advert-identifier-metadata-extract --help
 | `advert-identifier` | OCR detection (5 FPS + PaddleOCR-VL) | `--video-url` (local path or URL), `--metadata-file`, `--ad-break-index`, `--before-secs`, `--after-secs`, `--fps`, `--ocr-endpoint`, `--ocr-model`, `--verbose`, `--dry-run` |
 | `advert-identifier-pipeline` | Full folder automation | `--input-folder`, `--csv-folder`, `--before-secs`, `--after-secs`, `--fps`, `--ocr-endpoint`, `--ocr-model` |
 | `advert-identifier-metadata-extract` | CSV → JSON metadata | `--video`, `--csv-folder`, `--before-secs` |
-| `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--json-file`, `--index`, `--trim`, `--pad`, `--clip-offset`, `--state-file` |
+| `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--json-file`, `--index`, `--trim`, `--pad`, `--clip-offset`, `--ad-break-index`, `--state-file` |
 
 See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) for complete documentation.
 
@@ -116,8 +116,10 @@ See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) for complete documentation.
    - **Tier 1 (exact)**: Word-boundary regex (`\bgalaxy\b`) for precise matches
    - **Tier 2 (substring)**: Unbounded regex (`galaxy`) as fallback for concatenated forms like `galaxychocolate.com`
 4. **Ordering Enforcement**: Each advert's last matching frame must be after the previous advert's last matching frame
-5. **Advert Clip Extraction**: Extracts individual advert clips using detected timecodes and durations
-6. **Pipeline State Tracking**: A persistent state file (`_pipeline_state.json`) tracks every advert through all stages
+5. **Clamp/Cage Correction**: Detects pattern anomalies in detected end frames by comparing each advert's `sec_digit.mmm` pattern against the majority across the break. Snaps anomalous matches to the nearest frame matching the majority pattern using scheduled durations.
+6. **25fps End-Frame Refinement**: After clamp correction, extracts 5 source-rate frames (25 FPS) starting at each advert's detected 5fps match frame. Uses **boundary detection** — compares each refinement frame's OCR text to the current and next 5fps frame's text — to find the exact advert boundary at sub-frame precision (up to 4 source frames = 0.16s). This works even when brand text is not visible at the match position (e.g. sponsorship endcards).
+7. **Advert Clip Extraction**: Extracts individual advert clips using refined timecodes and durations
+8. **Pipeline State Tracking**: A persistent state file (`_pipeline_state.json`) tracks every advert through all stages
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed breakdown.
 
@@ -146,7 +148,8 @@ The pipeline state file automatically converts between these frames. See
         <advertiser>Tesco PLC</advertiser>
         <category>retail</category>
         <duration_seconds>10</duration_seconds>
-        <last_timecode>02:15.000</last_timecode>
+        <start_timecode>02:05.160</start_timecode>
+        <last_timecode>02:15.160</last_timecode>
         <match_tier>exact</match_tier>
         <matched_terms>tesco</matched_terms>
     </advert>

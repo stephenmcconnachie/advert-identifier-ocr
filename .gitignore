@@ -38,6 +38,12 @@ venv/
 *.png
 *_qc.html
 
+# Generated output directories
+advert_min_cover_output/
+
+# Database files
+advert_cover_cache.db
+
 # Application files
 .hermes
 .obsidian
