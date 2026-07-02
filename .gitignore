@@ -42,7 +42,7 @@ venv/
 advert_min_cover_output/
 
 # Database files
-advert_cover_cache.db
+*.db
 
 # Application files
 .hermes

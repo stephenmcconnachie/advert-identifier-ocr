@@ -1013,8 +1013,6 @@ def _refine_advert_end_frames(
                 "0.2",
                 "-r",
                 str(SOURCE_FPS),
-                "-vsync",
-                "vfr",
                 "-frame_pts",
                 "1",
                 "-pix_fmt",
