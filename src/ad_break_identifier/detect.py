@@ -84,9 +84,7 @@ def build_exact_patterns(
         for word in words:
             if len(word) >= 3 and word not in seen:
                 seen.add(word)
-                patterns.append(
-                    re.compile(rf"\b{re.escape(word)}\b", re.IGNORECASE)
-                )
+                patterns.append(re.compile(rf"\b{re.escape(word)}\b", re.IGNORECASE))
 
     simplified = term.replace("'", "").replace("\u2019", "")
     if simplified != term and simplified not in seen:
@@ -173,28 +171,42 @@ def download_video_to_temp(video_url: str, max_retries: int = 3) -> str:
 
             logger.info(
                 "Downloading video (attempt %d/%d): %s",
-                attempt + 1, max_retries, video_url,
+                attempt + 1,
+                max_retries,
+                video_url,
             )
             subprocess.run(
-                ["curl", "-L", "-o", temp_path, "--fail", "--silent",
-                 "--show-error", video_url],
-                capture_output=True, text=True, check=True,
+                [
+                    "curl",
+                    "-L",
+                    "-o",
+                    temp_path,
+                    "--fail",
+                    "--silent",
+                    "--show-error",
+                    video_url,
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
             )
             logger.info(
                 "Downloaded %d bytes to %s",
-                Path(temp_path).stat().st_size, temp_path,
+                Path(temp_path).stat().st_size,
+                temp_path,
             )
             return temp_path
 
         except subprocess.CalledProcessError as e:
             logger.warning(
                 "Download attempt %d failed: %s",
-                attempt + 1, e.stderr.strip(),
+                attempt + 1,
+                e.stderr.strip(),
             )
             if temp_path and os.path.exists(temp_path):
                 os.unlink(temp_path)
             if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)
+                time.sleep(2**attempt)
 
     raise RuntimeError(f"Failed to download video after {max_retries} attempts")
 
@@ -257,27 +269,35 @@ def extract_5fps_frames(
     pattern = str(output_dir / "frame_%05d.png")
 
     cmd = [
-        "ffmpeg", "-y",
-        "-ss", f"{start_seconds:.6f}",
-        "-i", video_path,
-        "-t", f"{duration:.6f}",
-        "-vf", f"fps={fps}",
-        "-vsync", "vfr",
-        "-frame_pts", "1",
-        "-pix_fmt", "rgb24",
+        "ffmpeg",
+        "-y",
+        "-ss",
+        f"{start_seconds:.6f}",
+        "-i",
+        video_path,
+        "-t",
+        f"{duration:.6f}",
+        "-vf",
+        f"fps={fps}",
+        "-vsync",
+        "vfr",
+        "-frame_pts",
+        "1",
+        "-pix_fmt",
+        "rgb24",
         pattern,
     ]
 
     logger.info(
         "Extracting frames at %g FPS: start=%.3fs, duration=%.3fs",
-        fps, start_seconds, duration,
+        fps,
+        start_seconds,
+        duration,
     )
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     if result.returncode != 0:
         logger.error("FFmpeg stderr:\n%s", result.stderr)
-        raise RuntimeError(
-            f"FFmpeg frame extraction failed: {result.stderr[-500:]}"
-        )
+        raise RuntimeError(f"FFmpeg frame extraction failed: {result.stderr[-500:]}")
 
     frames = sorted(output_dir.glob("frame_*.png"))
     logger.info("Extracted %d frame(s)", len(frames))
@@ -340,14 +360,16 @@ def save_ocr_results(
         idx = res["frame_index"]
         clip_ts = idx / fps
         broadcast_ts = start_seconds + clip_ts
-        data["frames"].append({
-            "frame_index": idx,
-            "frame_name": res.get("frame_name", ""),
-            "timestamp_clip": round(clip_ts, 3),
-            "timestamp_broadcast": round(broadcast_ts, 3),
-            "text": res.get("text", ""),
-            "error": res.get("error"),
-        })
+        data["frames"].append(
+            {
+                "frame_index": idx,
+                "frame_name": res.get("frame_name", ""),
+                "timestamp_clip": round(clip_ts, 3),
+                "timestamp_broadcast": round(broadcast_ts, 3),
+                "text": res.get("text", ""),
+                "error": res.get("error"),
+            }
+        )
 
     output_path = output_path.resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -362,6 +384,7 @@ def save_ocr_results(
 @dataclass
 class BrandSearchResult:
     """Result of searching for one advert's brand in OCR frames."""
+
     matched: bool
     last_match_frame: int | None
     last_match_seconds: float | None
@@ -508,9 +531,19 @@ def search_with_ordering(
                 hit = _scan([re.compile(pat, re.IGNORECASE)])
                 if hit:
                     frames, terms = hit
-                    cand = BrandSearchResult(True, frames[-1], frames[-1] / fps,
-                                             tier, len(frames), frames, terms)
-                    if best_result_g1 is None or cand.last_match_frame > best_result_g1.last_match_frame:
+                    cand = BrandSearchResult(
+                        True,
+                        frames[-1],
+                        frames[-1] / fps,
+                        tier,
+                        len(frames),
+                        frames,
+                        terms,
+                    )
+                    if (
+                        best_result_g1 is None
+                        or cand.last_match_frame > best_result_g1.last_match_frame
+                    ):
                         best_result_g1 = cand
 
             # Group 2 — individual-word matching
@@ -521,10 +554,19 @@ def search_with_ordering(
                 hit = _scan(pat_fn(brand=variant))
                 if hit:
                     frames, terms = hit
-                    cand = BrandSearchResult(True, frames[-1], frames[-1] / fps,
-                                             f"{tier_prefix}({label})", len(frames),
-                                             frames, terms)
-                    if best_result_g2 is None or cand.last_match_frame > best_result_g2.last_match_frame:
+                    cand = BrandSearchResult(
+                        True,
+                        frames[-1],
+                        frames[-1] / fps,
+                        f"{tier_prefix}({label})",
+                        len(frames),
+                        frames,
+                        terms,
+                    )
+                    if (
+                        best_result_g2 is None
+                        or cand.last_match_frame > best_result_g2.last_match_frame
+                    ):
                         best_result_g2 = cand
 
         # Pick the best result.  Priority (highest = worst):
@@ -551,17 +593,24 @@ def search_with_ordering(
             else:
                 p1 = _priority(best_result, True)
                 p2 = _priority(best_result_g2, False)
-                if p2 < p1 or (p2 == p1 and best_result_g2.last_match_frame > best_result.last_match_frame):
+                if p2 < p1 or (
+                    p2 == p1
+                    and best_result_g2.last_match_frame > best_result.last_match_frame
+                ):
                     best_result = best_result_g2
 
         if best_result is not None:
             # Re-scan with the winning group's patterns to ensure we use
             # the correct prev_last_frame for ordering enforcement
             prev_last_frame = best_result.last_match_frame
-            logger.info("  %s (%s): %s at frame %d (%s)",
-                        adv.unique_id, adv.brand, best_result.match_tier,
-                        best_result.last_match_frame,
-                        ", ".join(best_result.matched_terms))
+            logger.info(
+                "  %s (%s): %s at frame %d (%s)",
+                adv.unique_id,
+                adv.brand,
+                best_result.match_tier,
+                best_result.last_match_frame,
+                ", ".join(best_result.matched_terms),
+            )
             results.append(best_result)
             continue
 
@@ -600,8 +649,10 @@ def search_with_ordering(
             prev_last_frame = last_frame
             logger.info(
                 "  %s (%s): advertiser match at frame %d (tc=%s), %d frames matched",
-                adv.unique_id, adv.brand,
-                last_frame, seconds_to_timecode(last_frame / fps),
+                adv.unique_id,
+                adv.brand,
+                last_frame,
+                seconds_to_timecode(last_frame / fps),
                 len(adv_matches),
             )
             continue
@@ -619,7 +670,8 @@ def search_with_ordering(
         results.append(result)
         logger.warning(
             "  %s (%s): NO MATCH (fallback)",
-            adv.unique_id, adv.brand,
+            adv.unique_id,
+            adv.brand,
         )
 
     return results
@@ -660,8 +712,12 @@ def clamp_check(
         return [False] * len(scan_results)
 
     majority = counts.most_common(1)[0][0]
-    logger.info("Clamp majority pattern: %s (%d/%d matches)",
-                majority, counts[majority], sum(counts.values()))
+    logger.info(
+        "Clamp majority pattern: %s (%d/%d matches)",
+        majority,
+        counts[majority],
+        sum(counts.values()),
+    )
 
     anomalies: list[bool] = []
     for r in scan_results:
@@ -756,15 +812,27 @@ def clamp_correct(
                 # One neighbour is adjacent — trust the adjacent estimate
                 if abs(prev_trusted - i) <= 1:
                     snapped = _snap(fwd)
-                    logger.info("  %s fwd/bwd disagree (fwd=%d bwd=%d) — adjacent prev, trusting forward",
-                                adverts[i].brand, fwd, bwd)
+                    logger.info(
+                        "  %s fwd/bwd disagree (fwd=%d bwd=%d) — adjacent prev, trusting forward",
+                        adverts[i].brand,
+                        fwd,
+                        bwd,
+                    )
                 else:
                     snapped = _snap(bwd)
-                    logger.info("  %s fwd/bwd disagree (fwd=%d bwd=%d) — adjacent next, trusting backward",
-                                adverts[i].brand, fwd, bwd)
+                    logger.info(
+                        "  %s fwd/bwd disagree (fwd=%d bwd=%d) — adjacent next, trusting backward",
+                        adverts[i].brand,
+                        fwd,
+                        bwd,
+                    )
             else:
-                logger.info("  %s clamp forward=%d backward=%d disagree — keeping original",
-                            adverts[i].brand, fwd, bwd)
+                logger.info(
+                    "  %s clamp forward=%d backward=%d disagree — keeping original",
+                    adverts[i].brand,
+                    fwd,
+                    bwd,
+                )
                 continue
         elif dur is not None and prev_trusted is not None:
             # Only forward estimate available
@@ -790,17 +858,24 @@ def clamp_correct(
                 continue
             new_ts = snapped / fps
             results[i] = BrandSearchResult(
-                matched=True, last_match_frame=snapped,
+                matched=True,
+                last_match_frame=snapped,
                 last_match_seconds=new_ts,
-                match_tier=r.match_tier, match_count=r.match_count,
+                match_tier=r.match_tier,
+                match_count=r.match_count,
                 all_matching_frames=r.all_matching_frames,
                 matched_terms=r.matched_terms,
                 correction="duration" if dur is not None else "snap",
                 original_last_match_frame=r.last_match_frame,
             )
-            logger.info("  %s corrected: frame %d → %d (%.3fs, pattern %s)",
-                        adverts[i].brand, r.last_match_frame, snapped,
-                        new_ts, majority)
+            logger.info(
+                "  %s corrected: frame %d → %d (%.3fs, pattern %s)",
+                adverts[i].brand,
+                r.last_match_frame,
+                snapped,
+                new_ts,
+                majority,
+            )
 
     return results
 
@@ -826,17 +901,21 @@ def _refine_advert_end_frames(
     on any of these intermediate frames, the advert's end timecode is
     advanced to the latest matching frame.
 
-    Uses ``-noaccurate_seek`` for frame-accurate FFmpeg positioning.
+    Uses accurate seeking (default) for frame-accurate FFmpeg positioning.
     """
     if not scan_results or not video_path:
         return scan_results
 
     from ad_break_identifier.ocr_client import ocr_image
 
-    matched_count = sum(1 for r in scan_results if r.matched and r.last_match_frame is not None)
+    matched_count = sum(
+        1 for r in scan_results if r.matched and r.last_match_frame is not None
+    )
     if matched_count == 0:
         return scan_results
-    logger.info("Refining %d advert end frame(s) at %d FPS...", matched_count, SOURCE_FPS)
+    logger.info(
+        "Refining %d advert end frame(s) at %d FPS...", matched_count, SOURCE_FPS
+    )
 
     results = list(scan_results)
 
@@ -859,15 +938,22 @@ def _refine_advert_end_frames(
         try:
             pattern = str(refine_dir / "refine_%05d.png")
             cmd = [
-                "ffmpeg", "-y",
-                "-ss", f"{T_broadcast:.6f}",
-                "-noaccurate_seek",
-                "-i", video_path,
-                "-t", "0.2",
-                "-r", str(SOURCE_FPS),
-                "-vsync", "vfr",
-                "-frame_pts", "1",
-                "-pix_fmt", "rgb24",
+                "ffmpeg",
+                "-y",
+                "-ss",
+                f"{T_broadcast:.6f}",
+                "-i",
+                video_path,
+                "-t",
+                "0.2",
+                "-r",
+                str(SOURCE_FPS),
+                "-vsync",
+                "vfr",
+                "-frame_pts",
+                "1",
+                "-pix_fmt",
+                "rgb24",
                 pattern,
             ]
             subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=30)
@@ -882,6 +968,7 @@ def _refine_advert_end_frames(
 
             # OCR candidate frames
             import requests
+
             session = requests.Session()
             ocr_texts: list[str] = []
             for cf in candidate_frames:
@@ -908,7 +995,9 @@ def _refine_advert_end_frames(
                     if verbose:
                         logger.info(
                             "  %s refinement: frame +%d at +%.2fs matched",
-                            brand, j, j * 0.04,
+                            brand,
+                            j,
+                            j * 0.04,
                         )
 
             if last_match_idx is not None:
@@ -917,25 +1006,31 @@ def _refine_advert_end_frames(
                 if adjusted:
                     logger.info(
                         "  %s: refined end from %.3fs to %.3fs (+%d source frame(s))",
-                        brand, r.last_match_seconds, r.refined_end_seconds,
+                        brand,
+                        r.last_match_seconds,
+                        r.refined_end_seconds,
                         last_match_idx,
                     )
                 else:
                     logger.info(
                         "  %s: refinement checked, no change (confirmed at %.3fs)",
-                        brand, r.last_match_seconds,
+                        brand,
+                        r.last_match_seconds,
                     )
             else:
                 logger.warning(
                     "  %s: refinement produced no brand match in any of %d frames "
                     "(5fps match lost?), keeping original end",
-                    brand, len(candidate_frames),
+                    brand,
+                    len(candidate_frames),
                 )
 
         except subprocess.TimeoutExpired:
             logger.warning("Refinement FFmpeg timed out for %s", brand)
         except subprocess.CalledProcessError as e:
-            logger.warning("Refinement FFmpeg failed for %s: %s", brand, e.stderr[-300:])
+            logger.warning(
+                "Refinement FFmpeg failed for %s: %s", brand, e.stderr[-300:]
+            )
         except Exception as e:
             logger.warning("Refinement failed for %s: %s", brand, e)
         finally:
@@ -1008,19 +1103,27 @@ def format_xml(
                 dur_to_write = None
 
             if dur_to_write is not None:
-                lines.append(f"        <duration_seconds>{dur_to_write}</duration_seconds>")
+                lines.append(
+                    f"        <duration_seconds>{dur_to_write}</duration_seconds>"
+                )
 
             if start_seconds is not None:
                 start_tc = seconds_to_timecode(start_seconds)
-                lines.append(f"        <start_timecode>{_escape_xml(start_tc)}</start_timecode>")
+                lines.append(
+                    f"        <start_timecode>{_escape_xml(start_tc)}</start_timecode>"
+                )
 
             tc = seconds_to_timecode(effective_end)
             lines.append(f"        <last_timecode>{_escape_xml(tc)}</last_timecode>")
             lines.append(f"        <match_tier>{scan.match_tier}</match_tier>")
             if scan.matched_terms:
-                lines.append(f"        <matched_terms>{_escape_xml(', '.join(scan.matched_terms))}</matched_terms>")
+                lines.append(
+                    f"        <matched_terms>{_escape_xml(', '.join(scan.matched_terms))}</matched_terms>"
+                )
             if scan.correction:
-                lines.append(f"        <correction>{_escape_xml(scan.correction)}</correction>")
+                lines.append(
+                    f"        <correction>{_escape_xml(scan.correction)}</correction>"
+                )
 
             prev_effective_end = effective_end
         else:
@@ -1028,7 +1131,9 @@ def format_xml(
 
         if scan and not scan.matched:
             lines.append(f"        <ocr_match_fallback>true</ocr_match_fallback>")
-            lines.append(f"        <description>OCR: no text match for {_escape_xml(adv.brand)}/{_escape_xml(adv.advertiser)}</description>")
+            lines.append(
+                f"        <description>OCR: no text match for {_escape_xml(adv.brand)}/{_escape_xml(adv.advertiser)}</description>"
+            )
 
         lines.append("    </advert>")
 
@@ -1139,6 +1244,7 @@ def _thumbnail_data_uri(src_path: Path, width: int = 160) -> str:
         from PIL import Image
         import base64
         from io import BytesIO
+
         with Image.open(src_path) as img:
             w_percent = width / float(img.size[0])
             height = int(float(img.size[1]) * w_percent)
@@ -1199,13 +1305,18 @@ def generate_qc_html(
             meta_extra = f"Match tier: <strong>{tier_label}</strong>"
             if scan.correction:
                 meta_extra += f' <span class="correction-badge">&#x2705; { scan.correction } corrected</span>'
-            if scan.refined_end_seconds is not None and scan.refined_end_seconds != scan.last_match_seconds:
+            if (
+                scan.refined_end_seconds is not None
+                and scan.refined_end_seconds != scan.last_match_seconds
+            ):
                 meta_extra += (
                     f' <span class="correction-badge">&#x1F50D; refined: '
-                    f'{seconds_to_timecode(scan.refined_end_seconds)}</span>'
+                    f"{seconds_to_timecode(scan.refined_end_seconds)}</span>"
                 )
             if terms:
-                meta_extra += f" &mdash; matched terms: <code>{html.escape(terms)}</code>"
+                meta_extra += (
+                    f" &mdash; matched terms: <code>{html.escape(terms)}</code>"
+                )
 
             frame_rows: list[str] = []
             for idx in range(start, end + 1):
@@ -1219,8 +1330,10 @@ def generate_qc_html(
                 tc_clip = seconds_to_timecode(clip_ts)
                 tc_bcast = seconds_to_timecode(bcast_ts)
 
-                is_match = (idx == match_frame)
-                is_orig = (orig_frame is not None and idx == orig_frame and idx != match_frame)
+                is_match = idx == match_frame
+                is_orig = (
+                    orig_frame is not None and idx == orig_frame and idx != match_frame
+                )
 
                 if is_match:
                     row_cls = ' class="match"'
@@ -1229,8 +1342,8 @@ def generate_qc_html(
                     row_cls = ' class="original-match"'
                     badge = f'<span class="original-badge">&#x26A0; Original (frame { orig_frame })</span>'
                 else:
-                    row_cls = ''
-                    badge = ''
+                    row_cls = ""
+                    badge = ""
 
                 # Generate thumbnail as base64 data URI
                 src = frames_dir / frame_name
@@ -1251,7 +1364,9 @@ def generate_qc_html(
             frames_html = "\n".join(frame_rows)
             summary_status = f'<span class="status-pass">&#x2713; { tier_label }</span>'
             if scan.correction:
-                summary_status += f' <span class="correction-badge">&#x2705; corrected</span>'
+                summary_status += (
+                    f' <span class="correction-badge">&#x2705; corrected</span>'
+                )
             section = f"""<details class="advert-section" id="{ anchor }">
   <summary>{ brand_esc } { summary_status }</summary>
   <div class="advert-body">
@@ -1333,7 +1448,10 @@ def update_pipeline_state(
     """Update pipeline state JSON with detection results."""
     try:
         from .pipeline_state import (
-            derive_state_path, read_state, write_state, update_break_adverts,
+            derive_state_path,
+            read_state,
+            write_state,
+            update_break_adverts,
         )
     except ImportError:
         logger.warning("Could not import pipeline_state module")
@@ -1356,7 +1474,11 @@ def update_pipeline_state(
         matched_terms: list[str] = []
 
         if scan and scan.last_match_seconds is not None:
-            secs_clip = scan.refined_end_seconds if scan.refined_end_seconds is not None else scan.last_match_seconds
+            secs_clip = (
+                scan.refined_end_seconds
+                if scan.refined_end_seconds is not None
+                else scan.last_match_seconds
+            )
             tc = seconds_to_timecode(secs_clip)
             last_frame = scan.last_match_frame
             match_tier = scan.match_tier
@@ -1451,8 +1573,13 @@ def run_detection(
     if dry_run:
         _log("DRY RUN: Skipping OCR API calls, using empty text")
         ocr_results = [
-            {"frame_index": i, "frame_name": p.name, "path": str(p),
-             "text": "", "error": None}
+            {
+                "frame_index": i,
+                "frame_name": p.name,
+                "path": str(p),
+                "text": "",
+                "error": None,
+            }
             for i, p in enumerate(frame_paths)
         ]
     else:
@@ -1461,8 +1588,7 @@ def run_detection(
             image_paths=frame_paths,
             endpoint=ocr_endpoint,
             model=ocr_model,
-            progress_callback=lambda c, t: _log("OCR %d/%d", c, t)
-            if verbose else None,
+            progress_callback=lambda c, t: _log("OCR %d/%d", c, t) if verbose else None,
         )
 
     # 4. Save OCR results to JSON
@@ -1492,8 +1618,7 @@ def run_detection(
     # 6. Clamp/cage: detect and correct pattern anomalies
     anomalies = clamp_check(scan_results)
     if any(anomalies):
-        logger.info("Clamp detected %d anomaly(ies), correcting...",
-                    sum(anomalies))
+        logger.info("Clamp detected %d anomaly(ies), correcting...", sum(anomalies))
         scan_results = clamp_correct(scan_results, metadata.adverts, fps)
     else:
         logger.info("Clamp: no anomalies detected")
@@ -1561,7 +1686,8 @@ def create_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "-v", "--video-url",
+        "-v",
+        "--video-url",
         required=True,
         help="Path or URL to the broadcast video (local paths are auto-served)",
     )
@@ -1578,17 +1704,20 @@ def create_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--prog-before",
-        type=str, metavar="TITLE,CHANNEL",
+        type=str,
+        metavar="TITLE,CHANNEL",
         help="Programme before ad break: 'Lorraine,ITV1'",
     )
     parser.add_argument(
         "--prog-after",
-        type=str, metavar="TITLE,CHANNEL",
+        type=str,
+        metavar="TITLE,CHANNEL",
         help="Programme after ad break: 'Daybreak,ITV1'",
     )
     parser.add_argument(
         "--advert",
-        type=str, action="append",
+        type=str,
+        action="append",
         metavar="ID|ADVERTISER|BRAND|CATEGORY|DURATION",
         help="Advert (can specify multiple)",
     )
@@ -1626,12 +1755,14 @@ def create_parser() -> argparse.ArgumentParser:
         help="Directory for frame images and OCR results JSON",
     )
     parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         type=str,
         help="Output XML path (default: beside metadata file)",
     )
     parser.add_argument(
-        "--verbose", action="store_true",
+        "--verbose",
+        action="store_true",
         help="Show detailed progress",
     )
     parser.add_argument(
@@ -1656,7 +1787,7 @@ def main(args: list[str] | None = None) -> int:
     ad_break_index = parsed.ad_break_index
     if ad_break_index is None:
         video_path = Path(parsed.video_url.split("?")[0])
-        m = re.search(r'(\d{2})of(\d{2})\.mp4$', video_path.name, re.IGNORECASE)
+        m = re.search(r"(\d{2})of(\d{2})\.mp4$", video_path.name, re.IGNORECASE)
         ad_break_index = int(m.group(1)) if m else 1
 
     # Load metadata
@@ -1665,7 +1796,9 @@ def main(args: list[str] | None = None) -> int:
         metadata = load_metadata_from_file(parsed.metadata_file, ad_break_index)
     elif parsed.prog_before and parsed.prog_after and parsed.advert:
         metadata = parse_cli_metadata(
-            parsed.prog_before, parsed.prog_after, parsed.advert,
+            parsed.prog_before,
+            parsed.prog_after,
+            parsed.advert,
         )
 
     if not metadata or not metadata.adverts:
@@ -1705,7 +1838,8 @@ def main(args: list[str] | None = None) -> int:
             break_start_secs = break_start_secs - video_start_secs
             logger.info(
                 "Break start: %s (video-relative: %.3fs)",
-                break_start_time, break_start_secs,
+                break_start_time,
+                break_start_secs,
             )
     else:
         # Without metadata file, assume video starts at 0 and use ad break

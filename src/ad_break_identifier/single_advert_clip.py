@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def sanitize_filename(text: str) -> str:
     """Remove unsafe characters and replace spaces with hyphens for filenames."""
     text = text.replace(" ", "-")
-    text = re.sub(r'[\\/:*?"<>|]', '', text)
+    text = re.sub(r'[\\/:*?"<>|]', "", text)
     return text
 
 
@@ -34,7 +34,7 @@ def parse_ad_break_index(video_url: str) -> int:
     """
     video_path = Path(video_url.split("?")[0])
     filename = video_path.name
-    match = re.search(r'(\d{2})of\d{2}', filename)
+    match = re.search(r"(\d{2})of\d{2}", filename)
     if match:
         return int(match.group(1)) - 1
     return 0
@@ -51,16 +51,16 @@ def get_category_for_advert(json_path: str, ad_break_index: int, unique_id: str)
     Returns:
         Sanitized category string, or 'unknown' if not found.
     """
-    with open(json_path, 'r') as f:
+    with open(json_path, "r") as f:
         data = json.load(f)
 
-    ad_breaks = data.get('ad_breaks', [])
+    ad_breaks = data.get("ad_breaks", [])
     if ad_break_index >= len(ad_breaks):
         return "unknown"
 
-    for advert in ad_breaks[ad_break_index].get('adverts', []):
-        if advert.get('unique_id') == unique_id:
-            category = advert.get('category', 'unknown')
+    for advert in ad_breaks[ad_break_index].get("adverts", []):
+        if advert.get("unique_id") == unique_id:
+            category = advert.get("category", "unknown")
             if category:
                 return sanitize_filename(category)
             return "unknown"
@@ -104,10 +104,10 @@ def timecode_to_seconds(timecode: str) -> float:
 
 def seconds_to_timecode(total_seconds: float) -> str:
     """Convert seconds to HH:MM:SS timecode.
-    
+
     Args:
         total_seconds: Time in seconds.
-        
+
     Returns:
         Timecode in HH:MM:SS format.
     """
@@ -120,13 +120,13 @@ def seconds_to_timecode(total_seconds: float) -> str:
 
 def parse_advert_xml(xml_path: str) -> list[dict]:
     """Parse advert XML file.
-    
+
     Args:
         xml_path: Path to XML file.
-        
+
     Returns:
         List of dicts with advert details.
-        
+
     Raises:
         FileNotFoundError: If XML file doesn't exist.
         ValueError: If XML is invalid or missing required fields.
@@ -139,6 +139,7 @@ def parse_advert_xml(xml_path: str) -> list[dict]:
 
     adverts = []
     for i, advert_el in enumerate(root.findall("advert")):
+
         def get_text(tag: str) -> str | None:
             child = advert_el.find(tag)
             return child.text.strip() if child is not None and child.text else None
@@ -159,7 +160,9 @@ def parse_advert_xml(xml_path: str) -> list[dict]:
             "start_timecode": start_timecode,
             "duration_seconds": None if not duration_str else int(duration_str),
             "refined_timecode": refined_timecode,
-            "refined_clip_frame": None if not refined_clip_frame_str else int(refined_clip_frame_str),
+            "refined_clip_frame": (
+                None if not refined_clip_frame_str else int(refined_clip_frame_str)
+            ),
         }
         adverts.append(advert)
 
@@ -171,12 +174,12 @@ def parse_advert_xml(xml_path: str) -> list[dict]:
 
 def calculate_durations(adverts: list[dict], default_duration: int = 30) -> list[dict]:
     """Calculate duration_seconds for last advert if missing.
-    
+
     Args:
         adverts: List of advert dicts.
         default_duration: Default duration in seconds for a single-advert
             break when no duration is available (default: 30).
-        
+
     Returns:
         Updated adverts list with all durations filled.
     """
@@ -216,11 +219,11 @@ def calculate_durations(adverts: list[dict], default_duration: int = 30) -> list
 
 def download_video_to_temp(video_url: str, max_retries: int = 3) -> str:
     """Download video from URL to temporary file using curl.
-    
+
     Args:
         video_url: URL to download.
         max_retries: Maximum retry attempts.
-        
+
     Returns:
         Path to downloaded temporary file.
     """
@@ -274,13 +277,13 @@ def extract_advert_clip(
     output_path: Path,
 ) -> str:
     """Extract advert clip using FFmpeg with lossless encoding.
-    
+
     Args:
         video_input: Path or URL to video.
         start_seconds: Start time in seconds.
         duration_seconds: Duration in seconds.
         output_path: Output file path.
-        
+
     Returns:
         Path to extracted clip.
     """
@@ -369,12 +372,17 @@ def create_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Seconds from broadcast start to clip start (default: 0.0). "
-             "Needed to convert clip-relative timecodes to broadcast-absolute.",
+        "Needed to convert clip-relative timecodes to broadcast-absolute.",
     )
     parser.add_argument(
         "--state-file",
         help="Path to pipeline state file. When provided, reads adjusted_start_broadcast "
-             "from state instead of computing from XML timecode + clip_offset.",
+        "from state instead of computing from XML timecode + clip_offset.",
+    )
+    parser.add_argument(
+        "--ad-break-index",
+        type=int,
+        help="0-based ad break index (default: auto-detect from video URL filename)",
     )
     parser.add_argument(
         "--log-level",
@@ -420,10 +428,18 @@ def main() -> int:
             output_dir = Path(args.output_dir).resolve()
             output_dir.mkdir(parents=True, exist_ok=True)
 
-            indices_to_process = [args.index] if args.index else [a["index"] for a in adverts]
+            indices_to_process = (
+                [args.index] if args.index else [a["index"] for a in adverts]
+            )
 
-            ad_break_index = parse_ad_break_index(args.video_url)
-            logger.info(f"Parsed ad break index from video URL: {ad_break_index} (0-based)")
+            if args.ad_break_index is not None:
+                ad_break_index = args.ad_break_index
+                logger.info(f"Using --ad-break-index: {ad_break_index} (0-based)")
+            else:
+                ad_break_index = parse_ad_break_index(args.video_url)
+                logger.info(
+                    f"Parsed ad break index from video URL: {ad_break_index} (0-based)"
+                )
 
             for advert in adverts:
                 if advert["index"] not in indices_to_process:
@@ -443,9 +459,7 @@ def main() -> int:
                     start_secs = timecode_to_seconds(start_tc) + args.clip_offset
                     last_secs = timecode_to_seconds(last_tc)
                     duration = last_secs - timecode_to_seconds(start_tc)
-                    time_source_desc = (
-                        f"start_timecode={start_tc} + clip_offset={args.clip_offset:.3f}s"
-                    )
+                    time_source_desc = f"start_timecode={start_tc} + clip_offset={args.clip_offset:.3f}s"
 
                 # Path 2: pipeline state adjusted_start_broadcast
                 if start_secs is None and args.state_file:
@@ -454,31 +468,35 @@ def main() -> int:
                             read_state,
                             get_adjusted_starts,
                         )
+
                         state = read_state(args.state_file)
                         starts = get_adjusted_starts(state, ad_break_index + 1)
                         adv_idx = advert["index"] - 1
                         if adv_idx < len(starts) and starts[adv_idx] is not None:
                             start_secs = starts[adv_idx]
-                            time_source_desc = f"pipeline_state adjusted_start={start_secs:.3f}s"
+                            time_source_desc = (
+                                f"pipeline_state adjusted_start={start_secs:.3f}s"
+                            )
                     except Exception as e:
                         logger.warning(f"Could not read pipeline state: {e}")
 
                 # Path 3: clip-relative timecode + clip_offset (last resort)
                 if start_secs is None:
-                    time_source = advert.get("refined_timecode") or advert["last_timecode"]
+                    time_source = (
+                        advert.get("refined_timecode") or advert["last_timecode"]
+                    )
                     last_secs = timecode_to_seconds(time_source)
                     start_secs = last_secs - duration + args.clip_offset
                     time_source_desc = (
-                        f"refined_timecode={time_source}" if advert.get("refined_timecode")
+                        f"refined_timecode={time_source}"
+                        if advert.get("refined_timecode")
                         else f"last_timecode={time_source}"
                     )
                     if args.clip_offset != 0.0:
                         time_source_desc += f" + clip_offset={args.clip_offset:.3f}s"
 
                 logger.info(f"Advert {advert['index']}: {time_source_desc}")
-                logger.info(
-                    f"Advert {advert['index']}: start_secs={start_secs:.3f}s"
-                )
+                logger.info(f"Advert {advert['index']}: start_secs={start_secs:.3f}s")
 
                 trim = args.trim
                 pad = args.pad
@@ -486,12 +504,16 @@ def main() -> int:
                 if trim > 0:
                     start_secs += trim
                     duration -= 2 * trim
-                    logger.info(f"Advert {advert['index']}: trim={trim}s, adjusted start={start_secs:.3f}s, duration={duration:.3f}s")
+                    logger.info(
+                        f"Advert {advert['index']}: trim={trim}s, adjusted start={start_secs:.3f}s, duration={duration:.3f}s"
+                    )
 
                 if pad > 0:
                     start_secs -= pad
                     duration += 2 * pad
-                    logger.info(f"Advert {advert['index']}: pad={pad}s, adjusted start={start_secs:.3f}s, duration={duration:.3f}s")
+                    logger.info(
+                        f"Advert {advert['index']}: pad={pad}s, adjusted start={start_secs:.3f}s, duration={duration:.3f}s"
+                    )
 
                 if start_secs < 0:
                     logger.warning(
@@ -507,9 +529,15 @@ def main() -> int:
                     continue
 
                 safe_brand = sanitize_filename(advert["brand"])
-                category = get_category_for_advert(args.json_file, ad_break_index, advert['unique_id'])
-                output_path = output_dir / f"{advert['unique_id']}_{category}_{safe_brand}.mp4"
-                logger.info(f"Advert {advert['index']}: category={category}, output={output_path.name}")
+                category = get_category_for_advert(
+                    args.json_file, ad_break_index, advert["unique_id"]
+                )
+                output_path = (
+                    output_dir / f"{advert['unique_id']}_{category}_{safe_brand}.mp4"
+                )
+                logger.info(
+                    f"Advert {advert['index']}: category={category}, output={output_path.name}"
+                )
 
                 extract_advert_clip(
                     video_input=video_input,
