@@ -38,6 +38,9 @@ venv/
 *.png
 *_qc.html
 
+# Pipeline summary files
+*_pipeline-summary.txt
+
 # Generated output directories
 advert_min_cover_output/
 
