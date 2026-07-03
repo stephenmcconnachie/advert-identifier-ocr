@@ -1069,7 +1069,16 @@ def _refine_advert_end_frames(
                 "rgb24",
                 pattern,
             ]
-            subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=30)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=30
+            )
+            if result.returncode != 0 or "Output file is empty" in result.stderr:
+                logger.warning(
+                    "  %s: refinement FFmpeg failed (rc=%d): %s",
+                    brand,
+                    result.returncode,
+                    result.stderr[-200:].strip() if result.stderr else "",
+                )
 
             refine_frames = sorted(refine_dir.glob("refine_*.png"))
             if len(refine_frames) < 5:
