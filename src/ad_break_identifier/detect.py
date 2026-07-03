@@ -852,7 +852,7 @@ def clamp_correct(
             for j in range(prev_trusted + 1, i + 1):
                 fwd += int(adverts[j].duration_seconds * fps)
             bwd = results[next_trusted].last_match_frame
-            for j in range(next_trusted - 1, i - 1, -1):
+            for j in range(next_trusted, i, -1):
                 bwd -= int(adverts[j].duration_seconds * fps)
             if abs(fwd - bwd) <= 1:
                 snapped = _snap(fwd)
@@ -891,7 +891,7 @@ def clamp_correct(
         elif dur is not None and next_trusted is not None:
             # Only backward estimate available
             expected = results[next_trusted].last_match_frame
-            for j in range(next_trusted - 1, i - 1, -1):
+            for j in range(next_trusted, i, -1):
                 expected -= int(adverts[j].duration_seconds * fps)
             snapped = _snap(expected)
         else:
