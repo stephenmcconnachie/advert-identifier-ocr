@@ -222,9 +222,15 @@ class TestUpdateBreakAdverts:
         assert det1["adjusted_start_broadcast"] == pytest.approx(2900 + 270.04, abs=0.001)
         assert det1["detected_duration_seconds"] == pytest.approx(20.0 - 0.04, abs=0.1)
 
-    def test_single_advert_break_no_detection_on_second(self, state):
-        # Only first advert gets detection data; second has none
-        # Second advert should be skipped in Pass 2 (no detection)
+    def test_unmatched_advert_estimated_from_previous(self, state):
+        """When the second advert has no detection (unmatched), its position
+        should be estimated from the previous advert's end + duration.
+
+        prev_effective_end = 270.0, duration = 20
+        estimated_end = 270.0 + 20 = 290.0
+        start_seconds_clip = 270.0 + 1/25 = 270.04
+        adjusted_start_broadcast = 2900 + 270.04 = 3170.04
+        """
         updates = [
             {"detection": {"last_timecode": "00:04:30.000", "last_seconds_clip": 270.0, "last_frame": 1350}},
         ]
@@ -233,7 +239,13 @@ class TestUpdateBreakAdverts:
         det0 = state["ad_breaks"][0]["adverts"][0]["detection"]
         assert det0["adjusted_start_broadcast"] is not None
         det1 = state["ad_breaks"][0]["adverts"][1].get("detection")
-        assert det1 is None
+        assert det1 is not None
+        assert det1["match_tier"] == "estimated"
+        assert det1["last_seconds_clip"] == pytest.approx(290.0, abs=0.001)
+        assert det1["start_seconds_clip"] == pytest.approx(270.04, abs=0.001)
+        assert det1["adjusted_start_broadcast"] == pytest.approx(
+            3170.04, abs=0.001
+        )
 
     def test_refined_end_produces_correct_start(self, state):
         """When last_seconds_clip is refined (25fps), the start must be

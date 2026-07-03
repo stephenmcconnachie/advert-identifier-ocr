@@ -209,7 +209,31 @@ def update_break_adverts(
     for i, advert in enumerate(break_data["adverts"]):
         detection = advert.get("detection")
         if detection is None or detection.get("last_seconds_clip") is None:
-            prev_effective_end = None
+            _log_unmatched(state, break_data["index"], advert)
+
+            duration = advert.get("scheduled_duration_seconds")
+            if prev_effective_end is not None and duration is not None:
+                estimated_end = prev_effective_end + duration
+                start_seconds_clip = prev_effective_end + (1.0 / 25.0)
+                start_broadcast = clip_offset + start_seconds_clip
+                if detection is None:
+                    detection = {}
+                    advert["detection"] = detection
+                detection["last_seconds_clip"] = estimated_end
+                detection["start_seconds_clip"] = round(start_seconds_clip, 3)
+                detection["adjusted_start_broadcast"] = round(
+                    start_broadcast, 3
+                )
+                detection["match_tier"] = "estimated"
+                prev_effective_end = estimated_end
+                logger.info(
+                    "  %s: estimated end at %.3fs from previous advert "
+                    "(unmatched)",
+                    advert.get("brand", "unknown"),
+                    estimated_end,
+                )
+            else:
+                prev_effective_end = None
             continue
 
         effective_end: float = detection["last_seconds_clip"]
@@ -291,6 +315,43 @@ def _single_advert_log_path(state: dict[str, Any]) -> Path:
     """Derive the single-advert break log path from the state video path."""
     video_path = Path(state.get("video_info", {}).get("filepath", ""))
     return video_path.parent / f"{video_path.stem}_single_advert_breaks.log"
+
+
+def _unmatched_adverts_log_path(state: dict[str, Any]) -> Path:
+    """Derive the unmatched-adverts log path from the state video path."""
+    video_path = Path(state.get("video_info", {}).get("filepath", ""))
+    return video_path.parent / f"{video_path.stem}_unmatched_adverts.log"
+
+
+def _log_unmatched(
+    state: dict[str, Any],
+    break_index: int,
+    advert: dict[str, Any],
+) -> None:
+    """Append an entry to the unmatched-adverts log for this video."""
+    from datetime import datetime
+
+    unique_id = advert.get("unique_id", "unknown")
+    brand = advert.get("brand", "unknown")
+    duration = advert.get("scheduled_duration_seconds", "unknown")
+    try:
+        log_path = _unmatched_adverts_log_path(state)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(log_path, "a") as f:
+            f.write(
+                f"{datetime.now().isoformat()} | "
+                f"Break {break_index}: track_id={unique_id}, "
+                f"brand={brand}, duration={duration}\n"
+            )
+        logger.info(
+            "Unmatched advert %s / %s — logged to %s",
+            unique_id, brand, log_path,
+        )
+    except OSError:
+        logger.warning(
+            "Unmatched advert %s / %s (could not write log)",
+            unique_id, brand,
+        )
 
 
 def _tod_to_seconds(tod: str) -> float:
