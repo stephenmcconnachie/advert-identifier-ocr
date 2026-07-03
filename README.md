@@ -65,6 +65,10 @@ and threads it through every subsequent stage. It runs two stages per ad break:
 **OCR detection** → **lossless clip extraction**, with full coordinate transformation
 from clip-relative to broadcast-absolute timecodes.
 
+**Single-advert breaks** (only 1 advert in a break) are detected from the metadata JSON
+and skipped entirely — no OCR, no clipping. A row is appended to
+`single_advert_breaks.csv` in the repo root.
+
 ## vLLM Server Setup
 
 Deploy PaddleOCR-VL via vLLM:

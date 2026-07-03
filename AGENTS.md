@@ -73,6 +73,7 @@ pipeline vars are read by `bin/advert-identifier-pipeline`.
 
 ## Key Gotchas
 
+- **Single-advert breaks are skipped**: The pipeline detects ad breaks with only 1 advert via the metadata JSON and skips OCR detection and clipping entirely. Details are logged to `single_advert_breaks.csv` in the repo root (appended each run).
 - **`ad_break_index` is 1-based** in `config.py` (`load_metadata_from_file`), not 0-based. The CLI flag `--ad-break-index` also uses 1-based indexing. Auto-detects from filenames like `01of08.mp4` when omitted.
 - **Two-tier brand search**: Tier 1 uses word-boundary regex (`\bgalaxy\b`) for exact matches. Tier 2 (fallback) uses substring regex (`galaxy`) to catch concatenated forms like `galaxychocolate.com`.
 - **Ordering enforcement**: Each advert's last matching frame must be after the previous advert's last matching frame. The search range for advert N is `(prev_last_frame, end]`.

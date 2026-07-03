@@ -12,6 +12,7 @@ Usage:
 """
 
 import argparse
+import csv
 import json
 import logging
 import os
@@ -192,6 +193,60 @@ def get_ad_break_count(json_path: Path) -> int:
     with open(json_path) as f:
         data = json.load(f)
     return len(data.get("ad_breaks", []))
+
+
+def is_single_advert_break(json_path: Path, break_index: int) -> bool:
+    """Check if an ad break has only one advert."""
+    with open(json_path) as f:
+        data = json.load(f)
+    breaks = data.get("ad_breaks", [])
+    if break_index >= len(breaks):
+        return False
+    return len(breaks[break_index].get("adverts", [])) == 1
+
+
+def log_single_advert_break(
+    json_path: Path,
+    break_index: int,
+    video_path: Path,
+    logger: logging.Logger,
+) -> None:
+    """Append a row to single_advert_breaks.csv in the repo root."""
+    repo_root = Path(__file__).resolve().parent.parent
+    log_path = repo_root / "single_advert_breaks.csv"
+
+    with open(json_path) as f:
+        data = json.load(f)
+    break_data = data["ad_breaks"][break_index]
+    adv = break_data["adverts"][0]
+
+    row = {
+        "timestamp": datetime.now().isoformat(),
+        "video_file": video_path.name,
+        "break_index": break_index + 1,
+        "start_time": break_data.get("start_time", ""),
+        "end_time": break_data.get("end_time", ""),
+        "unique_id": adv["unique_id"],
+        "brand": adv["brand"],
+        "advertiser": adv["advertiser"],
+        "category": adv["category"],
+        "duration_seconds": adv.get("duration_seconds", ""),
+    }
+
+    write_header = not log_path.exists()
+    with open(log_path, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(row.keys()))
+        if write_header:
+            writer.writeheader()
+        writer.writerow(row)
+
+    logger.info(
+        "Single-advert break #%d: %s / %s — logged to %s",
+        break_index + 1,
+        adv["unique_id"],
+        adv["brand"],
+        log_path,
+    )
 
 
 def run_advert_identifier(
@@ -615,6 +670,23 @@ def main() -> int:
 
         for ad_break_index in range(num_ad_breaks):
             logger.info(f"\nProcessing ad break {ad_break_index + 1}/{num_ad_breaks}")
+
+            # Single-advert break — skip OCR and clipping entirely
+            if is_single_advert_break(json_path, ad_break_index):
+                log_single_advert_break(json_path, ad_break_index, mp4_file, logger)
+                ad_break_results.append(
+                    {
+                        "index": ad_break_index,
+                        "success": True,
+                        "skipped": True,
+                        "advert_count": 1,
+                        "last_time": None,
+                        "last_type": None,
+                        "clip_count": 0,
+                    }
+                )
+                total_adverts += 1
+                continue
 
             # Step 2: OCR detection on original video
             success, xml_path, advert_count = run_advert_identifier(
