@@ -485,6 +485,12 @@ def main() -> int:
                     time_source = (
                         advert.get("refined_timecode") or advert["last_timecode"]
                     )
+                    if not time_source:
+                        logger.warning(
+                            f"Advert {advert['index']}: no timecode available "
+                            f"(unmatched, skipping)"
+                        )
+                        continue
                     last_secs = timecode_to_seconds(time_source)
                     start_secs = last_secs - duration + args.clip_offset
                     time_source_desc = (
