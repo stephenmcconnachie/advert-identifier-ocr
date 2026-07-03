@@ -217,10 +217,10 @@ class TestUpdateBreakAdverts:
         assert det0["adjusted_start_broadcast"] == pytest.approx(2900 + 240.12, abs=0.001)
 
         det1 = state["ad_breaks"][0]["adverts"][1]["detection"]
-        # start = prev_effective_end + 2/25s = 270.0 + 0.08 = 270.08
-        assert det1["start_seconds_clip"] == pytest.approx(270.08, abs=0.001)
-        assert det1["adjusted_start_broadcast"] == pytest.approx(2900 + 270.08, abs=0.001)
-        assert det1["detected_duration_seconds"] == pytest.approx(20.0 - 0.08, abs=0.1)
+        # start = prev_effective_end + 3/25s = 270.0 + 0.12 = 270.12
+        assert det1["start_seconds_clip"] == pytest.approx(270.12, abs=0.001)
+        assert det1["adjusted_start_broadcast"] == pytest.approx(2900 + 270.12, abs=0.001)
+        assert det1["detected_duration_seconds"] == pytest.approx(20.0 - 0.12, abs=0.1)
 
     def test_unmatched_advert_estimated_from_previous(self, state):
         """When the second advert has no detection (unmatched), its position

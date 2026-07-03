@@ -242,7 +242,7 @@ def update_break_adverts(
         if duration is not None:
             start_seconds_clip = effective_end - duration + (3.0 / 25.0)
         elif prev_effective_end is not None:
-            start_seconds_clip = prev_effective_end + (2.0 / 25.0)  # two source frames
+            start_seconds_clip = prev_effective_end + (3.0 / 25.0)  # three source frames
             detected_duration = effective_end - start_seconds_clip
             detection["detected_duration_seconds"] = round(detected_duration, 1)
         else:
