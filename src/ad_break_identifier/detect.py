@@ -449,7 +449,7 @@ def _brand_variants(brand: str) -> list[tuple[str, str]]:
     # e.g. "Gocompare.com" → "Gocompare", "Interflora.co.uk" → "Interflora".
     # Combined with the dotless OCR fallback in match_ocr_text, this catches
     # on-screen text like "GO.COMPARE" against brand "Gocompare.com".
-    _tld_pat = re.compile(r"\.(com|co\.uk|org|net)$", re.IGNORECASE)
+    _tld_pat = re.compile(r"\.(com|co\.uk|org|net)", re.IGNORECASE)
     tld_stripped = _tld_pat.sub("", brand)
     if tld_stripped != brand and tld_stripped not in seen:
         variants.append((tld_stripped, "no-tld"))
@@ -535,6 +535,10 @@ def search_with_ordering(
         ) -> tuple[list[int], list[str]] | None:
             frames: list[int] = []
             terms: set[str] = set()
+            consecutive_misses = 0
+            MAX_MISSES = 10  # 10 frames = 2s at 5 FPS; stops scan after
+            # enough consecutive non-matches to avoid stealing frames from
+            # a later advert with the same brand.
             for ocr_res in ocr_results:
                 idx = ocr_res["frame_index"]
                 if idx <= prev_last_frame:
@@ -544,6 +548,11 @@ def search_with_ordering(
                 if hit:
                     frames.append(idx)
                     terms.update(t.lower() for t in matched_terms)
+                    consecutive_misses = 0
+                elif frames:  # only count misses after first match
+                    consecutive_misses += 1
+                    if consecutive_misses > MAX_MISSES:
+                        break
             if frames:
                 return frames, list(terms)
             return None
@@ -578,6 +587,14 @@ def search_with_ordering(
                         best_result_g1 = cand
 
             # Group 2 — individual-word matching
+            # Skip for the original variant when a no-tld variant exists:
+            # the original's TLD-glued word (e.g. "Tombola.co.uk") rarely
+            # matches OCR, while its other words (e.g. "online") are too
+            # generic and cause false positives.  The no-tld variant
+            # produces the specific core word (e.g. "Tombola") instead.
+            has_no_tld = any(l == "no-tld" for _, l in brand_variants)
+            if label == "original" and has_no_tld:
+                continue
             for pat_fn, tier_prefix in [
                 (build_exact_patterns, "words"),
                 (build_substring_patterns, "subwords"),
