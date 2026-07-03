@@ -1360,6 +1360,10 @@ def format_xml(
 
             prev_effective_end = effective_end
         else:
+            if adv.duration_seconds is not None:
+                lines.append(
+                    f"        <duration_seconds>{adv.duration_seconds}</duration_seconds>"
+                )
             lines.append(f"        <last_timecode></last_timecode>")
 
         if scan and not scan.matched:
