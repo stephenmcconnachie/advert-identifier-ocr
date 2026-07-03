@@ -1323,7 +1323,9 @@ def format_xml(
             duration_scheduled = adv.duration_seconds
 
             if duration_scheduled is not None:
-                start_seconds = effective_end - duration_scheduled + (1.0 / SOURCE_FPS)
+                start_seconds = (
+                    effective_end - duration_scheduled + (3.0 / SOURCE_FPS)
+                )
                 dur_to_write = duration_scheduled
             elif prev_effective_end is not None:
                 start_seconds = prev_effective_end + (1.0 / SOURCE_FPS)

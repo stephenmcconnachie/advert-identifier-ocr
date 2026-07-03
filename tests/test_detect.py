@@ -309,7 +309,7 @@ class TestFormatXml:
             ),
         ]
         xml = format_xml(metadata, results)
-        assert "<start_timecode>00:10.160</start_timecode>" in xml
+        assert "<start_timecode>00:10.240</start_timecode>" in xml
         assert "<last_timecode>00:40.120</last_timecode>" in xml
 
     def test_unrefined_end_unchanged(self):
@@ -340,8 +340,8 @@ class TestFormatXml:
             ),
         ]
         xml = format_xml(metadata, results)
-        # start = 40.0 - 30 + 1/25 = 10.04s → 00:10.040
-        assert "<start_timecode>00:10.040</start_timecode>" in xml
+        # start = 40.0 - 30 + 3/25 = 10.12s → 00:10.120
+        assert "<start_timecode>00:10.120</start_timecode>" in xml
 
 
 class TestTimeHelpers:

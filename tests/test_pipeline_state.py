@@ -164,10 +164,10 @@ class TestUpdateBreakAdverts:
         det = state["ad_breaks"][0]["adverts"][0]["detection"]
         # clip_offset = 2900
         # Non-last advert: duration=30, effective_end=270.0
-        # start_seconds_clip = 270.0 - 30 + 1/25 = 240.04
-        # adjusted_start_broadcast = 2900 + 240.04 = 3140.04
-        assert det["adjusted_start_broadcast"] == pytest.approx(3140.04, abs=0.001)
-        assert det["start_seconds_clip"] == pytest.approx(240.04, abs=0.001)
+        # start_seconds_clip = 270.0 - 30 + 3/25 = 240.12
+        # adjusted_start_broadcast = 2900 + 240.12 = 3140.12
+        assert det["adjusted_start_broadcast"] == pytest.approx(3140.12, abs=0.001)
+        assert det["start_seconds_clip"] == pytest.approx(240.12, abs=0.001)
 
     def test_single_advert_break_no_start_computed(self, state):
         # First advert with no duration and no preceding advert
@@ -213,8 +213,8 @@ class TestUpdateBreakAdverts:
         update_break_adverts(state, ad_break_index=1, updates=updates)
 
         det0 = state["ad_breaks"][0]["adverts"][0]["detection"]
-        assert det0["start_seconds_clip"] == pytest.approx(240.04, abs=0.001)
-        assert det0["adjusted_start_broadcast"] == pytest.approx(2900 + 240.04, abs=0.001)
+        assert det0["start_seconds_clip"] == pytest.approx(240.12, abs=0.001)
+        assert det0["adjusted_start_broadcast"] == pytest.approx(2900 + 240.12, abs=0.001)
 
         det1 = state["ad_breaks"][0]["adverts"][1]["detection"]
         # start = prev_effective_end + 1/25s = 270.0 + 0.04 = 270.04
@@ -242,9 +242,9 @@ class TestUpdateBreakAdverts:
         assert det1 is not None
         assert det1["match_tier"] == "estimated"
         assert det1["last_seconds_clip"] == pytest.approx(290.0, abs=0.001)
-        assert det1["start_seconds_clip"] == pytest.approx(270.04, abs=0.001)
+        assert det1["start_seconds_clip"] == pytest.approx(270.12, abs=0.001)
         assert det1["adjusted_start_broadcast"] == pytest.approx(
-            3170.04, abs=0.001
+            3170.12, abs=0.001
         )
 
     def test_refined_end_produces_correct_start(self, state):
@@ -253,8 +253,8 @@ class TestUpdateBreakAdverts:
 
         This is the core regression test for the clip-start-too-early bug:
         without the fix, start = last_frame/fps - duration = 270.0 - 30 = 240.0
-        (same as un-refined).  With the fix, start = 270.08 - 30 + 1/25 = 240.12,
-        which is 3 source frames later.
+        (same as un-refined).  With the fix, start = 270.08 - 30 + 3/25 = 240.20,
+        which is 5 source frames later.
         """
         updates = [
             {
@@ -268,10 +268,10 @@ class TestUpdateBreakAdverts:
         update_break_adverts(state, ad_break_index=1, updates=updates)
 
         det = state["ad_breaks"][0]["adverts"][0]["detection"]
-        # Refined: start = 270.08 - 30 + 1/25 = 240.12
-        # Old buggy: start = 1350/5 - 30 = 240.0 (3 source frames too early)
-        assert det["start_seconds_clip"] == pytest.approx(240.12, abs=0.001)
-        assert det["adjusted_start_broadcast"] == pytest.approx(2900 + 240.12, abs=0.001)
+        # Refined: start = 270.08 - 30 + 3/25 = 240.20
+        # Old buggy: start = 1350/5 - 30 = 240.0 (5 source frames too early)
+        assert det["start_seconds_clip"] == pytest.approx(240.20, abs=0.001)
+        assert det["adjusted_start_broadcast"] == pytest.approx(2900 + 240.20, abs=0.001)
 
 
 class TestGetAdjustedStarts:

@@ -214,7 +214,7 @@ def update_break_adverts(
             duration = advert.get("scheduled_duration_seconds")
             if prev_effective_end is not None and duration is not None:
                 estimated_end = prev_effective_end + duration
-                start_seconds_clip = prev_effective_end + (1.0 / 25.0)
+                start_seconds_clip = prev_effective_end + (3.0 / 25.0)
                 start_broadcast = clip_offset + start_seconds_clip
                 if detection is None:
                     detection = {}
@@ -240,7 +240,7 @@ def update_break_adverts(
         duration: int | None = advert.get("scheduled_duration_seconds")
 
         if duration is not None:
-            start_seconds_clip = effective_end - duration + (1.0 / 25.0)
+            start_seconds_clip = effective_end - duration + (3.0 / 25.0)
         elif prev_effective_end is not None:
             start_seconds_clip = prev_effective_end + (1.0 / 25.0)  # one source frame
             detected_duration = effective_end - start_seconds_clip
