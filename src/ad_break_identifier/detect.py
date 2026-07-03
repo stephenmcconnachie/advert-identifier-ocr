@@ -428,9 +428,10 @@ def _brand_variants(brand: str) -> list[tuple[str, str]]:
     Variants (in priority order):
     1. Original brand text  → ``"original"``
     2. ``&`` replaced with ``and``  → ``"ampersand->and"``
-    3. Spaces removed  → ``"concat"``
-    4. ``&``→``and`` + spaces removed  → ``"concat-and"``
-    5+ Prefixes of 3/4 (longest-first) so that e.g. ``Insure&gotravelinsurance``
+    3. Common TLD suffix removed  → ``"no-tld"``
+    4. Spaces removed  → ``"concat"``
+    5. ``&``→``and`` + spaces removed  → ``"concat-and"``
+    6+ Prefixes of 3/4 (longest-first) so that e.g. ``Insure&gotravelinsurance``
        yields prefixes ``Insure&gotravel``, ``Insure&go`` etc. for substring
        matching when the full concatenated form is longer than what the OCR
        captured.
@@ -443,13 +444,16 @@ def _brand_variants(brand: str) -> list[tuple[str, str]]:
         variants.append((spaced, "ampersand->and"))
         seen.add(spaced)
 
-    # Dot-to-space: replace dots with spaces so that URL-like brand
-    # names (e.g. "Gocompare.com") can be split into individual words.
-    # This lets "compare" match "COMPARE" in OCR text "GO.COMPARE".
-    dot_spaced = brand.replace(".", " ")
-    if dot_spaced != brand and dot_spaced not in seen:
-        variants.append((dot_spaced, "dot->space"))
-        seen.add(dot_spaced)
+    # TLD-stripped: remove common TLD suffixes (.com, .co.uk, .org, .net)
+    # so that the core brand word can be matched standalone.
+    # e.g. "Gocompare.com" → "Gocompare", "Interflora.co.uk" → "Interflora".
+    # Combined with the dotless OCR fallback in match_ocr_text, this catches
+    # on-screen text like "GO.COMPARE" against brand "Gocompare.com".
+    _tld_pat = re.compile(r"\.(com|co\.uk|org|net)$", re.IGNORECASE)
+    tld_stripped = _tld_pat.sub("", brand)
+    if tld_stripped != brand and tld_stripped not in seen:
+        variants.append((tld_stripped, "no-tld"))
+        seen.add(tld_stripped)
 
     concat = brand.replace(" ", "")
     if concat != brand and concat not in seen:
