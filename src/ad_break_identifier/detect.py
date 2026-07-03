@@ -1872,8 +1872,8 @@ def run_detection(
 
     # 4. Save OCR results to JSON
     if output_dir:
-        stem = output_dir.name
-        ocr_json_path = output_dir / f"{stem}_ocr.json"
+        stem = video_stem or output_dir.name
+        ocr_json_path = output_dir / f"{stem}_break{ad_break_index}_ocr.json"
     else:
         ocr_json_path = Path(tempfile.mktemp(suffix="_ocr.json"))
 
