@@ -1328,7 +1328,7 @@ def format_xml(
                 )
                 dur_to_write = duration_scheduled
             elif prev_effective_end is not None:
-                start_seconds = prev_effective_end + (1.0 / SOURCE_FPS)
+                start_seconds = prev_effective_end + (2.0 / SOURCE_FPS)
                 detected_dur = effective_end - start_seconds
                 dur_to_write = round(detected_dur)
             else:
