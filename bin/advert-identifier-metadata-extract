@@ -244,7 +244,8 @@ def group_by_ad_break(rows):
     for row in rows:
         key = (row.get("BARB Prog Before", ""), row.get("BARB Prog After", ""))
         pib_rel = row.get("All PIB rel", "").strip()
-        is_last = (pib_rel == "Last")
+        pib_pos = row.get("All PIB pos", "").strip()
+        is_last = (pib_rel == "Last" or pib_pos == "Last")
         
         # Start new break if:
         # 1. First advert (current_break is None)
@@ -289,9 +290,10 @@ def calculate_advert_durations(adverts, logger=None):
         start_time = advert.get("Start time", "")
         start_seconds = time_to_seconds(start_time)
         pib_rel = advert.get("All PIB rel", "").strip()
+        pib_pos = advert.get("All PIB pos", "").strip()
         
         # Check if this is the last advert in the break sequence
-        is_last = (pib_rel == "Last")
+        is_last = (pib_rel == "Last" or pib_pos == "Last")
         
         if is_last:
             # Last advert: no duration (null)
