@@ -20,16 +20,23 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-def _first_frame_data_uri(clip_path: Path, width: int = 220) -> str:
-    """Extract the first frame of a video clip and return it as a
-    base64-encoded PNG data URI (resized and quantised)."""
+def _frame_data_uri(clip_path: Path, time_seconds: float = 0, width: int = 220) -> str:
+    """Extract a frame from a video clip at *time_seconds* and return it
+    as a base64-encoded PNG data URI (resized and quantised).
+    When *time_seconds* is negative, treats it as ``-sseof`` (seek from end)."""
     try:
+        if time_seconds < 0:
+            seek_flag = "-sseof"
+            seek_val = f"{time_seconds:.3f}"
+        else:
+            seek_flag = "-ss"
+            seek_val = f"{time_seconds:.3f}"
         result = subprocess.run(
             [
                 "ffmpeg",
                 "-y",
-                "-ss",
-                "0",
+                seek_flag,
+                seek_val,
                 "-i",
                 str(clip_path),
                 "-vframes",
@@ -56,8 +63,38 @@ def _first_frame_data_uri(clip_path: Path, width: int = 220) -> str:
         b64 = base64.b64encode(buf.getvalue()).decode("ascii")
         return f"data:image/png;base64,{b64}"
     except Exception as exc:
-        logger.warning("Failed to extract first frame from %s: %s", clip_path.name, exc)
+        logger.warning(
+            "Failed to extract frame at %.3fs from %s: %s",
+            time_seconds,
+            clip_path.name,
+            exc,
+        )
         return ""
+
+
+def _get_duration(clip_path: Path) -> float:
+    """Return video duration in seconds using ffprobe."""
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(clip_path),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30,
+        )
+        return float(result.stdout.strip())
+    except Exception as exc:
+        logger.warning("Failed to get duration from %s: %s", clip_path.name, exc)
+        return 0.0
 
 
 _REFERENCE_CSS = """
@@ -84,15 +121,16 @@ h1 { font-size: 1.5rem; margin-bottom: 4px; }
 .theme-nav { display: flex; gap: 8px; margin-bottom: 20px; }
 .theme-btn { padding: 4px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-card); color: var(--fg); cursor: pointer; font-size: 0.8rem; }
 .theme-btn.active { border-color: var(--accent); color: var(--accent); }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
 .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s; }
 .card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
-.card-link { display: block; text-decoration: none; color: inherit; }
-.card img { width: 100%; height: auto; display: block; }
+.card-frames { display: flex; gap: 2px; }
+.card-frame { flex: 1; display: block; text-decoration: none; color: inherit; }
+.card-frame img { width: 100%; height: auto; display: block; }
 .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: var(--bg-code); padding: 40px 20px; color: var(--fg-muted); }
 .placeholder-icon { font-size: 2rem; }
 .placeholder-label { font-size: 0.8rem; }
-.card-body { padding: 10px 12px 12px; }
+.card-body { padding: 10px 12px 12px; text-align: center; }
 .card-id { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.75rem; color: var(--fg-muted); word-break: break-all; margin-bottom: 2px; }
 .card-category { font-size: 0.78rem; color: var(--fg-muted); word-break: break-all; margin-bottom: 2px; }
 .card-brand { font-weight: 600; font-size: 0.85rem; word-break: break-all; }
@@ -118,12 +156,6 @@ _REFERENCE_JS = """
   btns.forEach(function(b) { b.addEventListener('click', function() { setTheme(b.dataset.theme); }); });
 })();
 """
-
-
-def _safe_clip_name(stem: str) -> str:
-    """Make a clip stem presentable — keep the raw filename, just
-    escape HTML entities."""
-    return html.escape(stem)
 
 
 def generate_reference_html_from_clips(
@@ -153,23 +185,29 @@ def generate_reference_html_from_clips(
         unique_id = html.escape(parts[0]) if len(parts) > 0 else ""
         category = html.escape(parts[1]) if len(parts) > 1 else ""
         brand = html.escape(parts[2]) if len(parts) > 2 else ""
-        display_name = _safe_clip_name(stem)
-        img_data = _first_frame_data_uri(clip)
 
-        if img_data:
-            img_tag = f'<img src="{img_data}" ' f'alt="{display_name}" loading="lazy">'
-        else:
-            img_tag = (
+        first_img = _frame_data_uri(clip, 0)
+        last_img = _frame_data_uri(clip, -0.1)
+
+        def _frame_tag(img_data: str, label: str) -> str:
+            if img_data:
+                return f'<img src="{img_data}" alt="{label}" loading="lazy">'
+            return (
                 '<div class="placeholder">'
                 '<span class="placeholder-icon">&#x1F5BC;</span>'
-                f'<span class="placeholder-label">{display_name}</span>'
-                "</div>"
+                f"</div>"
             )
 
+        clip_name_esc = html.escape(clip.name)
         card = f"""<div class="card">
-  <a href="{html.escape(clip.name)}" target="_blank" class="card-link">
-    {img_tag}
-  </a>
+  <div class="card-frames">
+    <a href="{clip_name_esc}" target="_blank" class="card-frame">
+      {_frame_tag(first_img, f"{stem} first frame")}
+    </a>
+    <a href="{clip_name_esc}" target="_blank" class="card-frame">
+      {_frame_tag(last_img, f"{stem} last frame")}
+    </a>
+  </div>
   <div class="card-body">
     <div class="card-id">{unique_id}</div>
     <div class="card-category">{category}</div>
