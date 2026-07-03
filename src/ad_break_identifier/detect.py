@@ -137,25 +137,41 @@ def match_ocr_text(
     """Check OCR text against match patterns.
 
     Returns (matched, matched_terms).
+
+    If no match is found against the original text, a dot-stripped
+    version is tried as a fallback.  This catches on-screen text
+    like "GO.COMPARE" where dots act as visual word separators
+    but the brand is a single token like "Gocompare.com".
     """
     if not ocr_text or not ocr_text.strip():
         return False, []
 
-    matched_terms: list[str] = []
-    for pat in patterns:
-        m = pat.search(ocr_text)
-        if m:
-            matched_terms.append(m.group(0))
+    def _check(text: str) -> tuple[bool, list[str]]:
+        matched_terms: list[str] = []
+        for pat in patterns:
+            m = pat.search(text)
+            if m:
+                matched_terms.append(m.group(0))
 
-    seen: set[str] = set()
-    unique: list[str] = []
-    for t in matched_terms:
-        key = t.lower()
-        if key not in seen:
-            seen.add(key)
-            unique.append(t)
+        seen: set[str] = set()
+        unique: list[str] = []
+        for t in matched_terms:
+            key = t.lower()
+            if key not in seen:
+                seen.add(key)
+                unique.append(t)
 
-    return len(unique) > 0, unique
+        return len(unique) > 0, unique
+
+    matched, terms = _check(ocr_text)
+    if matched:
+        return matched, terms
+
+    dotless = ocr_text.replace(".", "")
+    if dotless != ocr_text:
+        return _check(dotless)
+
+    return False, []
 
 
 # ── Video helpers ────────────────────────────────────────────────────────
@@ -426,6 +442,14 @@ def _brand_variants(brand: str) -> list[tuple[str, str]]:
     if spaced != brand and spaced not in seen:
         variants.append((spaced, "ampersand->and"))
         seen.add(spaced)
+
+    # Dot-to-space: replace dots with spaces so that URL-like brand
+    # names (e.g. "Gocompare.com") can be split into individual words.
+    # This lets "compare" match "COMPARE" in OCR text "GO.COMPARE".
+    dot_spaced = brand.replace(".", " ")
+    if dot_spaced != brand and dot_spaced not in seen:
+        variants.append((dot_spaced, "dot->space"))
+        seen.add(dot_spaced)
 
     concat = brand.replace(" ", "")
     if concat != brand and concat not in seen:
