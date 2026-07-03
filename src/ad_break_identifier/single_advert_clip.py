@@ -200,19 +200,28 @@ def calculate_durations(adverts: list[dict], default_duration: int = 30) -> list
             else:
                 prev_timecode = adverts[i - 1]["last_timecode"]
                 curr_timecode = advert["last_timecode"]
-                prev_secs = timecode_to_seconds(prev_timecode)
-                curr_secs = timecode_to_seconds(curr_timecode)
-                duration = curr_secs - prev_secs
-                if duration <= 0:
-                    raise ValueError(
-                        f"Invalid duration calculation for advert {advert['index']}: "
-                        f"{curr_timecode} - {prev_timecode} = {duration}s"
+                if not prev_timecode or not curr_timecode:
+                    # Previous or current advert is unmatched (empty
+                    # timecode) — can't calculate duration, use default.
+                    advert["duration_seconds"] = default_duration
+                    logger.info(
+                        f"Advert {advert['index']}: no timecode available "
+                        f"for duration calculation, using default {default_duration}s"
                     )
-                advert["duration_seconds"] = int(duration)
-                logger.info(
-                    f"Advert {advert['index']}: calculated duration = {duration}s "
-                    f"({prev_timecode} to {curr_timecode})"
-                )
+                else:
+                    prev_secs = timecode_to_seconds(prev_timecode)
+                    curr_secs = timecode_to_seconds(curr_timecode)
+                    duration = curr_secs - prev_secs
+                    if duration <= 0:
+                        raise ValueError(
+                            f"Invalid duration calculation for advert {advert['index']}: "
+                            f"{curr_timecode} - {prev_timecode} = {duration}s"
+                        )
+                    advert["duration_seconds"] = int(duration)
+                    logger.info(
+                        f"Advert {advert['index']}: calculated duration = {duration}s "
+                        f"({prev_timecode} to {curr_timecode})"
+                    )
 
     return adverts
 
