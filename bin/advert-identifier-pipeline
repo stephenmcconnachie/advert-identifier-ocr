@@ -692,7 +692,7 @@ def main() -> int:
         ad_break_results = []
 
         for ad_break_index in range(num_ad_breaks):
-            logger.info(f"\nProcessing ad break {ad_break_index + 1}/{num_ad_breaks}")
+            logger.info(f"Processing ad break {ad_break_index + 1}/{num_ad_breaks}")
 
             # Single-advert break — skip OCR and clipping entirely
             if is_single_advert_break(json_path, ad_break_index):
