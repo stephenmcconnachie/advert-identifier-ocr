@@ -592,7 +592,15 @@ def main() -> int:
         logger.error(f"CSV folder not found: {csv_folder}")
         return 1
 
-    mp4_files = sorted(input_folder.glob("*.mp4"))
+    # Only process source video files (YYYY-MM-DD_CHANNEL_HH:MM:SS.mp4),
+    # not advert clip files which share the same extension.
+    import re
+    source_pat = re.compile(
+        r"^\d{4}-\d{2}-\d{2}_[A-Za-z0-9_]+_\d{2}:\d{2}:\d{2}"
+    )
+    mp4_files = sorted(
+        p for p in input_folder.glob("*.mp4") if source_pat.match(p.name)
+    )
 
     if not mp4_files:
         logger.warning(f"No .mp4 files found in {input_folder}")

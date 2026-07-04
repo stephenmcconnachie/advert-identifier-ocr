@@ -850,10 +850,12 @@ def clamp_correct(
             # Only correct if they agree within ±1 frame.
             fwd = results[prev_trusted].last_match_frame
             for j in range(prev_trusted + 1, i + 1):
-                fwd += int(adverts[j].duration_seconds * fps)
+                if adverts[j].duration_seconds is not None:
+                    fwd += int(adverts[j].duration_seconds * fps)
             bwd = results[next_trusted].last_match_frame
             for j in range(next_trusted, i, -1):
-                bwd -= int(adverts[j].duration_seconds * fps)
+                if adverts[j].duration_seconds is not None:
+                    bwd -= int(adverts[j].duration_seconds * fps)
             if abs(fwd - bwd) <= 1:
                 snapped = _snap(fwd)
             elif abs(prev_trusted - i) <= 1 or abs(next_trusted - i) <= 1:
@@ -886,13 +888,15 @@ def clamp_correct(
             # Only forward estimate available
             expected = results[prev_trusted].last_match_frame
             for j in range(prev_trusted + 1, i + 1):
-                expected += int(adverts[j].duration_seconds * fps)
+                if adverts[j].duration_seconds is not None:
+                    expected += int(adverts[j].duration_seconds * fps)
             snapped = _snap(expected)
         elif dur is not None and next_trusted is not None:
             # Only backward estimate available
             expected = results[next_trusted].last_match_frame
             for j in range(next_trusted, i, -1):
-                expected -= int(adverts[j].duration_seconds * fps)
+                if adverts[j].duration_seconds is not None:
+                    expected -= int(adverts[j].duration_seconds * fps)
             snapped = _snap(expected)
         else:
             # Strategy B — last advert with no duration: snap to nearest aligned

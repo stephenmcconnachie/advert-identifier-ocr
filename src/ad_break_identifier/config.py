@@ -128,7 +128,7 @@ def load_metadata_from_file(file_path: str, ad_break_index: int = 1) -> AdBreakM
     adverts = []
     for advert in break_data.get("adverts", []):
         duration = advert.get("duration_seconds")
-        if duration is not None and duration not in [10, 20, 30, 60]:
+        if duration is not None and duration not in [10, 20, 30, 60, 90, 120]:
             logger.warning(
                 f"Skipping advert {advert.get('unique_id', 'unknown')} "
                 f"with invalid duration: {duration}"
