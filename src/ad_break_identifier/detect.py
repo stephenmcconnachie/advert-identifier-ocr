@@ -82,7 +82,7 @@ def build_exact_patterns(
     words = term.split()
     if len(words) > 1:
         for word in words:
-            if len(word) >= 3 and word not in seen:
+            if len(word) >= 4 and word not in seen:
                 seen.add(word)
                 patterns.append(re.compile(rf"\b{re.escape(word)}\b", re.IGNORECASE))
 

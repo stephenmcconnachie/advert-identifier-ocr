@@ -209,6 +209,20 @@ def update_break_adverts(
     prev_effective_end: float | None = None
     # extraction window = before_secs + after_secs (all clip-relative)
     extract_window = before_secs + after_secs
+
+    # If zero adverts were matched by OCR, skip all estimation — every
+    # excerpt would be extracted from programme content, not ad content.
+    if not any(
+        (advert.get("detection") or {}).get("last_seconds_clip") is not None
+        for advert in break_data["adverts"]
+    ):
+        logger.info(
+            "  Break %d: zero adverts matched (all fallback), "
+            "skipping clip extraction",
+            break_data["index"],
+        )
+        return state
+
     for i, advert in enumerate(break_data["adverts"]):
         detection = advert.get("detection")
         if detection is None or detection.get("last_seconds_clip") is None:
