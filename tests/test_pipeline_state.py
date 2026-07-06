@@ -234,7 +234,8 @@ class TestUpdateBreakAdverts:
         updates = [
             {"detection": {"last_timecode": "00:04:30.000", "last_seconds_clip": 270.0, "last_frame": 1350}},
         ]
-        update_break_adverts(state, ad_break_index=1, updates=updates)
+        # after_secs=300 ensures extraction window (310s) covers estimated_end (290s)
+        update_break_adverts(state, ad_break_index=1, updates=updates, after_secs=300.0)
 
         det0 = state["ad_breaks"][0]["adverts"][0]["detection"]
         assert det0["adjusted_start_broadcast"] is not None

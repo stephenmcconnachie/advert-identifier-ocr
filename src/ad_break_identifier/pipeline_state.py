@@ -146,6 +146,7 @@ def update_break_adverts(
     ad_break_index: int,
     updates: list[dict[str, Any]],
     fps: float = 5.0,
+    after_secs: float = 240.0,
 ) -> dict[str, Any]:
     """Update advert data for one ad break in the state.
 
@@ -206,8 +207,8 @@ def update_break_adverts(
     #     start = prev_effective_end + 1 source frame
     # Single-advert break: logged and skipped
     prev_effective_end: float | None = None
-    last_matched_end: float | None = None
-    MAX_ESTIMATE_DRIFT = 180.0  # seconds from last matched advert
+    # extraction window = before_secs + after_secs (all clip-relative)
+    extract_window = before_secs + after_secs
     for i, advert in enumerate(break_data["adverts"]):
         detection = advert.get("detection")
         if detection is None or detection.get("last_seconds_clip") is None:
@@ -217,21 +218,19 @@ def update_break_adverts(
             if prev_effective_end is not None and duration is not None:
                 estimated_end = prev_effective_end + duration
 
-                # Stop estimation if it has drifted too far from the last
-                # matched advert — the position is likely in programme
-                # content, not advert content.
-                if (
-                    last_matched_end is not None
-                    and estimated_end - last_matched_end
-                    > MAX_ESTIMATE_DRIFT
-                ):
+                # Stop estimation if the position exceeds the extraction
+                # window — the OCR data doesn't cover this range and the
+                # clip would be extracted from programme content.
+                if estimated_end > extract_window:
                     logger.info(
-                        "  %s: estimation drifted %.0fs from last matched "
-                        "advert, skipping",
+                        "  %s: estimated end %.1fs exceeds extraction "
+                        "window (%.1fs), skipping",
                         advert.get("brand", "unknown"),
-                        estimated_end - last_matched_end,
+                        estimated_end,
+                        extract_window,
                     )
                     prev_effective_end = None
+                    continue
                     continue
 
                 start_seconds_clip = prev_effective_end + (3.0 / 25.0)
@@ -258,7 +257,6 @@ def update_break_adverts(
 
         effective_end: float = detection["last_seconds_clip"]
         duration: int | None = advert.get("scheduled_duration_seconds")
-        last_matched_end = effective_end
 
         if duration is not None:
             start_seconds_clip = effective_end - duration + (3.0 / 25.0)

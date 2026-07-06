@@ -1802,6 +1802,7 @@ def update_pipeline_state(
     scan_results: list[BrandSearchResult],
     ad_metadata: AdBreakMetadata,
     fps: float,
+    after_secs: float = 240.0,
 ) -> None:
     """Update pipeline state JSON with detection results."""
     try:
@@ -1858,7 +1859,7 @@ def update_pipeline_state(
         updates.append(update_entry)
 
     if updates:
-        update_break_adverts(state, ad_break_index, updates, fps)
+        update_break_adverts(state, ad_break_index, updates, fps, after_secs)
         write_state(state_path, state)
         logger.info("Pipeline state updated: %s", state_path)
 
@@ -2024,6 +2025,7 @@ def run_detection(
             scan_results=scan_results,
             ad_metadata=metadata,
             fps=fps,
+            after_secs=after_secs,
         )
 
     # 9. Clean up frames (keep OCR JSON)

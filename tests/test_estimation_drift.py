@@ -86,7 +86,7 @@ def main():
 
     # Create fresh state and run update_break_adverts
     state = create_initial_state(str(metadata_path), before_secs=10.0)
-    update_break_adverts(state, BREAK, updates, fps=5.0)
+    update_break_adverts(state, BREAK, updates, fps=5.0, after_secs=240.0)
 
     # Check results
     break_data = state["ad_breaks"][BREAK - 1]
@@ -127,10 +127,10 @@ def main():
                     print(f"  OK: {adv['brand']} skipped (drift {drift:.0f}s > {MAX_DRIFT}s)")
 
     if passed:
-        print("\nPASS: estimation drift limit working correctly")
+        print("\nPASS: extraction-window check working correctly")
         return 0
     else:
-        print("\nFAIL: estimation drift limit not working")
+        print("\nFAIL: extraction-window check not working")
         return 1
 
 
