@@ -1004,6 +1004,28 @@ def _refine_advert_end_frames(
 
     from ad_break_identifier.ocr_client import ocr_image
 
+    # Cache video duration so we don't refine beyond the actual video.
+    _video_duration: float | None = None
+
+    def _duration() -> float:
+        nonlocal _video_duration
+        if _video_duration is None:
+            import subprocess as _sp
+
+            r = _sp.run(
+                [
+                    "ffprobe", "-v", "error",
+                    "-show_entries", "format=duration",
+                    "-of", "default=noprint_wrappers=1:nokey=1",
+                    video_path,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            _video_duration = float(r.stdout.strip()) if r.returncode == 0 else 0.0
+        return _video_duration
+
     matched_count = sum(
         1 for r in scan_results if r.matched and r.last_match_frame is not None
     )
@@ -1051,6 +1073,24 @@ def _refine_advert_end_frames(
         has_boundary = bool(
             current_text and (not next_text or current_next_sim < SIMILARITY_THRESHOLD)
         )
+
+        # Skip refinement if the seek position is beyond the video.
+        vid_dur = _duration()
+        if T_broadcast + 0.2 > vid_dur:
+            logger.info(
+                "  %s: T_broadcast=%.3fs exceeds video duration "
+                "(%.3fs), skipping refinement",
+                brand, T_broadcast, vid_dur,
+            )
+            r.refined_end_seconds = None
+            r.refinement_data = {
+                "brand": brand,
+                "T_clip": round(T_clip, 3),
+                "T_broadcast": round(T_broadcast, 3),
+                "status": "beyond_video",
+                "refined_end_seconds": None,
+            }
+            continue
 
         # Create temp directory for refinement frames
         refine_dir = Path(tempfile.mkdtemp(suffix="_refine"))
