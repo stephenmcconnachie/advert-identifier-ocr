@@ -67,7 +67,7 @@ pipeline vars are read by `bin/advert-identifier-pipeline`.
 | `OCR_MODEL` | `PaddlePaddle/PaddleOCR-VL` | Config / all commands |
 | `DETECTION_FPS` | `5.0` (frame extraction rate) | Config / all commands |
 | `BEFORE_SECS` | `10.0` (seconds before ad break start) | Config / all commands |
-| `AFTER_SECS` | `360.0` (seconds after ad break start) | Config / all commands |
+| `AFTER_SECS` | `240.0` (seconds after ad break start) | Config / all commands |
 | `INPUT_FOLDER` | *(none)* | Pipeline (`--input-folder`) |
 | `CSV_FOLDER` | *(none)* | Pipeline (`--csv-folder`) |
 

@@ -109,8 +109,8 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--after-secs",
         type=float,
-        default=360.0,
-        help="Seconds after ad break timecode to include in frame extraction (default: 360)",
+        default=240.0,
+        help="Seconds after ad break timecode to include in frame extraction (default: 240)",
     )
     parser.add_argument(
         "--fps",

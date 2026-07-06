@@ -206,6 +206,8 @@ def update_break_adverts(
     #     start = prev_effective_end + 1 source frame
     # Single-advert break: logged and skipped
     prev_effective_end: float | None = None
+    last_matched_end: float | None = None
+    MAX_ESTIMATE_DRIFT = 180.0  # seconds from last matched advert
     for i, advert in enumerate(break_data["adverts"]):
         detection = advert.get("detection")
         if detection is None or detection.get("last_seconds_clip") is None:
@@ -214,6 +216,24 @@ def update_break_adverts(
             duration = advert.get("scheduled_duration_seconds")
             if prev_effective_end is not None and duration is not None:
                 estimated_end = prev_effective_end + duration
+
+                # Stop estimation if it has drifted too far from the last
+                # matched advert — the position is likely in programme
+                # content, not advert content.
+                if (
+                    last_matched_end is not None
+                    and estimated_end - last_matched_end
+                    > MAX_ESTIMATE_DRIFT
+                ):
+                    logger.info(
+                        "  %s: estimation drifted %.0fs from last matched "
+                        "advert, skipping",
+                        advert.get("brand", "unknown"),
+                        estimated_end - last_matched_end,
+                    )
+                    prev_effective_end = None
+                    continue
+
                 start_seconds_clip = prev_effective_end + (3.0 / 25.0)
                 start_broadcast = clip_offset + start_seconds_clip
                 if detection is None:
@@ -238,6 +258,7 @@ def update_break_adverts(
 
         effective_end: float = detection["last_seconds_clip"]
         duration: int | None = advert.get("scheduled_duration_seconds")
+        last_matched_end = effective_end
 
         if duration is not None:
             start_seconds_clip = effective_end - duration + (3.0 / 25.0)
