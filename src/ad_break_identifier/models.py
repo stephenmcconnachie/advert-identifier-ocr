@@ -20,10 +20,10 @@ class AdvertMetadata:
     duration_seconds: int | None = None
 
     def __post_init__(self):
-        if self.duration_seconds is not None and self.duration_seconds not in [10, 20, 30, 60]:
+        if self.duration_seconds is not None and self.duration_seconds not in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]:
             raise ValueError(
                 f"Invalid duration: {self.duration_seconds}. "
-                "Must be 10, 20, 30, or 60 (or None for unknown)."
+                "Must be 10, 20, 30, ..., 120 (or None for unknown)."
             )
 
 
