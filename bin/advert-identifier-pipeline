@@ -45,7 +45,9 @@ def timecode_to_seconds(timecode: str) -> float:
         raise ValueError(f"Invalid timecode format: {timecode}")
 
 
-def setup_logging(log_level: str = "INFO", log_file: str | None = None) -> logging.Logger:
+def setup_logging(
+    log_level: str = "INFO", log_file: str | None = None
+) -> logging.Logger:
     """Configure logging with optional file output."""
     handlers: list[logging.Handler] = [logging.StreamHandler()]
     if log_file:
@@ -215,6 +217,28 @@ def is_single_advert_break(json_path: Path, break_index: int) -> bool:
     return len(breaks[break_index].get("adverts", [])) == 1
 
 
+def get_single_advert_duration(json_path: Path, break_index: int) -> int | None:
+    """Get duration for a single-advert break, trying unique_id if null."""
+    with open(json_path) as f:
+        data = json.load(f)
+    breaks = data.get("ad_breaks", [])
+    if break_index >= len(breaks):
+        return None
+    adverts = breaks[break_index].get("adverts", [])
+    if len(adverts) != 1:
+        return None
+    duration = adverts[0].get("duration_seconds")
+    if duration is not None:
+        return duration
+    # Try to derive from unique_id suffix
+    try:
+        from ad_break_identifier.models import parse_duration_from_unique_id
+
+        return parse_duration_from_unique_id(adverts[0].get("unique_id", ""))
+    except ImportError:
+        return None
+
+
 def log_single_advert_break(
     json_path: Path,
     break_index: int,
@@ -230,6 +254,15 @@ def log_single_advert_break(
     break_data = data["ad_breaks"][break_index]
     adv = break_data["adverts"][0]
 
+    duration = adv.get("duration_seconds")
+    if duration is None:
+        try:
+            from ad_break_identifier.models import parse_duration_from_unique_id
+
+            duration = parse_duration_from_unique_id(adv.get("unique_id", ""))
+        except ImportError:
+            pass
+
     row = {
         "timestamp": datetime.now().isoformat(),
         "video_file": video_path.name,
@@ -240,7 +273,7 @@ def log_single_advert_break(
         "brand": adv["brand"],
         "advertiser": adv["advertiser"],
         "category": adv["category"],
-        "duration_seconds": adv.get("duration_seconds", ""),
+        "duration_seconds": duration if duration is not None else "",
     }
 
     write_header = not log_path.exists()
@@ -595,9 +628,8 @@ def main() -> int:
     # Only process source video files (YYYY-MM-DD_CHANNEL_HH:MM:SS.mp4),
     # not advert clip files which share the same extension.
     import re
-    source_pat = re.compile(
-        r"^\d{4}-\d{2}-\d{2}_[A-Za-z0-9_]+_\d{2}:\d{2}:\d{2}"
-    )
+
+    source_pat = re.compile(r"^\d{4}-\d{2}-\d{2}_[A-Za-z0-9_]+_\d{2}:\d{2}:\d{2}")
     mp4_files = sorted(
         p for p in input_folder.glob("*.mp4") if source_pat.match(p.name)
     )
@@ -694,22 +726,29 @@ def main() -> int:
         for ad_break_index in range(num_ad_breaks):
             logger.info(f"Processing ad break {ad_break_index + 1}/{num_ad_breaks}")
 
-            # Single-advert break — skip OCR and clipping entirely
+            # Single-advert break — skip only if duration is unknown
             if is_single_advert_break(json_path, ad_break_index):
-                log_single_advert_break(json_path, ad_break_index, mp4_file, logger)
-                ad_break_results.append(
-                    {
-                        "index": ad_break_index,
-                        "success": True,
-                        "skipped": True,
-                        "advert_count": 1,
-                        "last_time": None,
-                        "last_type": None,
-                        "clip_count": 0,
-                    }
+                duration = get_single_advert_duration(json_path, ad_break_index)
+                if duration is None:
+                    log_single_advert_break(json_path, ad_break_index, mp4_file, logger)
+                    ad_break_results.append(
+                        {
+                            "index": ad_break_index,
+                            "success": True,
+                            "skipped": True,
+                            "advert_count": 1,
+                            "last_time": None,
+                            "last_type": None,
+                            "clip_count": 0,
+                        }
+                    )
+                    total_adverts += 1
+                    continue
+                logger.info(
+                    "Single-advert break #%d: %ds duration from metadata — proceeding with detection",
+                    ad_break_index + 1,
+                    duration,
                 )
-                total_adverts += 1
-                continue
 
             # Step 2: OCR detection on original video
             success, xml_path, advert_count = run_advert_identifier(

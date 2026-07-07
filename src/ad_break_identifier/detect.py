@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_FPS = 5.0
 DEFAULT_BEFORE_SECS = 10.0
-DEFAULT_AFTER_SECS = 240.0
+DEFAULT_AFTER_SECS = 360.0
 
 
 # ── Text matching ────────────────────────────────────────────────────────

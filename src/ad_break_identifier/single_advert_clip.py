@@ -172,6 +172,13 @@ def parse_advert_xml(xml_path: str) -> list[dict]:
     return adverts
 
 
+def parse_duration_from_unique_id(unique_id: str) -> int | None:
+    suffix = unique_id[-3:] if len(unique_id) >= 3 else ""
+    if suffix.isdigit():
+        return int(suffix)
+    return None
+
+
 def calculate_durations(adverts: list[dict], default_duration: int = 30) -> list[dict]:
     """Calculate duration_seconds for last advert if missing.
 
@@ -185,8 +192,15 @@ def calculate_durations(adverts: list[dict], default_duration: int = 30) -> list
     """
     for i, advert in enumerate(adverts):
         if advert["duration_seconds"] is None:
-            if i == 0 and len(adverts) == 1:
-                # Single-advert break with no duration — use default
+            id_duration = parse_duration_from_unique_id(advert.get("unique_id", ""))
+            if id_duration is not None:
+                advert["duration_seconds"] = id_duration
+                logger.info(
+                    f"Advert {advert['index']}: derived {id_duration}s "
+                    f"from unique_id {advert['unique_id']}"
+                )
+            elif i == 0 and len(adverts) == 1:
+                # Single-advert break with no duration and unparseable ID
                 advert["duration_seconds"] = default_duration
                 logger.info(
                     f"Advert {advert['index']}: single advert, no duration in XML, "

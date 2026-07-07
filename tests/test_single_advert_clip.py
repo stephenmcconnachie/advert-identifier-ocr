@@ -1,7 +1,10 @@
 """Tests for single_advert_clip coordinate fixes."""
+
 from ad_break_identifier.single_advert_clip import (
     timecode_to_seconds,
     parse_advert_xml,
+    calculate_durations,
+    parse_duration_from_unique_id,
 )
 import pytest
 
@@ -103,3 +106,102 @@ class TestParseAdvertXml:
         assert len(adverts) == 2
         assert adverts[0]["refined_timecode"] == "00:04:30.080"
         assert adverts[1]["refined_timecode"] is None
+
+
+class TestCalculateDurations:
+    def test_single_advert_from_unique_id(self):
+        adverts = [
+            {
+                "index": 1,
+                "unique_id": "TAGDDGB048020",
+                "brand": "Dove",
+                "duration_seconds": None,
+                "last_timecode": "00:20.000",
+            },
+        ]
+        result = calculate_durations(adverts)
+        assert result[0]["duration_seconds"] == 20
+
+    def test_single_advert_fallback_default(self):
+        adverts = [
+            {
+                "index": 1,
+                "unique_id": "ADV1",
+                "brand": "Test",
+                "duration_seconds": None,
+                "last_timecode": "00:20.000",
+            },
+        ]
+        result = calculate_durations(adverts, default_duration=30)
+        assert result[0]["duration_seconds"] == 30
+
+    def test_last_advert_from_unique_id(self):
+        adverts = [
+            {
+                "index": 1,
+                "unique_id": "ADV001010",
+                "brand": "Brand1",
+                "duration_seconds": 10,
+                "last_timecode": "00:10.000",
+            },
+            {
+                "index": 2,
+                "unique_id": "ADV002020",
+                "brand": "Brand2",
+                "duration_seconds": None,
+                "last_timecode": "00:30.000",
+            },
+        ]
+        result = calculate_durations(adverts)
+        assert result[1]["duration_seconds"] == 20
+
+    def test_last_advert_calculated_from_timecodes(self):
+        adverts = [
+            {
+                "index": 1,
+                "unique_id": "NO_SUFFIX",
+                "brand": "Brand1",
+                "duration_seconds": 10,
+                "last_timecode": "00:10.000",
+            },
+            {
+                "index": 2,
+                "unique_id": "NO_SUFFIX_2",
+                "brand": "Brand2",
+                "duration_seconds": None,
+                "last_timecode": "00:30.000",
+            },
+        ]
+        result = calculate_durations(adverts)
+        assert result[1]["duration_seconds"] == 20
+
+    def test_first_advert_no_previous_raises(self):
+        with pytest.raises(ValueError, match="Cannot calculate duration"):
+            adverts = [
+                {
+                    "index": 1,
+                    "unique_id": "NO_SUFFIX",
+                    "brand": "Brand1",
+                    "duration_seconds": None,
+                    "last_timecode": "00:10.000",
+                },
+                {
+                    "index": 2,
+                    "unique_id": "ADV002020",
+                    "brand": "Brand2",
+                    "duration_seconds": 20,
+                    "last_timecode": "00:30.000",
+                },
+            ]
+            calculate_durations(adverts)
+
+
+class TestParseDurationFromUniqueIdLocal:
+    def test_valid_suffix(self):
+        assert parse_duration_from_unique_id("TAGDDGB048020") == 20
+
+    def test_no_suffix(self):
+        assert parse_duration_from_unique_id("ADV1") is None
+
+    def test_short_string(self):
+        assert parse_duration_from_unique_id("AB") is None

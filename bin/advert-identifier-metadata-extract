@@ -15,15 +15,17 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT / "src"))
 
+from ad_break_identifier.models import parse_duration_from_unique_id
+
 
 def parse_video_filename(filename):
     """Extract date, channel, time from filename.
-    
+
     Pattern: YYYY-MM-DD_CHANNEL_HH:MM:SS[_anything].ext
-    
+
     Args:
         filename: Video filename (e.g., "2024-03-26_ITV1HD_09:45:00_TIMECODE_OVERLAY.mp4")
-        
+
     Returns:
         dict with 'date', 'channel', 'time' or None if no match
     """
@@ -31,9 +33,9 @@ def parse_video_filename(filename):
     match = re.search(pattern, filename)
     if match:
         return {
-            "date": match.group(1),      # "2024-03-26"
-            "channel": match.group(2),   # "ITV1HD"
-            "time": match.group(3)       # "09:45:00"
+            "date": match.group(1),  # "2024-03-26"
+            "channel": match.group(2),  # "ITV1HD"
+            "time": match.group(3),  # "09:45:00"
         }
     return None
 
@@ -46,7 +48,7 @@ def normalize_date_for_csv(date_str):
 
 def normalize_channel(channel_str):
     """Normalize channel for comparison.
-    
+
     Examples:
         "ITV1HD" → "itv1hd"
         "ITV1 HD" → "itv1hd"
@@ -57,21 +59,25 @@ def normalize_channel(channel_str):
 
 def get_video_duration(video_path):
     """Get video duration in seconds using ffprobe.
-    
+
     Args:
         video_path: Path to video file.
-        
+
     Returns:
         Duration in seconds as float.
-        
+
     Raises:
         RuntimeError: If ffprobe fails.
     """
     cmd = [
-        "ffprobe", "-v", "error",
-        "-show_entries", "format=duration",
-        "-of", "default=noprint_wrappers=1:nokey=1",
-        str(video_path)
+        "ffprobe",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        str(video_path),
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
@@ -85,10 +91,10 @@ def get_video_duration(video_path):
 
 def time_to_seconds(time_str):
     """Convert HH:MM:SS to seconds since midnight.
-    
+
     Args:
         time_str: Time string in HH:MM:SS format.
-        
+
     Returns:
         Seconds as integer.
     """
@@ -98,10 +104,10 @@ def time_to_seconds(time_str):
 
 def seconds_to_time(total_seconds):
     """Convert seconds since midnight to HH:MM:SS.
-    
+
     Args:
         total_seconds: Seconds as integer.
-        
+
     Returns:
         Time string in HH:MM:SS format.
     """
@@ -113,11 +119,11 @@ def seconds_to_time(total_seconds):
 
 def calculate_end_time(start_time_str, duration_seconds):
     """Calculate end time from start time and duration.
-    
+
     Args:
         start_time_str: Start time in HH:MM:SS format.
         duration_seconds: Duration in seconds.
-        
+
     Returns:
         End time in HH:MM:SS format.
     """
@@ -128,12 +134,12 @@ def calculate_end_time(start_time_str, duration_seconds):
 
 def time_in_range(time_str, start_str, end_str):
     """Check if time is within range [start, end).
-    
+
     Args:
         time_str: Time to check in HH:MM:SS format.
         start_str: Start of range in HH:MM:SS format.
         end_str: End of range in HH:MM:SS format.
-        
+
     Returns:
         True if start <= time < end.
     """
@@ -145,32 +151,32 @@ def time_in_range(time_str, start_str, end_str):
 
 def find_csv_file(csv_folder, date_str):
     """Find CSV file matching date.
-    
+
     Pattern: {date}_BFIExport.csv
-    
+
     Args:
         csv_folder: Path to folder containing CSV files.
         date_str: Date in YYYY-MM-DD format.
-        
+
     Returns:
         Path to matching CSV file or None.
     """
     csv_folder = Path(csv_folder)
     csv_filename = f"{date_str}_BFIExport.csv"
     csv_path = csv_folder / csv_filename
-    
+
     if csv_path.exists():
         return csv_path
-    
+
     return None
 
 
 def load_csv(csv_path):
     """Load CSV file and return list of rows as dicts.
-    
+
     Args:
         csv_path: Path to CSV file.
-        
+
     Returns:
         List of dicts, one per row.
     """
@@ -184,30 +190,31 @@ def load_csv(csv_path):
 
 def filter_rows_by_channel(rows, video_channel):
     """Filter CSV rows by channel (case-insensitive partial match).
-    
+
     Args:
         rows: List of CSV rows.
         video_channel: Channel from video filename.
-        
+
     Returns:
         List of rows matching the channel.
     """
     # Normalize: lowercase and remove spaces for flexible matching
     video_channel_normalized = video_channel.lower().replace(" ", "")
     return [
-        row for row in rows
+        row
+        for row in rows
         if video_channel_normalized in row.get("Channel", "").lower().replace(" ", "")
     ]
 
 
 def filter_rows_by_time(rows, time_start, time_end):
     """Filter CSV rows by time range.
-    
+
     Args:
         rows: List of CSV rows (already filtered by channel).
         time_start: Start time in HH:MM:SS format.
         time_end: End time in HH:MM:SS format.
-        
+
     Returns:
         List of filtered rows.
     """
@@ -217,36 +224,36 @@ def filter_rows_by_time(rows, time_start, time_end):
         start_time = row.get("Start time", "")
         if time_in_range(start_time, time_start, time_end):
             filtered.append(row)
-    
+
     return filtered
 
 
 def group_by_ad_break(rows):
     """Group rows by ad break using BARB Prog Before/After AND 'Last' PIB markers.
-    
-    An advert marked as 'Last' in the 'All PIB rel' column signals the end of an 
-    ad break. The next advert starts a new break, even if the programme context 
+
+    An advert marked as 'Last' in the 'All PIB rel' column signals the end of an
+    ad break. The next advert starts a new break, even if the programme context
     is the same.
-    
+
     Args:
         rows: List of CSV rows (already filtered by time).
-        
+
     Returns:
         List of ad break dicts, each with adverts list.
     """
     if not rows:
         return []
-    
+
     breaks = []
     current_break = None
     last_was_last = False  # Track if previous advert was a 'Last' marker
-    
+
     for row in rows:
         key = (row.get("BARB Prog Before", ""), row.get("BARB Prog After", ""))
         pib_rel = row.get("All PIB rel", "").strip()
         pib_pos = row.get("All PIB pos", "").strip()
-        is_last = (pib_rel == "Last" or pib_pos == "Last")
-        
+        is_last = pib_rel == "Last" or pib_pos == "Last"
+
         # Start new break if:
         # 1. First advert (current_break is None)
         # 2. Programme context changed
@@ -260,28 +267,28 @@ def group_by_ad_break(rows):
                 "programme_before": row.get("BARB Prog Before", ""),
                 "programme_after": row.get("BARB Prog After", ""),
                 "channel": row.get("Channel", ""),
-                "adverts": []
+                "adverts": [],
             }
-        
+
         current_break["adverts"].append(row)
         last_was_last = is_last
-    
+
     if current_break is not None:
         breaks.append(current_break)
-    
+
     return breaks
 
 
 def calculate_advert_durations(adverts, logger=None):
     """Calculate duration for each advert based on next advert's start time.
-    
-    The last advert in the sequence (identified by 'All PIB rel' = 'Last') 
+
+    The last advert in the sequence (identified by 'All PIB rel' = 'Last')
     always has null duration.
-    
+
     Args:
         adverts: List of advert rows.
         logger: Optional logging function for debug output.
-        
+
     Returns:
         List of dicts with duration_seconds (null for last advert).
     """
@@ -291,57 +298,65 @@ def calculate_advert_durations(adverts, logger=None):
         start_seconds = time_to_seconds(start_time)
         pib_rel = advert.get("All PIB rel", "").strip()
         pib_pos = advert.get("All PIB pos", "").strip()
-        
+
         # Check if this is the last advert in the break sequence
-        is_last = (pib_rel == "Last" or pib_pos == "Last")
-        
+        is_last = pib_rel == "Last" or pib_pos == "Last"
+
         if is_last:
             # Last advert: no duration (null)
             duration = None
             if logger:
-                logger(f"Advert at {start_time} marked as 'Last' - setting duration to null")
+                logger(
+                    f"Advert at {start_time} marked as 'Last' - setting duration to null"
+                )
         elif i < len(adverts) - 1:
             # Not last advert: calculate duration from next advert
             next_start = adverts[i + 1].get("Start time", "")
             next_seconds = time_to_seconds(next_start)
             duration = next_seconds - start_seconds
             if logger:
-                logger(f"Advert at {start_time}: duration = {duration}s (next advert at {next_start})")
+                logger(
+                    f"Advert at {start_time}: duration = {duration}s (next advert at {next_start})"
+                )
         else:
             # Fallback: if no 'Last' marker found, last item gets null
             duration = None
             if logger:
-                logger(f"Advert at {start_time} is last in list (no 'Last' marker) - setting duration to null")
-        
-        result.append({
-            "start_time": start_time,
-            "duration_seconds": duration,
-            "start_seconds": start_seconds,
-            "is_last": is_last
-        })
-    
+                logger(
+                    f"Advert at {start_time} is last in list (no 'Last' marker) - setting duration to null"
+                )
+
+        result.append(
+            {
+                "start_time": start_time,
+                "duration_seconds": duration,
+                "start_seconds": start_seconds,
+                "is_last": is_last,
+            }
+        )
+
     return result
 
 
 def check_partial_break(adverts_with_duration, video_start, video_end):
     """Check if ad break is partial (extends outside video range).
-    
+
     Args:
         adverts_with_duration: List of adverts with calculated durations.
         video_start: Video start time in HH:MM:SS.
         video_end: Video end time in HH:MM:SS.
-        
+
     Returns:
         Dict with is_partial flag and optional missing counts.
     """
     if not adverts_with_duration:
         return {"is_partial": False}
-    
+
     video_start_sec = time_to_seconds(video_start)
     video_end_sec = time_to_seconds(video_end)
-    
+
     first_start = adverts_with_duration[0]["start_seconds"]
-    
+
     # Get last advert end time
     last_advert = adverts_with_duration[-1]
     last_start = last_advert["start_seconds"]
@@ -351,100 +366,123 @@ def check_partial_break(adverts_with_duration, video_start, video_end):
     else:
         # Estimate last advert duration as 20 seconds
         last_end = last_start + 20
-    
+
     missing_start = 0
     missing_end = 0
-    
+
     # Check if first advert starts before video
     if first_start < video_start_sec:
         missing_start = 1
-    
+
     # Check if last advert ends after video
     if last_end > video_end_sec:
         missing_end = 1
-    
+
     is_partial = missing_start > 0 or missing_end > 0
-    
+
     result = {"is_partial": bool(is_partial)}
     if is_partial:
         if missing_start > 0:
             result["missing_start_adverts"] = int(missing_start)
         if missing_end > 0:
             result["missing_end_adverts"] = int(missing_end)
-    
+
     return result
 
 
 def build_ad_break_output(break_data, video_start, video_end, break_index):
     """Build output dict for a single ad break.
-    
+
     Args:
         break_data: Ad break dict from group_by_ad_break.
         video_start: Video start time.
         video_end: Video end time.
         break_index: Index of this break in the list.
-        
+
     Returns:
         Dict ready for JSON output.
     """
     adverts = break_data["adverts"]
-    
+
     # Calculate durations with logging
     print(f"\nCalculating durations for {len(adverts)} adverts in break {break_index}:")
     adverts_with_duration = calculate_advert_durations(adverts, logger=print)
-    
+
     # Check if partial
     partial_info = check_partial_break(adverts_with_duration, video_start, video_end)
-    
+
     # Build adverts list
     adverts_output = []
     for i, (advert, dur_info) in enumerate(zip(adverts, adverts_with_duration)):
+        film_code = advert.get("Film Code", "")
+        duration = dur_info["duration_seconds"]
+
+        if duration is not None:
+            id_duration = parse_duration_from_unique_id(film_code)
+            if id_duration is not None and id_duration != duration:
+                print(
+                    f"  WARNING: Advert {film_code}: CSV duration ({duration}s) "
+                    f"differs from unique_id suffix ({id_duration}s)"
+                )
+        else:
+            parsed = parse_duration_from_unique_id(film_code)
+            if parsed is not None:
+                print(
+                    f"  Advert {film_code}: derived {parsed}s duration "
+                    f"from unique_id suffix (was null in CSV)"
+                )
+                duration = parsed
+
         advert_output = {
-            "unique_id": advert.get("Film Code", ""),
+            "unique_id": film_code,
             "advertiser": advert.get("Advertiser", ""),
             "brand": advert.get("Brand", ""),
             "category": advert.get("Minor category", ""),
-            "duration_seconds": dur_info["duration_seconds"],
+            "duration_seconds": duration,
             "start_time": dur_info["start_time"],
-            "position_in_break": advert.get("All PIB rel", "")
+            "position_in_break": advert.get("All PIB rel", ""),
         }
         adverts_output.append(advert_output)
-    
+
     # Get break time range
-    break_start = adverts_with_duration[0]["start_time"] if adverts_with_duration else ""
+    break_start = (
+        adverts_with_duration[0]["start_time"] if adverts_with_duration else ""
+    )
     if adverts_with_duration:
         last_advert = adverts_with_duration[-1]
         if last_advert["duration_seconds"] is not None:
-            break_end_seconds = last_advert["start_seconds"] + last_advert["duration_seconds"]
+            break_end_seconds = (
+                last_advert["start_seconds"] + last_advert["duration_seconds"]
+            )
             break_end = seconds_to_time(break_end_seconds)
         else:
             break_end = seconds_to_time(last_advert["start_seconds"] + 20)  # Estimate
     else:
         break_end = ""
-    
+
     output = {
         "index": break_index,
         "is_partial": partial_info["is_partial"],
         "programme_before": {
             "title": break_data["programme_before"],
-            "channel": break_data["channel"]
+            "channel": break_data["channel"],
         },
         "programme_after": {
             "title": break_data["programme_after"],
-            "channel": break_data["channel"]
+            "channel": break_data["channel"],
         },
         "start_time": break_start,
         "end_time": break_end,
-        "adverts": adverts_output
+        "adverts": adverts_output,
     }
-    
+
     # Add partial info if applicable
     if partial_info["is_partial"]:
         if "missing_start_adverts" in partial_info:
             output["missing_start_adverts"] = partial_info["missing_start_adverts"]
         if "missing_end_adverts" in partial_info:
             output["missing_end_adverts"] = partial_info["missing_end_adverts"]
-    
+
     return output
 
 
@@ -454,86 +492,101 @@ def main():
         description="Extract ad break metadata from CSV files based on video filename."
     )
     parser.add_argument(
-        "-v", "--video",
+        "-v",
+        "--video",
         required=True,
-        help="Path to video file (e.g., /path/to/2024-03-26_ITV1HD_09:45:00.mp4)"
+        help="Path to video file (e.g., /path/to/2024-03-26_ITV1HD_09:45:00.mp4)",
     )
     parser.add_argument(
-        "-c", "--csv-folder",
-        help="Path to folder containing CSV files (default: /mnt/qnap_04/Admin/datasets/adverts_techedge_no_dupes)"
+        "-c",
+        "--csv-folder",
+        help="Path to folder containing CSV files (default: /mnt/qnap_04/Admin/datasets/adverts_techedge_no_dupes)",
     )
     parser.add_argument(
-        "-o", "--output-dir",
-        help="Output directory for JSON file (default: video file directory)"
+        "-o",
+        "--output-dir",
+        help="Output directory for JSON file (default: video file directory)",
     )
     parser.add_argument(
         "--before-secs",
         type=float,
         default=10.0,
         help="Seconds before ad break start used for clip extraction (default: 10.0). "
-             "Affects clip_offset computation in the pipeline state file."
+        "Affects clip_offset computation in the pipeline state file.",
     )
 
     args = parser.parse_args()
-    
+
     # Parse video path
     video_path = Path(args.video)
     if not video_path.exists():
         print(f"Error: Video file not found: {video_path}", file=sys.stderr)
         sys.exit(1)
-    
+
     # Parse filename
     filename = video_path.name
     parsed = parse_video_filename(filename)
     if parsed is None:
-        print(f"Error: Could not parse date/channel/time from filename: {filename}", file=sys.stderr)
-        print("Expected format: YYYY-MM-DD_CHANNEL_HH:MM:SS[_anything].ext", file=sys.stderr)
+        print(
+            f"Error: Could not parse date/channel/time from filename: {filename}",
+            file=sys.stderr,
+        )
+        print(
+            "Expected format: YYYY-MM-DD_CHANNEL_HH:MM:SS[_anything].ext",
+            file=sys.stderr,
+        )
         sys.exit(1)
-    
+
     date_str = parsed["date"]
     channel_str = parsed["channel"]
     time_start = parsed["time"]
-    
+
     print(f"Parsed filename:")
     print(f"  Date: {date_str}")
     print(f"  Channel: {channel_str}")
     print(f"  Start time: {time_start}")
-    
+
     # Get video duration
     try:
         duration = get_video_duration(video_path)
     except RuntimeError as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
-    
+
     time_end = calculate_end_time(time_start, duration)
     print(f"Video duration: {duration:.1f} seconds")
     print(f"Time range: {time_start} to {time_end}")
-    
+
     # Determine CSV folder (use default if not provided)
     csv_folder = args.csv_folder
     if csv_folder is None:
         csv_folder = "/mnt/qnap_04/Admin/datasets/adverts_techedge_no_dupes"
         print(f"Using default CSV folder: {csv_folder}")
-    
+
     # Find CSV file (date-based only)
     csv_path = find_csv_file(csv_folder, date_str)
     if csv_path is None:
-        print(f"Error: No CSV file found for date {date_str} (looking for {date_str}_BFIExport.csv)", file=sys.stderr)
+        print(
+            f"Error: No CSV file found for date {date_str} (looking for {date_str}_BFIExport.csv)",
+            file=sys.stderr,
+        )
         sys.exit(1)
-    
+
     print(f"Found CSV: {csv_path.name}")
-    
+
     # Load all rows from CSV
     rows = load_csv(csv_path)
     print(f"Loaded {len(rows)} total rows from CSV")
-    
+
     # Filter by channel (case-insensitive partial match)
     channel_rows = filter_rows_by_channel(rows, channel_str)
     print(f"Found {len(channel_rows)} rows matching channel '{channel_str}'")
-    
+
     if not channel_rows:
-        print(f"Error: No adverts found for channel '{channel_str}' in CSV", file=sys.stderr)
+        print(
+            f"Error: No adverts found for channel '{channel_str}' in CSV",
+            file=sys.stderr,
+        )
         # Create empty output with error
         output = {
             "video_info": {
@@ -542,21 +595,21 @@ def main():
                 "channel": channel_str,
                 "start_time": time_start,
                 "duration_seconds": duration,
-                "end_time": time_end
+                "end_time": time_end,
             },
             "ad_breaks": [],
             "summary": {
                 "total_ad_breaks": 0,
                 "partial_breaks": 0,
                 "total_adverts": 0,
-                "error": f"No channel match: {channel_str}"
-            }
+                "error": f"No channel match: {channel_str}",
+            },
         }
     else:
         # Filter by time range
         filtered_rows = filter_rows_by_time(channel_rows, time_start, time_end)
         print(f"Found {len(filtered_rows)} rows in time range")
-        
+
         if not filtered_rows:
             print("Warning: No adverts found in time range", file=sys.stderr)
             # Create empty output
@@ -567,30 +620,32 @@ def main():
                     "channel": channel_str,
                     "start_time": time_start,
                     "duration_seconds": duration,
-                    "end_time": time_end
+                    "end_time": time_end,
                 },
                 "ad_breaks": [],
                 "summary": {
                     "total_ad_breaks": 0,
                     "partial_breaks": 0,
-                    "total_adverts": 0
-                }
+                    "total_adverts": 0,
+                },
             }
         else:
             # Group by ad break
             breaks = group_by_ad_break(filtered_rows)
             print(f"Found {len(breaks)} ad break(s)")
-            
+
             # Build output for each break
             ad_breaks_output = []
             for i, break_data in enumerate(breaks, 1):
-                break_output = build_ad_break_output(break_data, time_start, time_end, i)
+                break_output = build_ad_break_output(
+                    break_data, time_start, time_end, i
+                )
                 ad_breaks_output.append(break_output)
-            
+
             # Count partials and total adverts
             partial_count = sum(1 for b in ad_breaks_output if b["is_partial"])
             total_adverts = sum(len(b["adverts"]) for b in ad_breaks_output)
-            
+
             output = {
                 "video_info": {
                     "filepath": str(video_path),
@@ -598,33 +653,33 @@ def main():
                     "channel": channel_str,
                     "start_time": time_start,
                     "duration_seconds": duration,
-                    "end_time": time_end
+                    "end_time": time_end,
                 },
                 "ad_breaks": ad_breaks_output,
                 "summary": {
                     "total_ad_breaks": len(ad_breaks_output),
                     "partial_breaks": partial_count,
-                    "total_adverts": total_adverts
-                }
+                    "total_adverts": total_adverts,
+                },
             }
-    
+
     # Determine output path
     if args.output_dir:
         output_dir = Path(args.output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
     else:
         output_dir = video_path.parent
-    
+
     # Generate output filename
     output_filename = f"{video_path.stem}_metadata.json"
     output_path = output_dir / output_filename
-    
+
     # Write JSON
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2)
-    
+
     print(f"Output written to: {output_path}")
-    
+
     # Write pipeline state file
     try:
         from ad_break_identifier.pipeline_state import (
@@ -632,18 +687,26 @@ def main():
             derive_state_path,
             write_state,
         )
+
         state = create_initial_state(str(output_path), args.before_secs)
         state_path = derive_state_path(str(output_path))
         write_state(state_path, state)
         print(f"Pipeline state written to: {state_path}")
     except Exception as e:
         print(f"Warning: Could not write pipeline state: {e}", file=sys.stderr)
-    print(f"Summary: {output['summary']['total_ad_breaks']} ad break(s), {output['summary']['total_adverts']} advert(s)")
-    
+    print(
+        f"Summary: {output['summary']['total_ad_breaks']} ad break(s), {output['summary']['total_adverts']} advert(s)"
+    )
+
     # Only show partial break info if we have results and partial_count is defined
-    if output['summary']['total_ad_breaks'] > 0 and output['summary'].get('partial_breaks', 0) > 0:
-        print(f"Note: {output['summary']['partial_breaks']} ad break(s) are partial (may be incomplete)")
-    
+    if (
+        output["summary"]["total_ad_breaks"] > 0
+        and output["summary"].get("partial_breaks", 0) > 0
+    ):
+        print(
+            f"Note: {output['summary']['partial_breaks']} ad break(s) are partial (may be incomplete)"
+        )
+
     sys.exit(0)
 
 

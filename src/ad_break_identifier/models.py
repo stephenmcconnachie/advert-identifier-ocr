@@ -1,11 +1,32 @@
 """Data models for ad break sequence identification."""
 
+import logging
 from dataclasses import dataclass, field
+
+logger = logging.getLogger(__name__)
+
+VALID_DURATIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]
+
+
+def parse_duration_from_unique_id(unique_id: str) -> int | None:
+    suffix = unique_id[-3:] if len(unique_id) >= 3 else ""
+    if suffix.isdigit():
+        parsed = int(suffix)
+        if parsed in VALID_DURATIONS:
+            return parsed
+        logger.warning(
+            "Unique ID %s has duration suffix %d outside valid range %s",
+            unique_id,
+            parsed,
+            VALID_DURATIONS,
+        )
+    return None
 
 
 @dataclass
 class ProgrammeMetadata:
     """Metadata for a TV programme segment."""
+
     title: str
     channel: str
 
@@ -13,6 +34,7 @@ class ProgrammeMetadata:
 @dataclass
 class AdvertMetadata:
     """Metadata for a single advertisement."""
+
     unique_id: str
     advertiser: str
     brand: str
@@ -20,7 +42,10 @@ class AdvertMetadata:
     duration_seconds: int | None = None
 
     def __post_init__(self):
-        if self.duration_seconds is not None and self.duration_seconds not in [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120]:
+        if (
+            self.duration_seconds is not None
+            and self.duration_seconds not in VALID_DURATIONS
+        ):
             raise ValueError(
                 f"Invalid duration: {self.duration_seconds}. "
                 "Must be 10, 20, 30, ..., 120 (or None for unknown)."
@@ -30,6 +55,7 @@ class AdvertMetadata:
 @dataclass
 class AdBreakMetadata:
     """Complete metadata for an ad break sequence."""
+
     programme_before: ProgrammeMetadata
     programme_after: ProgrammeMetadata
     adverts: list[AdvertMetadata] = field(default_factory=list)
@@ -43,6 +69,7 @@ class AdBreakMetadata:
 @dataclass
 class AdvertResult:
     """Result for a single advert detection."""
+
     timecode: str | None = None
     frame: int | None = None
     advert_id: str = ""
@@ -57,6 +84,7 @@ class AdvertResult:
 @dataclass
 class AdBreakResult:
     """Complete result for ad break analysis."""
+
     success: bool = False
     error: str | None = None
     ident_end_timecode: str | None = None
