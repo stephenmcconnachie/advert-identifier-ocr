@@ -137,6 +137,14 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         help="Directory for frame images, OCR results JSON, and QC HTML report (passed to advert-identifier)",
     )
+    parser.add_argument(
+        "--min-break-confidence",
+        type=float,
+        default=0.0,
+        help="Skip clip extraction for breaks with confidence below this "
+        "threshold (0.0–1.0, default: 0.0 = always extract). Low-confidence "
+        "breaks are logged to low_confidence_breaks.csv.",
+    )
     return parser
 
 
@@ -288,6 +296,71 @@ def log_single_advert_break(
         break_index + 1,
         adv["unique_id"],
         adv["brand"],
+        log_path,
+    )
+
+
+def get_break_confidence(state_path: Path, break_index: int) -> dict | None:
+    """Read confidence dict for a break from the pipeline state file.
+
+    Args:
+        state_path: Path to the ``_pipeline_state.json`` file.
+        break_index: 0-based break index.
+
+    Returns:
+        Confidence dict (with ``score``, ``reasons``, etc.) or None.
+    """
+    try:
+        with open(state_path) as f:
+            state = json.load(f)
+        breaks = state.get("ad_breaks", [])
+        if break_index >= len(breaks):
+            return None
+        return breaks[break_index].get("confidence")
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def log_low_confidence_break(
+    state_path: Path,
+    break_index: int,
+    video_path: Path,
+    confidence: dict,
+    logger: logging.Logger,
+) -> None:
+    """Append a row to low_confidence_breaks.csv in the repo root."""
+    repo_root = Path(__file__).resolve().parent.parent
+    log_path = repo_root / "low_confidence_breaks.csv"
+
+    try:
+        with open(state_path) as f:
+            state = json.load(f)
+        break_data = state["ad_breaks"][break_index]
+    except (OSError, json.JSONDecodeError, KeyError, IndexError):
+        break_data = {}
+
+    row = {
+        "timestamp": datetime.now().isoformat(),
+        "video_file": video_path.name,
+        "break_index": break_index + 1,
+        "start_time": break_data.get("start_time", ""),
+        "confidence_score": confidence.get("score", ""),
+        "matched_count": confidence.get("matched_count", ""),
+        "total_count": confidence.get("total_count", ""),
+        "reasons": "; ".join(confidence.get("reasons", [])),
+    }
+
+    write_header = not log_path.exists()
+    with open(log_path, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(row.keys()))
+        if write_header:
+            writer.writeheader()
+        writer.writerow(row)
+
+    logger.warning(
+        "Low-confidence break #%d: score=%.3f — logged to %s",
+        break_index + 1,
+        confidence.get("score", 0.0),
         log_path,
     )
 
@@ -769,6 +842,39 @@ def main() -> int:
 
             if success:
                 last_time, last_type = parse_last_advert_info(xml_path)
+
+                # Check break confidence — skip clip extraction if below threshold
+                confidence = (
+                    get_break_confidence(Path(state_file_path), ad_break_index)
+                    if state_file_path
+                    else None
+                )
+                min_conf = args.min_break_confidence
+                if (
+                    confidence is not None
+                    and min_conf > 0
+                    and confidence.get("score", 1.0) < min_conf
+                ):
+                    log_low_confidence_break(
+                        Path(state_file_path),
+                        ad_break_index,
+                        mp4_file,
+                        confidence,
+                        logger,
+                    )
+                    ad_break_results.append(
+                        {
+                            "index": ad_break_index,
+                            "success": True,
+                            "skipped_low_confidence": True,
+                            "advert_count": advert_count,
+                            "last_time": last_time,
+                            "last_type": last_type,
+                            "clip_count": 0,
+                        }
+                    )
+                    total_adverts += advert_count
+                    continue
 
                 # Step 3: Extract individual advert clips
                 clips_success, clip_count = run_single_advert_clipper(

@@ -59,6 +59,7 @@ DEFAULT_AFTER_SECS = 360.0
 
 def build_exact_patterns(
     brand: str,
+    skip_words: bool = False,
 ) -> list[re.Pattern]:
     """Build word-boundary regex patterns for exact matching.
 
@@ -67,6 +68,12 @@ def build_exact_patterns(
     Generates case-insensitive patterns with \\b word boundaries for
     brand and individual words from multi-word terms.
     Apostrophe-stripped variants are also included.
+
+    When *skip_words* is True, only the full-phrase pattern (and its
+    apostrophe-stripped variant) is generated — individual word
+    patterns are suppressed.  This is used by the advertiser fallback
+    (Tier 3) to avoid false positives from common words like "group"
+    in advertiser names such as "Avios group".
     """
     patterns: list[re.Pattern] = []
     seen: set[str] = set()
@@ -79,12 +86,15 @@ def build_exact_patterns(
     escaped = re.escape(term)
     patterns.append(re.compile(rf"\b{escaped}\b", re.IGNORECASE))
 
-    words = term.split()
-    if len(words) > 1:
-        for word in words:
-            if len(word) >= 4 and word not in seen:
-                seen.add(word)
-                patterns.append(re.compile(rf"\b{re.escape(word)}\b", re.IGNORECASE))
+    if not skip_words:
+        words = term.split()
+        if len(words) > 1:
+            for word in words:
+                if len(word) >= 4 and word not in seen:
+                    seen.add(word)
+                    patterns.append(
+                        re.compile(rf"\b{re.escape(word)}\b", re.IGNORECASE)
+                    )
 
     simplified = term.replace("'", "").replace("\u2019", "")
     if simplified != term and simplified not in seen:
@@ -96,6 +106,7 @@ def build_exact_patterns(
 
 def build_substring_patterns(
     brand: str,
+    skip_words: bool = False,
 ) -> list[re.Pattern]:
     """Build unbounded regex patterns for fuzzy substring matching.
 
@@ -103,6 +114,12 @@ def build_substring_patterns(
     concatenated forms like "galaxychocolate.com".  Individual words
     shorter than 4 chars are excluded to avoid false positives from
     short common substrings (e.g. "age" inside "image").
+
+    When *skip_words* is True, only the full-phrase substring pattern
+    (and its apostrophe-stripped variant) is generated — individual
+    word substrings are suppressed.  This is used by the advertiser
+    fallback (Tier 3) to prevent generic words like "group" from
+    matching unrelated OCR text.
     """
     patterns: list[re.Pattern] = []
     seen: set[str] = set()
@@ -115,12 +132,13 @@ def build_substring_patterns(
     escaped = re.escape(term)
     patterns.append(re.compile(escaped, re.IGNORECASE))
 
-    words = term.split()
-    if len(words) > 1:
-        for word in words:
-            if len(word) >= 4 and word not in seen:
-                seen.add(word)
-                patterns.append(re.compile(re.escape(word), re.IGNORECASE))
+    if not skip_words:
+        words = term.split()
+        if len(words) > 1:
+            for word in words:
+                if len(word) >= 4 and word not in seen:
+                    seen.add(word)
+                    patterns.append(re.compile(re.escape(word), re.IGNORECASE))
 
     simplified = term.replace("'", "").replace("\u2019", "")
     if simplified != term and simplified not in seen:
@@ -664,9 +682,11 @@ def search_with_ordering(
 
         # Tier 3: advertiser fallback — retry with advertiser patterns when
         # brand-only failed (catches cases like "Disneyland" brand where
-        # OCR only sees "Disney" from "Walt disney company").
-        adv_exact = build_exact_patterns(brand=adv.advertiser)
-        adv_sub = build_substring_patterns(brand=adv.advertiser)
+        # OCR only sees "Disney" from "Walt disney company").  Individual
+        # word patterns are suppressed (skip_words=True) to avoid false
+        # positives from generic words like "group" in "Avios group".
+        adv_exact = build_exact_patterns(brand=adv.advertiser, skip_words=True)
+        adv_sub = build_substring_patterns(brand=adv.advertiser, skip_words=True)
         adv_matches: list[int] = []
         adv_terms: set[str] = set()
 
@@ -1014,9 +1034,13 @@ def _refine_advert_end_frames(
 
             r = _sp.run(
                 [
-                    "ffprobe", "-v", "error",
-                    "-show_entries", "format=duration",
-                    "-of", "default=noprint_wrappers=1:nokey=1",
+                    "ffprobe",
+                    "-v",
+                    "error",
+                    "-show_entries",
+                    "format=duration",
+                    "-of",
+                    "default=noprint_wrappers=1:nokey=1",
                     video_path,
                 ],
                 capture_output=True,
@@ -1080,7 +1104,9 @@ def _refine_advert_end_frames(
             logger.info(
                 "  %s: T_broadcast=%.3fs exceeds video duration "
                 "(%.3fs), skipping refinement",
-                brand, T_broadcast, vid_dur,
+                brand,
+                T_broadcast,
+                vid_dur,
             )
             r.refined_end_seconds = None
             r.refinement_data = {
@@ -1113,9 +1139,7 @@ def _refine_advert_end_frames(
                 "rgb24",
                 pattern,
             ]
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=30
-            )
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             if result.returncode != 0 or "Output file is empty" in result.stderr:
                 logger.warning(
                     "  %s: refinement FFmpeg failed (rc=%d): %s",
@@ -1376,9 +1400,7 @@ def format_xml(
             duration_scheduled = adv.duration_seconds
 
             if duration_scheduled is not None:
-                start_seconds = (
-                    effective_end - duration_scheduled + (3.0 / SOURCE_FPS)
-                )
+                start_seconds = effective_end - duration_scheduled + (3.0 / SOURCE_FPS)
                 dur_to_write = duration_scheduled
             elif prev_effective_end is not None:
                 start_seconds = prev_effective_end + (3.0 / SOURCE_FPS)
@@ -1795,6 +1817,100 @@ def generate_qc_html(
 
 # ── Pipeline state update ────────────────────────────────────────────────
 
+_TIER_SCORES: dict[str, float] = {
+    "exact": 1.0,
+    "words": 0.75,
+    "subwords": 0.5,
+    "advertiser": 0.3,
+    "estimated": 0.1,
+    "fallback": 0.0,
+}
+
+
+def _tier_base(tier: str) -> str:
+    return tier.split("(")[0].strip()
+
+
+def compute_break_confidence(
+    scan_results: list[BrandSearchResult],
+    ad_metadata: AdBreakMetadata,
+    fps: float = DEFAULT_FPS,
+    after_secs: float = DEFAULT_AFTER_SECS,
+    before_secs: float = DEFAULT_BEFORE_SECS,
+) -> dict[str, Any]:
+    """Compute a per-break confidence score (0.0–1.0).
+
+    Returns a dict with ``score`` (float), ``matched_count``,
+    ``total_count``, and a list of ``reasons`` (strings explaining
+    any deductions).
+    """
+    total = len(ad_metadata.adverts)
+    if total == 0:
+        return {"score": 0.0, "matched_count": 0, "total_count": 0, "reasons": []}
+
+    matched = [r for r in scan_results if r.matched and r.last_match_frame is not None]
+    matched_count = len(matched)
+    match_ratio = matched_count / total
+
+    avg_tier = 0.0
+    if scan_results:
+        tier_scores = [
+            _TIER_SCORES.get(_tier_base(r.match_tier), 0.0) for r in scan_results
+        ]
+        avg_tier = sum(tier_scores) / len(tier_scores)
+
+    first_tier = _tier_base(scan_results[0].match_tier) if scan_results else "fallback"
+    first_ok = first_tier in ("exact", "words", "subwords")
+
+    extract_window = before_secs + after_secs
+    outside_window = any(
+        r.last_match_seconds is not None and r.last_match_seconds > extract_window
+        for r in scan_results
+    )
+
+    spacing_ok = True
+    if matched_count >= 2:
+        frames = [r.last_match_frame for r in matched if r.last_match_frame is not None]
+        if frames:
+            actual_span = (max(frames) - min(frames)) / fps
+            expected_span = sum(
+                adv.duration_seconds or 30 for adv in ad_metadata.adverts[:-1]
+            )
+            if expected_span > 0:
+                ratio = actual_span / expected_span
+                if ratio < 0.3:
+                    spacing_ok = False
+
+    score = 0.0
+    reasons: list[str] = []
+
+    score += 0.30 * match_ratio
+    if match_ratio < 0.5:
+        reasons.append(f"low match ratio ({matched_count}/{total})")
+
+    score += 0.30 * avg_tier
+    if avg_tier < 0.4:
+        reasons.append(f"low average tier score ({avg_tier:.2f})")
+
+    score += 0.20 if spacing_ok else 0.0
+    if not spacing_ok:
+        reasons.append("matched adverts clustered too closely")
+
+    score += 0.10 if first_ok else 0.0
+    if not first_ok:
+        reasons.append(f"first advert weak match tier ({first_tier})")
+
+    score += 0.10 if not outside_window else 0.0
+    if outside_window:
+        reasons.append("advert position exceeds extraction window")
+
+    return {
+        "score": round(score, 3),
+        "matched_count": matched_count,
+        "total_count": total,
+        "reasons": reasons,
+    }
+
 
 def update_pipeline_state(
     metadata_file: str,
@@ -1802,7 +1918,7 @@ def update_pipeline_state(
     scan_results: list[BrandSearchResult],
     ad_metadata: AdBreakMetadata,
     fps: float,
-    after_secs: float = 240.0,
+    after_secs: float = DEFAULT_AFTER_SECS,
 ) -> None:
     """Update pipeline state JSON with detection results."""
     try:
@@ -1860,6 +1976,26 @@ def update_pipeline_state(
 
     if updates:
         update_break_adverts(state, ad_break_index, updates, fps, after_secs)
+
+        confidence = compute_break_confidence(
+            scan_results, ad_metadata, fps, after_secs
+        )
+        break_data = state["ad_breaks"][ad_break_index - 1]
+        break_data["confidence"] = confidence
+        if confidence["reasons"]:
+            logger.warning(
+                "  Break %d confidence %.3f — %s",
+                ad_break_index,
+                confidence["score"],
+                "; ".join(confidence["reasons"]),
+            )
+        else:
+            logger.info(
+                "  Break %d confidence %.3f",
+                ad_break_index,
+                confidence["score"],
+            )
+
         write_state(state_path, state)
         logger.info("Pipeline state updated: %s", state_path)
 
@@ -2013,7 +2149,10 @@ def run_detection(
             frames_dir=frames_dir,
             start_seconds=start_seconds,
         )
-        qc_path = output_dir / f"{video_stem or output_dir.name}_break{ad_break_index}_qc.html"
+        qc_path = (
+            output_dir
+            / f"{video_stem or output_dir.name}_break{ad_break_index}_qc.html"
+        )
         qc_path.write_text(qc_html, encoding="utf-8")
         _log("QC HTML written to: %s", qc_path)
 
