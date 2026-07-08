@@ -34,15 +34,25 @@ venv/
 # Egg info
 *.egg-info/
 
-# Generated frame images and QC output
+# Generated frame images and QC/reference HTML output
 *.png
 *_qc.html
+*_reference.html
 
 # Pipeline summary files
 *_pipeline-summary.txt
 
 # Generated output directories
 advert_min_cover_output/
+
+# Log files
+*.log
+
+# Single-advert breaks log
+single_advert_breaks.csv
+
+# Pipeline run output directories
+video/pipeline_*/
 
 # Database files
 *.db
