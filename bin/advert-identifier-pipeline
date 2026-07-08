@@ -145,6 +145,14 @@ def create_parser() -> argparse.ArgumentParser:
         "threshold (0.0–1.0, default: 0.0 = always extract). Low-confidence "
         "breaks are logged to low_confidence_breaks.csv.",
     )
+    parser.add_argument(
+        "--anchor-threshold",
+        type=float,
+        default=0.6,
+        help="Re-estimate low-confidence breaks using strongest OCR match "
+        "as anchor when confidence falls below this value (0.0 disables, "
+        "default: 0.6)",
+    )
     return parser
 
 
@@ -377,6 +385,7 @@ def run_advert_identifier(
     output_dir: str | None,
     logger: logging.Logger,
     verbose: bool = False,
+    anchor_threshold: float = 0.6,
 ) -> Tuple[bool, Optional[Path], int]:
     """Run advert-identifier (OCR detection) on the original video.
 
@@ -422,6 +431,7 @@ def run_advert_identifier(
         cmd.append("--verbose")
     if output_dir:
         cmd.extend(["--output-dir", output_dir])
+    cmd.extend(["--anchor-threshold", str(anchor_threshold)])
 
     logger.info(
         f"Running OCR detection for ad break {ad_break_index + 1}: {' '.join(cmd)}"
@@ -838,6 +848,7 @@ def main() -> int:
                 output_dir=args.output_dir,
                 logger=logger,
                 verbose=args.verbose,
+                anchor_threshold=args.anchor_threshold,
             )
 
             if success:

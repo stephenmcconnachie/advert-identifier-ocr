@@ -1822,6 +1822,8 @@ _TIER_SCORES: dict[str, float] = {
     "words": 0.75,
     "subwords": 0.5,
     "advertiser": 0.3,
+    "anchor": 0.6,
+    "anchor-verified": 0.8,
     "estimated": 0.1,
     "fallback": 0.0,
 }
@@ -1829,6 +1831,169 @@ _TIER_SCORES: dict[str, float] = {
 
 def _tier_base(tier: str) -> str:
     return tier.split("(")[0].strip()
+
+
+_TIER_RANK: dict[str, int] = {
+    "exact": 5,
+    "words": 4,
+    "subwords": 3,
+    "advertiser": 2,
+    "fallback": 0,
+}
+
+
+def anchor_based_reestimation(
+    scan_results: list[BrandSearchResult],
+    ad_metadata: AdBreakMetadata,
+    ocr_results: list[dict],
+    fps: float = DEFAULT_FPS,
+    after_secs: float = DEFAULT_AFTER_SECS,
+    before_secs: float = DEFAULT_BEFORE_SECS,
+) -> list[BrandSearchResult]:
+    """Re-estimate advert positions using the strongest OCR match as an anchor.
+
+    Selects the match with the highest tier (exact > words > subwords >
+    advertiser) as the trusted anchor, then computes all other advert
+    positions from known durations.  Each predicted window is validated
+    against OCR text — if brand words are found, the last matching frame
+    is used (``anchor-verified`` tier); otherwise the duration-based
+    position is used (``anchor`` tier).
+
+    Returns a new list of :class:`BrandSearchResult` objects.
+    """
+    adverts = ad_metadata.adverts
+    n = len(adverts)
+    if n == 0:
+        return scan_results
+
+    matched = [
+        (i, r)
+        for i, r in enumerate(scan_results)
+        if r.matched and r.last_match_frame is not None
+    ]
+    if not matched:
+        logger.info("  Anchor re-estimation: no matched adverts, cannot anchor")
+        return scan_results
+
+    def _effective_end(r: BrandSearchResult) -> float:
+        if r.refined_end_seconds is not None:
+            return r.refined_end_seconds
+        if r.last_match_seconds is not None:
+            return r.last_match_seconds
+        return 0.0
+
+    best_idx, best_result = max(
+        matched,
+        key=lambda pair: (
+            _TIER_RANK.get(_tier_base(pair[1].match_tier), 0),
+            pair[1].match_count,
+            -pair[0],
+        ),
+    )
+    anchor_end = _effective_end(best_result)
+    logger.info(
+        "  Anchor re-estimation: using advert %d (%s, tier=%s, end=%.1fs) as anchor",
+        best_idx + 1,
+        adverts[best_idx].brand,
+        best_result.match_tier,
+        anchor_end,
+    )
+
+    durations = []
+    for adv in adverts:
+        d = adv.duration_seconds
+        if d is None:
+            d = 30
+        durations.append(d)
+
+    starts: list[float] = [0.0] * n
+    ends: list[float] = [0.0] * n
+    starts[best_idx] = anchor_end - durations[best_idx]
+    ends[best_idx] = anchor_end
+
+    for i in range(best_idx - 1, -1, -1):
+        ends[i] = starts[i + 1]
+        starts[i] = ends[i] - durations[i]
+
+    for i in range(best_idx + 1, n):
+        starts[i] = ends[i - 1]
+        ends[i] = starts[i] + durations[i]
+
+    extract_window = before_secs + after_secs
+    new_results: list[BrandSearchResult] = []
+
+    for i, adv in enumerate(adverts):
+        pred_start = starts[i]
+        pred_end = ends[i]
+        start_frame = int(pred_start * fps)
+        end_frame = int(pred_end * fps)
+
+        patterns = build_exact_patterns(adv.brand)
+        sub_patterns = build_substring_patterns(adv.brand)
+
+        verified_frames: list[int] = []
+        verified_terms: set[str] = set()
+        for ocr_res in ocr_results:
+            fi = ocr_res["frame_index"]
+            if fi < start_frame or fi > end_frame:
+                continue
+            text = ocr_res.get("text", "")
+            matched_ok, terms = match_ocr_text(text, patterns)
+            if not matched_ok:
+                matched_ok, terms = match_ocr_text(text, sub_patterns)
+            if matched_ok:
+                verified_frames.append(fi)
+                verified_terms.update(t.lower() for t in terms)
+
+        if verified_frames:
+            last_f = verified_frames[-1]
+            last_s = last_f / fps
+            new_results.append(
+                BrandSearchResult(
+                    matched=True,
+                    last_match_frame=last_f,
+                    last_match_seconds=last_s,
+                    match_tier="anchor-verified",
+                    match_count=len(verified_frames),
+                    all_matching_frames=verified_frames,
+                    matched_terms=list(verified_terms),
+                    correction=f"anchor from advert {best_idx + 1} ({adverts[best_idx].brand})",
+                )
+            )
+            logger.info(
+                "  Anchor: advert %d (%s) verified at frame %d (%.1fs)",
+                i + 1,
+                adv.brand,
+                last_f,
+                last_s,
+            )
+        else:
+            outside = pred_start < 0 or pred_end > extract_window
+            tier = "anchor" if not outside else "anchor"
+            new_results.append(
+                BrandSearchResult(
+                    matched=False,
+                    last_match_frame=end_frame,
+                    last_match_seconds=pred_end,
+                    match_tier=tier,
+                    match_count=0,
+                    all_matching_frames=[],
+                    matched_terms=[],
+                    correction=(
+                        f"anchor from advert {best_idx + 1}"
+                        f"{' (outside OCR window)' if outside else ''}"
+                    ),
+                )
+            )
+            logger.info(
+                "  Anchor: advert %d (%s) estimated at %.1fs%s",
+                i + 1,
+                adv.brand,
+                pred_end,
+                " (outside OCR window)" if outside else "",
+            )
+
+    return new_results
 
 
 def compute_break_confidence(
@@ -2018,6 +2183,7 @@ def run_detection(
     verbose: bool = False,
     dry_run: bool = False,
     video_stem: str | None = None,
+    anchor_threshold: float = 0.6,
 ) -> tuple[str, list[BrandSearchResult]]:
     """Run the full OCR detection pipeline.
 
@@ -2133,6 +2299,35 @@ def run_detection(
             output_dir=output_dir,
             verbose=verbose,
         )
+
+    # 7b. Anchor-based re-estimation for low-confidence breaks
+    if anchor_threshold > 0:
+        confidence = compute_break_confidence(scan_results, metadata, fps, after_secs)
+        if confidence["score"] < anchor_threshold:
+            logger.info(
+                "  Break %d confidence %.3f < anchor threshold %.3f — "
+                "running anchor re-estimation",
+                ad_break_index,
+                confidence["score"],
+                anchor_threshold,
+            )
+            scan_results = anchor_based_reestimation(
+                scan_results=scan_results,
+                ad_metadata=metadata,
+                ocr_results=ocr_results,
+                fps=fps,
+                after_secs=after_secs,
+                before_secs=before_secs,
+            )
+            new_confidence = compute_break_confidence(
+                scan_results, metadata, fps, after_secs
+            )
+            logger.info(
+                "  Break %d confidence after anchor re-estimation: %.3f (was %.3f)",
+                ad_break_index,
+                new_confidence["score"],
+                confidence["score"],
+            )
 
     # 8. Format XML
     xml_output = format_xml(metadata, scan_results, fps)
@@ -2272,6 +2467,14 @@ def create_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip OCR API calls (for testing frame extraction only)",
     )
+    parser.add_argument(
+        "--anchor-threshold",
+        type=float,
+        default=0.6,
+        help="Re-estimate low-confidence breaks using strongest OCR match "
+        "as anchor when confidence falls below this value (0.0 disables, "
+        "default: 0.6)",
+    )
     return parser
 
 
@@ -2383,6 +2586,7 @@ def main(args: list[str] | None = None) -> int:
             verbose=parsed.verbose,
             dry_run=parsed.dry_run,
             video_stem=video_stem,
+            anchor_threshold=parsed.anchor_threshold,
         )
 
         # Write XML output
