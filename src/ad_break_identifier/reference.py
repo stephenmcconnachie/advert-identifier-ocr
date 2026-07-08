@@ -2,13 +2,15 @@
 
 Scans a directory of clip MP4s (output of ``single_advert_clip``),
 extracts the first frame of each, and builds a responsive grid with
-thumbnails and filenames.
+thumbnails and filenames.  Clips are ordered by creation time
+(detection sequence) with section headers from pipeline state JSONs.
 """
 
 from __future__ import annotations
 
 import base64
 import html
+import json
 import logging
 import re
 import subprocess
@@ -20,10 +22,34 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
+def _load_state_map(clips_dir: Path) -> dict[str, tuple[str, int, int]]:
+    """Build unique_id -> (video_stem, break_idx, adv_idx) from pipeline
+    state files, sorted by state file modification time (detection order).
+
+    Where the same unique_id appears in multiple videos, the LAST
+    occurrence wins (the state file that was most recently written).
+    """
+    state_paths = sorted(
+        clips_dir.glob("*_pipeline_state.json"),
+        key=lambda p: p.stat().st_mtime,
+    )
+    result: dict[str, tuple[str, int, int]] = {}
+    for sp in state_paths:
+        video_stem = sp.stem.replace("_pipeline_state", "")
+        try:
+            with open(sp) as f:
+                state = json.load(f)
+        except Exception:
+            continue
+        for bi, break_data in enumerate(state.get("ad_breaks", [])):
+            for ai, adv in enumerate(break_data.get("adverts", [])):
+                uid = adv.get("unique_id", "")
+                if uid:
+                    result[uid] = (video_stem, bi, ai)
+    return result
+
+
 def _frame_data_uri(clip_path: Path, time_seconds: float = 0, width: int = 220) -> str:
-    """Extract a frame from a video clip at *time_seconds* and return it
-    as a base64-encoded PNG data URI (resized and quantised).
-    When *time_seconds* is negative, treats it as ``-sseof`` (seek from end)."""
     try:
         if time_seconds < 0:
             seek_flag = "-sseof"
@@ -72,31 +98,6 @@ def _frame_data_uri(clip_path: Path, time_seconds: float = 0, width: int = 220) 
         return ""
 
 
-def _get_duration(clip_path: Path) -> float:
-    """Return video duration in seconds using ffprobe."""
-    try:
-        result = subprocess.run(
-            [
-                "ffprobe",
-                "-v",
-                "error",
-                "-show_entries",
-                "format=duration",
-                "-of",
-                "default=noprint_wrappers=1:nokey=1",
-                str(clip_path),
-            ],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=30,
-        )
-        return float(result.stdout.strip())
-    except Exception as exc:
-        logger.warning("Failed to get duration from %s: %s", clip_path.name, exc)
-        return 0.0
-
-
 _REFERENCE_CSS = """
 html { transition: background 0.3s, color 0.3s; }
 :root {
@@ -121,6 +122,9 @@ h1 { font-size: 1.5rem; margin-bottom: 4px; }
 .theme-nav { display: flex; gap: 8px; margin-bottom: 20px; }
 .theme-btn { padding: 4px 12px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg-card); color: var(--fg); cursor: pointer; font-size: 0.8rem; }
 .theme-btn.active { border-color: var(--accent); color: var(--accent); }
+.break-section { margin-bottom: 32px; }
+.break-header { font-size: 1.1rem; font-weight: 600; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border); color: var(--accent); }
+.break-header .video-label { color: var(--fg-muted); font-size: 0.85rem; font-weight: 400; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
 .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: border-color 0.2s, box-shadow 0.2s; }
 .card:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
@@ -129,7 +133,6 @@ h1 { font-size: 1.5rem; margin-bottom: 4px; }
 .card-frame img { width: 100%; height: auto; display: block; }
 .placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; background: var(--bg-code); padding: 40px 20px; color: var(--fg-muted); }
 .placeholder-icon { font-size: 2rem; }
-.placeholder-label { font-size: 0.8rem; }
 .card-body { padding: 10px 12px 12px; text-align: center; }
 .card-id { font-family: "SF Mono", "Fira Code", monospace; font-size: 0.75rem; color: var(--fg-muted); word-break: break-all; margin-bottom: 2px; }
 .card-category { font-size: 0.78rem; color: var(--fg-muted); word-break: break-all; margin-bottom: 2px; }
@@ -158,18 +161,52 @@ _REFERENCE_JS = """
 """
 
 
+def _frame_tag(img_data: str, label: str) -> str:
+    if img_data:
+        return f'<img src="{img_data}" alt="{label}" loading="lazy">'
+    return (
+        '<div class="placeholder">'
+        '<span class="placeholder-icon">&#x1F5BC;</span>'
+        f"</div>"
+    )
+
+
+def _make_card(clip: Path, unique_id: str, category: str, brand: str) -> str:
+    first_img = _frame_data_uri(clip, 0)
+    last_img = _frame_data_uri(clip, -0.1)
+    clip_name_esc = html.escape(clip.name)
+    return f"""<div class="card">
+  <div class="card-frames">
+    <a href="{clip_name_esc}" target="_blank" class="card-frame">
+      {_frame_tag(first_img, f"{unique_id} first frame")}
+    </a>
+    <a href="{clip_name_esc}" target="_blank" class="card-frame">
+      {_frame_tag(last_img, f"{unique_id} last frame")}
+    </a>
+  </div>
+  <div class="card-body">
+    <div class="card-id">{html.escape(unique_id)}</div>
+    <div class="card-category">{html.escape(category)}</div>
+    <div class="card-brand">{html.escape(brand)}</div>
+  </div>
+</div>"""
+
+
 def generate_reference_html_from_clips(
     clips_dir: Path,
     output_path: Path,
 ) -> str:
-    """Scan *clips_dir* for ``*.mp4`` files, extract first-frame
-    thumbnails, and write a themed reference HTML page to *output_path*.
+    """Scan *clips_dir* for clip MP4s, extract first/last-frame
+    thumbnails, and write a themed reference HTML page.
+
+    Clips are ordered by creation time (detection sequence).  Section
+    headers are inserted for each ad break using pipeline state JSONs.
 
     Returns the HTML string.
     """
     all_mp4s = sorted(
         clips_dir.glob("*.mp4"),
-        key=lambda p: p.stat().st_ctime,
+        key=lambda p: p.stat().st_mtime_ns,
     )
     clips = [p for p in all_mp4s if re.match(r"^[A-Z]{2,}\d+_", p.stem)]
     if not clips:
@@ -179,48 +216,55 @@ def generate_reference_html_from_clips(
             len(all_mp4s),
         )
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cards: list[str] = []
+    state_map = _load_state_map(clips_dir)
+
+    last_group: tuple[str, int] | None = None
+    sections: list[str] = []
+    current_cards: list[str] = []
+
+    def _flush() -> None:
+        if current_cards:
+            sections.append('<div class="grid">')
+            sections.extend(current_cards)
+            sections.append("</div></div>")
+            current_cards.clear()
 
     for clip in clips:
-        stem = clip.stem
-        parts = stem.split("_", 2)
-        unique_id = html.escape(parts[0]) if len(parts) > 0 else ""
-        category = html.escape(parts[1]) if len(parts) > 1 else ""
-        brand = html.escape(parts[2]) if len(parts) > 2 else ""
+        uid = clip.stem.split("_", 1)[0]
+        parts = clip.stem.split("_", 2)
+        category = parts[1] if len(parts) > 1 else ""
+        brand = parts[2] if len(parts) > 2 else ""
 
-        first_img = _frame_data_uri(clip, 0)
-        last_img = _frame_data_uri(clip, -0.1)
+        pos = state_map.get(uid)
+        if pos is not None:
+            video_stem, bi, ai = pos
+            group = (video_stem, bi)
+        else:
+            group = None
 
-        def _frame_tag(img_data: str, label: str) -> str:
-            if img_data:
-                return f'<img src="{img_data}" alt="{label}" loading="lazy">'
-            return (
-                '<div class="placeholder">'
-                '<span class="placeholder-icon">&#x1F5BC;</span>'
-                f"</div>"
-            )
+        if group != last_group:
+            _flush()
+            if group is not None:
+                video_stem, bi = group
+                sections.append(
+                    '<div class="break-section">'
+                    f'<div class="break-header">'
+                    f"Break {bi + 1} &mdash; "
+                    f'<span class="video-label">{html.escape(video_stem)}</span>'
+                    f"</div>"
+                )
+            else:
+                sections.append(
+                    '<div class="break-section">'
+                    '<div class="break-header">Unmatched</div>'
+                )
+            last_group = group
 
-        clip_name_esc = html.escape(clip.name)
-        card = f"""<div class="card">
-  <div class="card-frames">
-    <a href="{clip_name_esc}" target="_blank" class="card-frame">
-      {_frame_tag(first_img, f"{stem} first frame")}
-    </a>
-    <a href="{clip_name_esc}" target="_blank" class="card-frame">
-      {_frame_tag(last_img, f"{stem} last frame")}
-    </a>
-  </div>
-  <div class="card-body">
-    <div class="card-id">{unique_id}</div>
-    <div class="card-category">{category}</div>
-    <div class="card-brand">{brand}</div>
-  </div>
-</div>"""
-        cards.append(card)
+        current_cards.append(_make_card(clip, uid, category, brand))
 
-    cards_html = "\n".join(cards)
+    _flush()
 
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     stem_esc = html.escape(clips_dir.name)
     html_str = f"""<!DOCTYPE html>
 <html lang="en">
@@ -241,9 +285,7 @@ def generate_reference_html_from_clips(
   <button class="theme-btn" data-theme="gruvbox">Gruvbox</button>
 </div>
 
-<div class="grid">
-{cards_html}
-</div>
+{"".join(sections)}
 
 <div class="footer">Advert Identifier OCR &mdash; Reference Frames</div>
 
