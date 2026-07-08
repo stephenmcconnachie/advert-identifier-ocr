@@ -167,7 +167,10 @@ def generate_reference_html_from_clips(
 
     Returns the HTML string.
     """
-    all_mp4s = sorted(clips_dir.glob("*.mp4"))
+    all_mp4s = sorted(
+        clips_dir.glob("*.mp4"),
+        key=lambda p: p.stat().st_ctime,
+    )
     clips = [p for p in all_mp4s if re.match(r"^[A-Z]{2,}\d+_", p.stem)]
     if not clips:
         logger.warning(
