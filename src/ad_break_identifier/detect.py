@@ -2013,7 +2013,7 @@ def run_detection(
             frames_dir=frames_dir,
             start_seconds=start_seconds,
         )
-        qc_path = output_dir / f"{video_stem or output_dir.name}_qc.html"
+        qc_path = output_dir / f"{video_stem or output_dir.name}_break{ad_break_index}_qc.html"
         qc_path.write_text(qc_html, encoding="utf-8")
         _log("QC HTML written to: %s", qc_path)
 
