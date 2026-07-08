@@ -111,8 +111,8 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--after-secs",
         type=float,
-        default=240.0,
-        help="Seconds after ad break timecode to include in frame extraction (default: 240)",
+        default=360.0,
+        help="Seconds after ad break timecode to include in frame extraction (default: 360)",
     )
     parser.add_argument(
         "--fps",
@@ -461,8 +461,10 @@ def run_single_advert_clipper(
     logger.info(f"Running advert clip extraction")
 
     try:
+        before = len(list(output_dir.glob("*.mp4")))
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        clip_count = len(list(output_dir.glob("*.mp4")))
+        after = len(list(output_dir.glob("*.mp4")))
+        clip_count = after - before
         logger.info(f"Extracted {clip_count} advert clip(s)")
         return True, clip_count
     except subprocess.CalledProcessError as e:

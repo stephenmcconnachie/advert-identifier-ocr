@@ -351,9 +351,9 @@ def _single_advert_log_path(state: dict[str, Any]) -> Path:
 
 
 def _unmatched_adverts_log_path(state: dict[str, Any]) -> Path:
-    """Derive the unmatched-adverts log path from the state video path."""
+    """Derive the shared unmatched-adverts log path in the video directory."""
     video_path = Path(state.get("video_info", {}).get("filepath", ""))
-    return video_path.parent / f"{video_path.stem}_unmatched_adverts.log"
+    return video_path.parent / "unmatched_adverts.log"
 
 
 def _log_unmatched(
@@ -364,6 +364,7 @@ def _log_unmatched(
     """Append an entry to the unmatched-adverts log for this video."""
     from datetime import datetime
 
+    video_path = Path(state.get("video_info", {}).get("filepath", ""))
     unique_id = advert.get("unique_id", "unknown")
     brand = advert.get("brand", "unknown")
     duration = advert.get("scheduled_duration_seconds", "unknown")
@@ -373,6 +374,7 @@ def _log_unmatched(
         with open(log_path, "a") as f:
             f.write(
                 f"{datetime.now().isoformat()} | "
+                f"{video_path.name} | "
                 f"Break {break_index}: track_id={unique_id}, "
                 f"brand={brand}, duration={duration}\n"
             )
