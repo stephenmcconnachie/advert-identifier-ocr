@@ -56,6 +56,120 @@ DEFAULT_AFTER_SECS = 360.0
 
 # ── Text matching ────────────────────────────────────────────────────────
 
+# Words too generic to use as individual brand match patterns.
+# Full-phrase patterns still include these words; only standalone
+# single-word matching is suppressed to avoid false positives from
+# programme content (e.g. "cheese" in "Swiss cheese plant" matching
+# "Consorzio grana padano cheese").
+_BRAND_STOP_WORDS: frozenset = frozenset(
+    {
+        "book",
+        "brand",
+        "care",
+        "cheese",
+        "choice",
+        "city",
+        "club",
+        "company",
+        "cost",
+        "deal",
+        "deals",
+        "design",
+        "direct",
+        "discount",
+        "edge",
+        "energy",
+        "enterprise",
+        "essentials",
+        "expert",
+        "extra",
+        "family",
+        "food",
+        "free",
+        "fresh",
+        "full",
+        "global",
+        "gold",
+        "group",
+        "health",
+        "help",
+        "home",
+        "house",
+        "ideal",
+        "international",
+        "life",
+        "line",
+        "local",
+        "love",
+        "market",
+        "media",
+        "mobile",
+        "money",
+        "nationwide",
+        "network",
+        "new",
+        "next",
+        "north",
+        "now",
+        "office",
+        "online",
+        "original",
+        "plus",
+        "point",
+        "premier",
+        "premium",
+        "price",
+        "pro",
+        "product",
+        "protection",
+        "rate",
+        "real",
+        "rent",
+        "restaurant",
+        "sale",
+        "save",
+        "secure",
+        "select",
+        "service",
+        "shop",
+        "show",
+        "sign",
+        "site",
+        "smart",
+        "solar",
+        "solution",
+        "south",
+        "special",
+        "star",
+        "start",
+        "store",
+        "studio",
+        "super",
+        "support",
+        "system",
+        "team",
+        "tech",
+        "technology",
+        "top",
+        "total",
+        "tour",
+        "trade",
+        "travel",
+        "trip",
+        "trust",
+        "uk",
+        "value",
+        "view",
+        "ware",
+        "web",
+        "west",
+        "wide",
+        "world",
+        "year",
+        "zone",
+    }
+)
+
 
 def build_exact_patterns(
     brand: str,
@@ -90,7 +204,11 @@ def build_exact_patterns(
         words = term.split()
         if len(words) > 1:
             for word in words:
-                if len(word) >= 4 and word not in seen:
+                if (
+                    len(word) >= 4
+                    and word not in seen
+                    and word.lower() not in _BRAND_STOP_WORDS
+                ):
                     seen.add(word)
                     patterns.append(
                         re.compile(rf"\b{re.escape(word)}\b", re.IGNORECASE)
@@ -136,7 +254,11 @@ def build_substring_patterns(
         words = term.split()
         if len(words) > 1:
             for word in words:
-                if len(word) >= 4 and word not in seen:
+                if (
+                    len(word) >= 4
+                    and word not in seen
+                    and word.lower() not in _BRAND_STOP_WORDS
+                ):
                     seen.add(word)
                     patterns.append(re.compile(re.escape(word), re.IGNORECASE))
 
