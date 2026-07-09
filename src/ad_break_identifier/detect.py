@@ -1876,8 +1876,9 @@ def anchor_based_reestimation(
         return scan_results
 
     def _effective_end(r: BrandSearchResult) -> float:
-        if r.refined_end_seconds is not None:
-            return r.refined_end_seconds
+        # Use raw Pass 1 match position only — never clamp-corrected or
+        # refined positions, which may have been shifted by the forward-
+        # backward clamp corrector.
         if r.last_match_seconds is not None:
             return r.last_match_seconds
         return 0.0
@@ -2277,30 +2278,10 @@ def run_detection(
         fps=fps,
     )
 
-    # 6. Clamp/cage: detect and correct pattern anomalies
-    anomalies = clamp_check(scan_results)
-    if any(anomalies):
-        logger.info("Clamp detected %d anomaly(ies), correcting...", sum(anomalies))
-        scan_results = clamp_correct(scan_results, metadata.adverts, fps)
-    else:
-        logger.info("Clamp: no anomalies detected")
-
-    # 7. 25fps end-frame refinement (if not dry run)
-    if not dry_run and video_path:
-        scan_results = _refine_advert_end_frames(
-            scan_results=scan_results,
-            video_path=video_path,
-            start_seconds=start_seconds,
-            adverts=metadata.adverts,
-            ocr_endpoint=ocr_endpoint,
-            ocr_model=ocr_model,
-            fps=fps,
-            ocr_results=ocr_results,
-            output_dir=output_dir,
-            verbose=verbose,
-        )
-
-    # 7b. Anchor-based re-estimation for low-confidence breaks
+    # 6. Anchor-based re-estimation for low-confidence breaks
+    # Run BEFORE clamp/cage so the anchor uses raw Pass 1 match positions
+    # (uncontaminated by the clamp corrector's forward-backward shifting).
+    anchor_invoked = False
     if anchor_threshold > 0:
         confidence = compute_break_confidence(scan_results, metadata, fps, after_secs)
         if confidence["score"] < anchor_threshold:
@@ -2328,12 +2309,38 @@ def run_detection(
                 new_confidence["score"],
                 confidence["score"],
             )
+            anchor_invoked = True
 
-    # 8. Format XML
+    # 7. Clamp/cage: detect and correct pattern anomalies
+    # Skip when anchor has already re-estimated all positions.
+    if not anchor_invoked:
+        anomalies = clamp_check(scan_results)
+        if any(anomalies):
+            logger.info("Clamp detected %d anomaly(ies), correcting...", sum(anomalies))
+            scan_results = clamp_correct(scan_results, metadata.adverts, fps)
+        else:
+            logger.info("Clamp: no anomalies detected")
+
+    # 8. 25fps end-frame refinement (if not dry run)
+    if not dry_run and video_path:
+        scan_results = _refine_advert_end_frames(
+            scan_results=scan_results,
+            video_path=video_path,
+            start_seconds=start_seconds,
+            adverts=metadata.adverts,
+            ocr_endpoint=ocr_endpoint,
+            ocr_model=ocr_model,
+            fps=fps,
+            ocr_results=ocr_results,
+            output_dir=output_dir,
+            verbose=verbose,
+        )
+
+    # 9. Format XML
     xml_output = format_xml(metadata, scan_results, fps)
     _log("XML output: %d lines", len(xml_output.splitlines()))
 
-    # 7. Generate QC HTML report (only when frames are kept on disk)
+    # 10. Generate QC HTML report (only when frames are kept on disk)
     if output_dir:
         qc_html = generate_qc_html(
             ocr_results=ocr_results,
