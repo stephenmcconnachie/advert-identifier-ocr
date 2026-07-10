@@ -167,6 +167,49 @@ _BRAND_STOP_WORDS: frozenset = frozenset(
         "world",
         "year",
         "zone",
+        # Added 2026-07-10: generic words found in 2026-07-09 run that
+        # caused false-positive matches in programme content.
+        # Each brand still matches via its other distinctive words or
+        # full-phrase patterns.
+        "blade",       # Vax cordless blade vacuum
+        "cancer",      # CCS NHS Cancer, Cancer Research Race For Life
+        "careers",     # CCS childcare careers
+        "cash",        # Fast cash property (also subword: fastcashproperty)
+        "chairs",      # HSL chairs
+        "delivery",    # Deliveroo takeaway delivery (also: deliveroo)
+        "easter",      # Tesco/Lidl/Disneyland Easter
+        "experts",     # Trailfinders travel experts (also: trailfinders)
+        "farm",        # Childs farm (also: childs)
+        "fast",        # Fast cash property (also subword: fastcashproperty)
+        "great",       # Great ormond street / First great western
+        "insurance",   # Aviva insurance, Liverpool Victoria
+        "lottery",     # Age UK / Postcode lottery
+        "noodle",      # Pot noodle
+        "noodles",     # Batchelors super noodles (also: super, batchelors)
+        "over",        # AXA sun life over 50 ins plan
+        "pain",        # Voltarol pain relief (also: voltarol)
+        "paris",       # Disneyland paris, Loreal paris
+        "pass",        # Merlin annual pass (also: merlin, annual)
+        "phone",       # Google pixel 8 phone (also: pixel, google)
+        "plan",        # AXA sun life plan
+        "plenty",      # Essity plenty kitchen towel
+        "power",       # Domestos power foam, E.ON (also: foam, domentos)
+        "relief",      # Voltarol pain relief (also: voltarol)
+        "research",    # Cancer research race for life (also: race, life)
+        "reveal",      # Loreal bright reveal serum (also: bright, serum)
+        "richmond",    # Pilgrims richmond sausages (also: sausages)
+        "sausages",    # Pilgrims richmond sausages (also: richmond)
+        "serum",       # Boots/Clarins/Nivea serum (also: boots, clarins, nivea)
+        "shampoo",     # Herbal essences shampoo (also: herbal, essences)
+        "sips",        # McDonalds winning sips (also: winning, mcdonalds)
+        "smoking",     # CCS phe stop smoking
+        "stain",       # Vanish oxi action stain remover (also: vanish)
+        "stores",      # Poundland stores (also: poundland)
+        "tail",        # Yellow tail shiraz wine (also: yellow, shiraz)
+        "western",     # First great western (also: great)
+        "winning",     # McDonalds winning sips (also: sips, mcdonalds)
+        "wrinkle",     # Nivea wrinkle filler serum (also: filler, serum)
+        "yellow",      # Yellow tail shiraz wine (also: tail, shiraz)
     }
 )
 
