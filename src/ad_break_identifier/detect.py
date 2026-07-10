@@ -883,6 +883,13 @@ def _pattern_key(last_match_seconds: float) -> str:
     return f"{sec_digit}.{millis:03d}"
 
 
+# Minimum number of matched adverts that must share the majority
+# ``sec_digit.mmm`` pattern for clamp correction to be applied.
+# With fewer than 3, the "majority" is likely coincidental and
+# snapping to it shifts valid OCR matches to wrong positions.
+_CLAMP_MIN_MAJORITY_COUNT = 3
+
+
 def clamp_check(
     scan_results: list[BrandSearchResult],
 ) -> list[bool]:
@@ -890,6 +897,12 @@ def clamp_check(
     pattern against the majority across the break.
 
     Returns a list of booleans, one per advert: ``True`` means anomaly.
+
+    The check is skipped (all ``False``) when the majority pattern is
+    shared by fewer than ``_CLAMP_MIN_MAJORITY_COUNT`` matched adverts
+    *or* by fewer than half of all matched adverts.  A "majority" of 1
+    or 2 out of 6+ is not statistically meaningful and the resulting
+    corrections shift valid OCR matches to wrong positions.
     """
     from collections import Counter
 
@@ -902,12 +915,32 @@ def clamp_check(
         return [False] * len(scan_results)
 
     majority = counts.most_common(1)[0][0]
+    majority_count = counts[majority]
+    total_matched = sum(counts.values())
+
     logger.info(
         "Clamp majority pattern: %s (%d/%d matches)",
         majority,
-        counts[majority],
-        sum(counts.values()),
+        majority_count,
+        total_matched,
     )
+
+    # Gate: require minimum 3 adverts sharing the pattern AND at least
+    # 50% of matched adverts.  Below this, the pattern is likely
+    # coincidental and corrections do more harm than good.
+    if (
+        majority_count < _CLAMP_MIN_MAJORITY_COUNT
+        or majority_count < (total_matched + 1) // 2
+    ):
+        logger.info(
+            "Clamp skipped: majority pattern %s has only %d/%d matches "
+            "(need ≥%d and ≥50%%) — insufficient support for correction",
+            majority,
+            majority_count,
+            total_matched,
+            _CLAMP_MIN_MAJORITY_COUNT,
+        )
+        return [False] * len(scan_results)
 
     anomalies: list[bool] = []
     for r in scan_results:
@@ -942,6 +975,24 @@ def clamp_correct(
     if not counts:
         return scan_results
     majority = counts.most_common(1)[0][0]
+    majority_count = counts[majority]
+    total_matched = sum(counts.values())
+
+    # Gate: same minimum-support check as clamp_check.  If called
+    # directly (e.g. from tests), don't correct on a weak majority.
+    if (
+        majority_count < _CLAMP_MIN_MAJORITY_COUNT
+        or majority_count < (total_matched + 1) // 2
+    ):
+        logger.info(
+            "Clamp corrector skipped: majority pattern %s has only "
+            "%d/%d matches (need ≥%d and ≥50%%)",
+            majority,
+            majority_count,
+            total_matched,
+            _CLAMP_MIN_MAJORITY_COUNT,
+        )
+        return scan_results
 
     trusted: set[int] = set()
     for i, r in enumerate(scan_results):
