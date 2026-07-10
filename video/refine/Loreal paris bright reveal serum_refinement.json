@@ -1,0 +1,47 @@
+{
+  "brand": "Loreal paris bright reveal serum",
+  "T_clip": 48.6,
+  "T_broadcast": 1224.6,
+  "current_5fps_text": "L'ORÉAL PARIS",
+  "next_5fps_text": "REAL PICTURE",
+  "current_next_similarity": 0.48,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "L'ORÉAL PARIS",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.48
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "L'ORÉAL PARIS",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.48
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "L'ORÉAL PARIS",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.48
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "L'ORÉAL PARIS",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.48
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "L'ORÉAL PARIS",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.48
+    }
+  ]
+}

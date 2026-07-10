@@ -1,0 +1,498 @@
+{
+  "pipeline_version": 2,
+  "before_secs": 10.0,
+  "video_info": {
+    "filepath": "/mnt/qnap_04/Admin/code/ai_machine_learning/advert-identifier-ocr/video/2024-03-26_ITV1HD_21:00:00.mp4",
+    "start_time": "21:00:00"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "start_time": "21:00:09",
+      "clip_offset": -1.0,
+      "adverts": [
+        {
+          "unique_id": "LMIMTWY004010",
+          "brand": "Motorway.co.uk",
+          "advertiser": "Motorway online",
+          "category": "Automotive marketplace",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "MUMKNLU330030",
+          "brand": "Kfc lunch meal deal",
+          "advertiser": "Kentucky fried chick",
+          "category": "Fast food restaurants - multi product",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "BLBFURN204010",
+          "brand": "Furniture village",
+          "advertiser": "Furniture village",
+          "category": "Furniture & furnishings",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.3,
+        "matched_count": 0,
+        "total_count": 3,
+        "reasons": [
+          "low match ratio (0/3)",
+          "low average tier score (0.00)",
+          "first advert weak match tier (fallback)"
+        ]
+      }
+    },
+    {
+      "index": 2,
+      "start_time": "21:09:56",
+      "clip_offset": 586.0,
+      "adverts": [
+        {
+          "unique_id": "UMWGETY006010",
+          "brand": "Getyourguide.com",
+          "advertiser": "Getyourguide deutsch",
+          "category": "Online travel/booking agents",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "HOGTOLX095030",
+          "brand": "Toyota lexus rz",
+          "advertiser": "Toyota gb",
+          "category": "H - dual purpose",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "WCRSKBR052020",
+          "brand": "Sky mobile",
+          "advertiser": "Sky uk",
+          "category": "Mobile service range",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "ITCPPLB012030",
+          "brand": "Postcode lottery",
+          "advertiser": "Postcode lottery",
+          "category": "Lottery",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "KROSCSS115030",
+          "brand": "Scs furniture & carpets",
+          "advertiser": "A share & sons",
+          "category": "Furniture - lounge & dining",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "ICPEONN510020",
+          "brand": "E on next",
+          "advertiser": "E on",
+          "category": "Residential renewable energy",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "PCHPPGP002010",
+          "brand": "Consorzio grana padano cheese",
+          "advertiser": "Consorzio tutela gra",
+          "category": "Cheese - continental",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "NCAALZH038060",
+          "brand": "Alzheimers society",
+          "advertiser": "Alzheimers society",
+          "category": "Health charities",
+          "scheduled_duration_seconds": 60,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.3,
+        "matched_count": 0,
+        "total_count": 8,
+        "reasons": [
+          "low match ratio (0/8)",
+          "low average tier score (0.00)",
+          "first advert weak match tier (fallback)"
+        ]
+      }
+    },
+    {
+      "index": 3,
+      "start_time": "21:28:32",
+      "clip_offset": 1702.0,
+      "adverts": [
+        {
+          "unique_id": "OHLHOME001030",
+          "brand": "Homebase stores",
+          "advertiser": "Homebase",
+          "category": "Diy stores",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "TTFHOTE005030",
+          "brand": "Hotel chocolate tasting club",
+          "advertiser": "Hotel chocolat",
+          "category": "Small appliances - kitchen",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "BLBFURN203010",
+          "brand": "Furniture village",
+          "advertiser": "Furniture village",
+          "category": "Furniture & furnishings",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "HKXDFEN017020",
+          "brand": "Edf energy",
+          "advertiser": "Edf energy",
+          "category": "Residential renewable energy",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "SAAMAXF025020",
+          "brand": "Max factor miracle pure foundation",
+          "advertiser": "Coty uk",
+          "category": "Liquid/mousse foundation",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "TGSNNQQ835030",
+          "brand": "Nissan qashqai",
+          "advertiser": "Nissan motor gb",
+          "category": "C - lower medium",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "ANOCRUK414030",
+          "brand": "Cancer research race for life",
+          "advertiser": "Cancer research uk",
+          "category": "Cancer charities",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "PIPSPKE031020",
+          "brand": "Spokelondon.com mens clothing",
+          "advertiser": "Respoke",
+          "category": "Mens fashions & outfitters",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "BURTMOR078020",
+          "brand": "Morrisons supermarket",
+          "advertiser": "William morrison sup",
+          "category": "Lamb",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.3,
+        "matched_count": 0,
+        "total_count": 9,
+        "reasons": [
+          "low match ratio (0/9)",
+          "low average tier score (0.00)",
+          "first advert weak match tier (fallback)"
+        ]
+      }
+    },
+    {
+      "index": 4,
+      "start_time": "21:47:28",
+      "clip_offset": 2838.0,
+      "adverts": [
+        {
+          "unique_id": "ANOANGP105020",
+          "brand": "Google pixel 8 phone",
+          "advertiser": "Google uk",
+          "category": "Mobile handsets - smartphones",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "HOGTOBZ073030",
+          "brand": "Toyota bz4x",
+          "advertiser": "Toyota gb",
+          "category": "H - dual purpose",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "PFYMSWW001030",
+          "brand": "Marks & spencer",
+          "advertiser": "Marks & spencer",
+          "category": "Womens fashions & designers",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "BBHTCPT534020",
+          "brand": "Tesco easter",
+          "advertiser": "Tesco stores",
+          "category": "Food - multi product",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "PMCKAPW002020",
+          "brand": "Karcher pressure washer",
+          "advertiser": "Karcher",
+          "category": "Pressure sprayers/washers",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "MCBYEOV093030",
+          "brand": "Yeo valley organic",
+          "advertiser": "Yeo valley farms",
+          "category": "Dairy - multi product",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "UCSBABR002030",
+          "brand": "British airways",
+          "advertiser": "British airways",
+          "category": "Travel & transport - brand building",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "GOOSRGK002030",
+          "brand": "Sue ryder bereavement support",
+          "advertiser": "Sue ryder",
+          "category": "Charities other",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.3,
+        "matched_count": 0,
+        "total_count": 8,
+        "reasons": [
+          "low match ratio (0/8)",
+          "low average tier score (0.00)",
+          "first advert weak match tier (fallback)"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "brand": "Warburtons bread",
+  "T_clip": 106.2,
+  "T_broadcast": 3463.2,
+  "current_5fps_text": "TOASTIE SOFT THICK WHITE WarburtonS",
+  "next_5fps_text": "ALBERT EINSTEIN rights licensed by the H.U.J./BEN Group, Inc.",
+  "current_next_similarity": 0.292,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "TOASTIE SOFT THICK WHITE WarburtonS\nBAKERS, BORN AND BRED",
+      "sim_to_current": 0.761,
+      "sim_to_next": 0.271
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "TOASTIE SOFT THICK WHITE WarburtonS\nBAKERS, BORN AND BRED",
+      "sim_to_current": 0.761,
+      "sim_to_next": 0.271
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "TOASTIE SOFT THICK WHITE WarburtonS",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.292
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "TOASTIE SOFT THICK WHITE WarburtonS",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.292
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "TOASTIE SOFT THICK WHITE WarburtonS",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.292
+    }
+  ]
+}

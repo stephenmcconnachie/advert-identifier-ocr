@@ -1,0 +1,47 @@
+{
+  "brand": "Axa sun life over 50 ins plan",
+  "T_clip": 56.2,
+  "T_broadcast": 2755.2,
+  "current_5fps_text": "0800 50 55 50\nor search SunLife Plan\nUK's favourite by direct new policy sales. Sent after your sixth payment. Gift offer ends 01.05.24. T&Cs apply. See verifications at sunlife.co.uk/verify",
+  "next_5fps_text": "",
+  "current_next_similarity": 0.0,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "0800 50 55 50\nor search SunLife Plan\nUK's favourite by direct new policy sales. Sent after your sixth payment. Gift offer ends 01.05.24. T&Cs apply. See verifications at sunlife.co.uk/verify",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.0
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "0800 50 55 50\nor search SunLife Plan\nUK's favourite by direct new policy sales. Sent after your sixth payment. Gift offer ends 01.05.24. T&Cs apply. See verifications at sunlife.co.uk/verify",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.0
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "0800 50 55 50\nor search SunLife Plan\nUK's favourite by direct new policy sales. Sent after your sixth payment. Gift offer ends 01.05.24. T&Cs apply. See verifications at sunlife.co.uk/verify",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.0
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "0800 50 55 50\nor search SunLife Plan\nUK's favourite by direct new policy sales. Sent after your sixth payment. Gift offer ends 01.05.24. T&Cs apply. See verifications at sunlife.co.uk/verify",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.0
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "0800 50 55 50\nor search SunLife Plan\nUK's favourite by direct new policy sales. Sent after your sixth payment. Gift offer ends 01.05.24. T&Cs apply. See verifications at sunlife.co.uk/verify",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.0
+    }
+  ]
+}

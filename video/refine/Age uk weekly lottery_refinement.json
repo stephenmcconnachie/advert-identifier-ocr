@@ -1,0 +1,47 @@
+{
+  "brand": "Age uk weekly lottery",
+  "T_clip": 170.2,
+  "T_broadcast": 805.2,
+  "current_5fps_text": "Call now or go online\n0800 304 7502 ageuk-lottery.com\nPlay responsibly: begambleaware.org",
+  "next_5fps_text": "Free delivery and returns. 200 Night Sleep Trial & Guarantee - terms & exclusions apply. Selected items. Sale ends 01/04.",
+  "current_next_similarity": 0.314,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "Call now or go online\n0800 304 7502 ageuk-lottery.com\nPlay responsibly: begambleaware.org",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.314
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "Call now or go online\n0800 304 7502 ageuk-lottery.com\nPlay responsibly: begambleaware.org",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.314
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "Call now or go online\n0800 304 7502 ageuk-lottery.com\nPlay responsibly: begambleaware.org",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.314
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "Call now or go online\n0800 304 7502 ageuk-lottery.com\nPlay responsibly: begambleaware.org",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.314
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "Free delivery and returns. 200 Night Sleep Trial & Guarantee - terms & exclusions apply.\nSelected items. Sale ends 01/04.",
+      "sim_to_current": 0.248,
+      "sim_to_next": 1.0
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "brand": "Butlins holiday worlds drtv",
+  "T_clip": 153.2,
+  "T_broadcast": 3425.2,
+  "current_5fps_text": "Butlin's\nBIG WEEKENDERS\nEXCLUSIVELY FOR ADULTS\nTHAT WEEKENDER FEELING",
+  "next_5fps_text": "Call Today 0800 085 13 66\nFastCashProperty.co.uk",
+  "current_next_similarity": 0.12,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "Butlin's\nBIG WEEKENDERS\nEXCLUSIVELY FOR ADULTS\nTHAT WEEKENDER FEELING",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.12
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "Butlin's\nBIG WEEKENDERS\nEXCLUSIVELY FOR ADULTS\nTHAT WEEKENDER FEELING",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.12
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "Butlin's\nBIG WEEKENDERS\nEXCLUSIVELY FOR ADULTS\nTHAT WEEKENDER FEELING",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.12
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "Call Today 0800 085 13 66\nFastCashProperty.co.uk",
+      "sim_to_current": 0.154,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "Call Today 0800 085 13 66\nFastCashProperty.co.uk",
+      "sim_to_current": 0.154,
+      "sim_to_next": 1.0
+    }
+  ]
+}

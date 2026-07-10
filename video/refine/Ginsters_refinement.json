@@ -1,0 +1,47 @@
+{
+  "brand": "Ginsters",
+  "T_clip": 150.2,
+  "T_broadcast": 928.2,
+  "current_5fps_text": "TASTE THE EFFORT",
+  "next_5fps_text": "4 out of 5 customers rated LV= as value for money on Feefo Jan '24. 10% of customers paid £179 or less Aug '23 - Jan '24.",
+  "current_next_similarity": 0.131,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "TASTE THE EFFORT",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.131
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "TASTE THE EFFORT",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.131
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "TASTE THE EFFORT",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.131
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "4 out of 5 customers rated LV= as value for money on Feefo Jan '24. 10% of customers paid £179 or less Aug '23 - Jan '24.",
+      "sim_to_current": 0.131,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "4 out of 5 customers rated LV= as value for money on Feefo Jan '24. 10% of customers paid £179 or less Aug '23 - Jan '24.",
+      "sim_to_current": 0.131,
+      "sim_to_next": 1.0
+    }
+  ]
+}

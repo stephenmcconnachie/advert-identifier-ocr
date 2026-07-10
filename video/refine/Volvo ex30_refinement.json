@@ -1,0 +1,47 @@
+{
+  "brand": "Volvo ex30",
+  "T_clip": 168.2,
+  "T_broadcast": 1344.2,
+  "current_5fps_text": "The Volvo EX30 is here\nOptional features shown.",
+  "next_5fps_text": "Optional features shown.",
+  "current_next_similarity": 0.676,
+  "has_boundary": false,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "The Volvo EX30 is here\nOptional features shown.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.676
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "The Volvo EX30 is here\nOptional features shown.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.676
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "The Volvo EX30 is here\nOptional features shown.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.676
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "The Volvo EX30 is here\nOptional features shown.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.676
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "The Volvo EX30 is here\nOptional features shown.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.676
+    }
+  ]
+}

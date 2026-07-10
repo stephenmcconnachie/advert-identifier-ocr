@@ -1,0 +1,47 @@
+{
+  "brand": "Poundland stores",
+  "T_clip": 56.2,
+  "T_broadcast": 2821.2,
+  "current_5fps_text": "Poundland",
+  "next_5fps_text": "Offer ends 28/04/24. Subject to availability. Participating restaurants only. See kfc.co.uk for T&Cs.",
+  "current_next_similarity": 0.109,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "Poundland",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.109
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "Poundland",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.109
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "Poundland",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.109
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "Poundland",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.109
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "Poundland",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.109
+    }
+  ]
+}

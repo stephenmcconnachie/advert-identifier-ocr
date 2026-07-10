@@ -1,0 +1,192 @@
+{
+  "pipeline_version": 2,
+  "before_secs": 10.0,
+  "video_info": {
+    "filepath": "/mnt/qnap_04/Admin/code/ai_machine_learning/advert-identifier-ocr/video/2024-03-26_ITV1HD_22:45:00.mp4",
+    "start_time": "22:45:00"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "start_time": "23:15:22",
+      "clip_offset": 1812.0,
+      "adverts": [
+        {
+          "unique_id": "LBEDISN002020",
+          "brand": "Disneyland paris",
+          "advertiser": "Walt disney company",
+          "category": "Overseas resorts",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "TJUIDHS092030",
+          "brand": "Media 10 ideal home show",
+          "advertiser": "Media 10",
+          "category": "Exhibitions",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:50.360",
+            "last_seconds_clip": 110.36,
+            "last_frame": 551,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "home",
+              "show",
+              "ideal"
+            ],
+            "start_seconds_clip": 80.48,
+            "adjusted_start_broadcast": 1892.48
+          }
+        },
+        {
+          "unique_id": "HKXDFEN017020",
+          "brand": "Edf energy",
+          "advertiser": "Edf energy",
+          "category": "Residential renewable energy",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:10.360",
+            "last_seconds_clip": 130.35999999999999,
+            "last_frame": 651,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "energy"
+            ],
+            "start_seconds_clip": 110.48,
+            "adjusted_start_broadcast": 1922.48
+          }
+        },
+        {
+          "unique_id": "VCCCOMP758030",
+          "brand": "Comparethemarket.com",
+          "advertiser": "Bisl",
+          "category": "Home & motor insurance",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 160.35999999999999,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 130.48,
+            "adjusted_start_broadcast": 1942.48
+          }
+        },
+        {
+          "unique_id": "VCCVMBR127030",
+          "brand": "Virgin media broadband & tv",
+          "advertiser": "Virgin media",
+          "category": "Home broadband",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:10.360",
+            "last_seconds_clip": 190.35999999999999,
+            "last_frame": 951,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "media"
+            ],
+            "start_seconds_clip": 160.48,
+            "adjusted_start_broadcast": 1972.48
+          }
+        },
+        {
+          "unique_id": "NSANHCA490030",
+          "brand": "Ccs nhs cancer",
+          "advertiser": "Ccs",
+          "category": "Government departments",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:40.360",
+            "last_seconds_clip": 220.35999999999999,
+            "last_frame": 1101,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "cancer"
+            ],
+            "start_seconds_clip": 190.48,
+            "adjusted_start_broadcast": 2002.48
+          }
+        },
+        {
+          "unique_id": "HOMREDI908020",
+          "brand": "32red.com online casino",
+          "advertiser": "32red",
+          "category": "Online casino",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:00.360",
+            "last_seconds_clip": 240.35999999999999,
+            "last_frame": 1201,
+            "match_tier": "words(no-tld)",
+            "matched_terms": [
+              "32red"
+            ],
+            "start_seconds_clip": 220.48,
+            "adjusted_start_broadcast": 2032.48
+          }
+        },
+        {
+          "unique_id": "IIBORKG015010",
+          "brand": "Kerrygold softer butter",
+          "advertiser": "Kerrygold company",
+          "category": "Butter",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:10.360",
+            "last_seconds_clip": 250.35999999999999,
+            "last_frame": 1251,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "kerrygold"
+            ],
+            "start_seconds_clip": 240.48,
+            "adjusted_start_broadcast": 2052.48
+          }
+        },
+        {
+          "unique_id": "AEDAVGI130020",
+          "brand": "Aviva insurance",
+          "advertiser": "Aviva",
+          "category": "Car insurance",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:30.360",
+            "last_seconds_clip": 270.36,
+            "last_frame": 1351,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "insurance"
+            ],
+            "start_seconds_clip": 250.48,
+            "adjusted_start_broadcast": 2062.48
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.692,
+        "matched_count": 7,
+        "total_count": 9,
+        "reasons": [
+          "first advert weak match tier (fallback)"
+        ]
+      }
+    }
+  ]
+}

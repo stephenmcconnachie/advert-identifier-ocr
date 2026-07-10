@@ -1,0 +1,42 @@
+{
+  "pipeline_version": 2,
+  "before_secs": 10.0,
+  "video_info": {
+    "filepath": "/mnt/qnap_04/Admin/code/ai_machine_learning/advert-identifier-ocr/video/2024-03-26_ITV1HD_13:55:00.mp4",
+    "start_time": "13:55:00"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "start_time": "13:55:15",
+      "clip_offset": 5.0,
+      "adverts": [
+        {
+          "unique_id": "TAGDDGB048020",
+          "brand": "Dove anti perspirant deodorant",
+          "advertiser": "Unilever uk home & p",
+          "category": "Anti perspirant & deodorant - womens",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.3,
+        "matched_count": 0,
+        "total_count": 1,
+        "reasons": [
+          "low match ratio (0/1)",
+          "low average tier score (0.00)",
+          "first advert weak match tier (fallback)"
+        ]
+      }
+    }
+  ]
+}

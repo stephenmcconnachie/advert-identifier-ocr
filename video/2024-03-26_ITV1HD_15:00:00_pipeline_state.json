@@ -1,0 +1,542 @@
+{
+  "pipeline_version": 2,
+  "before_secs": 10.0,
+  "video_info": {
+    "filepath": "/mnt/qnap_04/Admin/code/ai_machine_learning/advert-identifier-ocr/video/2024-03-26_ITV1HD_15:00:00.mp4",
+    "start_time": "15:00:00"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "start_time": "15:10:45",
+      "clip_offset": 635.0,
+      "adverts": [
+        {
+          "unique_id": "TMWOFLT014010",
+          "brand": "Oakfurnitureland.co.uk",
+          "advertiser": "Oak furnitureland",
+          "category": "Furniture & furnishings",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:50.320",
+            "last_seconds_clip": 110.32000000000001,
+            "last_frame": 551,
+            "match_tier": "advertiser",
+            "matched_terms": [
+              "oak furnitureland"
+            ],
+            "start_seconds_clip": 100.44,
+            "adjusted_start_broadcast": 735.44
+          }
+        },
+        {
+          "unique_id": "WPNALIL049060",
+          "brand": "Age uk weekly lottery",
+          "advertiser": "Age uk",
+          "category": "Lottery",
+          "scheduled_duration_seconds": 60,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:50.320",
+            "last_seconds_clip": 170.32,
+            "last_frame": 851,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "lottery"
+            ],
+            "start_seconds_clip": 110.44,
+            "adjusted_start_broadcast": 745.44
+          }
+        },
+        {
+          "unique_id": "WPPEMMA310020",
+          "brand": "Emma mattress",
+          "advertiser": "Emma mattress",
+          "category": "Beds & mattresses",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:10.320",
+            "last_seconds_clip": 190.32,
+            "last_frame": 951,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "emma"
+            ],
+            "start_seconds_clip": 170.44,
+            "adjusted_start_broadcast": 805.44
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.78,
+        "matched_count": 3,
+        "total_count": 3,
+        "reasons": [
+          "first advert weak match tier (advertiser)"
+        ]
+      }
+    },
+    {
+      "index": 2,
+      "start_time": "15:22:04",
+      "clip_offset": 1314.0,
+      "adverts": [
+        {
+          "unique_id": "SKYPPTB001030",
+          "brand": "Sky cinema",
+          "advertiser": "Sky uk",
+          "category": "Telecoms tv services",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:56.560",
+            "last_seconds_clip": 116.56,
+            "last_frame": 582,
+            "match_tier": "exact(original)",
+            "matched_terms": [
+              "sky cinema"
+            ],
+            "start_seconds_clip": 86.68,
+            "adjusted_start_broadcast": 1400.68
+          }
+        },
+        {
+          "unique_id": "HOGDELV071030",
+          "brand": "Deliveroo takeaway delivery",
+          "advertiser": "Roofoods",
+          "category": "Delivery partners",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:26.400",
+            "last_seconds_clip": 146.4,
+            "last_frame": 732,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "deliveroo",
+              "delivery"
+            ],
+            "start_seconds_clip": 116.52,
+            "adjusted_start_broadcast": 1430.52
+          }
+        },
+        {
+          "unique_id": "TBMMPMS461030",
+          "brand": "Merlin annual pass",
+          "advertiser": "Merlin entertainment",
+          "category": "Theme parks",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:56.400",
+            "last_seconds_clip": 176.4,
+            "last_frame": 882,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "annual",
+              "pass",
+              "merlin"
+            ],
+            "start_seconds_clip": 146.52,
+            "adjusted_start_broadcast": 1460.52
+          }
+        },
+        {
+          "unique_id": "MCZVAXV092090",
+          "brand": "Vax platinum smartwash carpet clean",
+          "advertiser": "Vax",
+          "category": "Small appliances - home",
+          "scheduled_duration_seconds": 90,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:26.560",
+            "last_seconds_clip": 266.56,
+            "last_frame": 1332,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "platinum",
+              "smartwash"
+            ],
+            "start_seconds_clip": 176.68,
+            "adjusted_start_broadcast": 1490.68
+          }
+        },
+        {
+          "unique_id": "WPPEMMA317010",
+          "brand": "Emma mattress",
+          "advertiser": "Emma mattress",
+          "category": "Beds & mattresses",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:36.400",
+            "last_seconds_clip": 276.4,
+            "last_frame": 1382,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "emma"
+            ],
+            "start_seconds_clip": 266.52,
+            "adjusted_start_broadcast": 1580.52
+          }
+        },
+        {
+          "unique_id": "HOGBONS764020",
+          "brand": "Boots no 7 skincare serum",
+          "advertiser": "Boots company",
+          "category": "Skin serum",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:56.400",
+            "last_seconds_clip": 296.4,
+            "last_frame": 1482,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "serum",
+              "boots"
+            ],
+            "start_seconds_clip": 276.52,
+            "adjusted_start_broadcast": 1590.52
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.925,
+        "matched_count": 6,
+        "total_count": 6,
+        "reasons": []
+      }
+    },
+    {
+      "index": 3,
+      "start_time": "15:41:23",
+      "clip_offset": 2473.0,
+      "adverts": [
+        {
+          "unique_id": "AMVSEGA227020",
+          "brand": "Smart energy smart meters",
+          "advertiser": "Smart energy gb",
+          "category": "Residential combined utilities",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:59.600",
+            "last_seconds_clip": 119.6,
+            "last_frame": 598,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "smart"
+            ],
+            "start_seconds_clip": 99.72,
+            "adjusted_start_broadcast": 2572.72
+          }
+        },
+        {
+          "unique_id": "CWWGARN248020",
+          "brand": "Loreal garnier skinactive vitamin c",
+          "advertiser": "Loreal uk",
+          "category": "Skin serum",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:19.600",
+            "last_seconds_clip": 139.6,
+            "last_frame": 698,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "garnier"
+            ],
+            "start_seconds_clip": 119.72,
+            "adjusted_start_broadcast": 2592.72
+          }
+        },
+        {
+          "unique_id": "SSCEEDR032030",
+          "brand": "Ee broadband",
+          "advertiser": "Everything everywher",
+          "category": "Home broadband",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:49.600",
+            "last_seconds_clip": 169.6,
+            "last_frame": 848,
+            "match_tier": "exact(original)",
+            "matched_terms": [
+              "ee broadband"
+            ],
+            "start_seconds_clip": 139.72,
+            "adjusted_start_broadcast": 2612.72
+          }
+        },
+        {
+          "unique_id": "ATGBKCL135030",
+          "brand": "Actegy revitive circulation booster",
+          "advertiser": "Actegy",
+          "category": "Health & fitness appliances",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:19.600",
+            "last_seconds_clip": 199.6,
+            "last_frame": 998,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "revitive"
+            ],
+            "start_seconds_clip": 169.72,
+            "adjusted_start_broadcast": 2642.72
+          }
+        },
+        {
+          "unique_id": "MCEJEAT398020",
+          "brand": "Justeat.co.uk",
+          "advertiser": "Just eat.co.uk",
+          "category": "Delivery partners",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 219.6,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 199.72,
+            "adjusted_start_broadcast": 2672.72
+          }
+        },
+        {
+          "unique_id": "UCSBQBR010020",
+          "brand": "B&q value",
+          "advertiser": "B & q",
+          "category": "Diy stores",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 239.6,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 219.72,
+            "adjusted_start_broadcast": 2692.72
+          }
+        },
+        {
+          "unique_id": "BYTEBAY006030",
+          "brand": "Ebay online trading",
+          "advertiser": "Ebay",
+          "category": "Online shopping general",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:29.600",
+            "last_seconds_clip": 269.6,
+            "last_frame": 1348,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "ebay"
+            ],
+            "start_seconds_clip": 239.72,
+            "adjusted_start_broadcast": 2712.72
+          }
+        },
+        {
+          "unique_id": "DTVGOWI001040",
+          "brand": "Great ormond street hospital",
+          "advertiser": "Great ormond street",
+          "category": "Lottery",
+          "scheduled_duration_seconds": 40,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "05:09.600",
+            "last_seconds_clip": 309.6,
+            "last_frame": 1548,
+            "match_tier": "exact(original)",
+            "matched_terms": [
+              "great ormond street hospital"
+            ],
+            "start_seconds_clip": 269.72,
+            "adjusted_start_broadcast": 2742.72
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.812,
+        "matched_count": 6,
+        "total_count": 8,
+        "reasons": []
+      }
+    },
+    {
+      "index": 4,
+      "start_time": "15:54:31",
+      "clip_offset": 3261.0,
+      "adverts": [
+        {
+          "unique_id": "CHIMADO002020",
+          "brand": "Dolmio bolognese sauce",
+          "advertiser": "Mars uk",
+          "category": "Cooking sauces",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:00.320",
+            "last_seconds_clip": 120.32000000000001,
+            "last_frame": 601,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "bolognese"
+            ],
+            "start_seconds_clip": 100.44,
+            "adjusted_start_broadcast": 3361.44
+          }
+        },
+        {
+          "unique_id": "LBEDISN004020",
+          "brand": "Disneyland paris",
+          "advertiser": "Walt disney company",
+          "category": "Overseas resorts",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 140.32,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 120.44,
+            "adjusted_start_broadcast": 3381.44
+          }
+        },
+        {
+          "unique_id": "VCCVMDR130020",
+          "brand": "Virgin media broadband",
+          "advertiser": "Virgin media",
+          "category": "Home broadband",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:40.320",
+            "last_seconds_clip": 160.32,
+            "last_frame": 801,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "media",
+              "virgin"
+            ],
+            "start_seconds_clip": 140.44,
+            "adjusted_start_broadcast": 3401.44
+          }
+        },
+        {
+          "unique_id": "TTBGSVO075020",
+          "brand": "Voltarol pain relief",
+          "advertiser": "Haleon uk",
+          "category": "Muscular & rheumatic remedies",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:00.320",
+            "last_seconds_clip": 180.32,
+            "last_frame": 901,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "relief",
+              "voltarol",
+              "pain"
+            ],
+            "start_seconds_clip": 160.44,
+            "adjusted_start_broadcast": 3421.44
+          }
+        },
+        {
+          "unique_id": "MUMGOSS285030",
+          "brand": "Gousto.co.uk ingredients delivery",
+          "advertiser": "Gousto",
+          "category": "Food - multi product",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:30.320",
+            "last_seconds_clip": 210.32,
+            "last_frame": 1051,
+            "match_tier": "words(no-tld)",
+            "matched_terms": [
+              "gousto",
+              "delivery"
+            ],
+            "start_seconds_clip": 180.44,
+            "adjusted_start_broadcast": 3441.44
+          }
+        },
+        {
+          "unique_id": "MCZVAXV094060",
+          "brand": "Vax spotwash home duo cleaner",
+          "advertiser": "Vax",
+          "category": "Small appliances - home",
+          "scheduled_duration_seconds": 60,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:30.320",
+            "last_seconds_clip": 270.32,
+            "last_frame": 1351,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "home",
+              "spotwash"
+            ],
+            "start_seconds_clip": 210.44,
+            "adjusted_start_broadcast": 3471.44
+          }
+        },
+        {
+          "unique_id": "PCHPPGP002010",
+          "brand": "Consorzio grana padano cheese",
+          "advertiser": "Consorzio tutela gra",
+          "category": "Cheese - continental",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:40.320",
+            "last_seconds_clip": 280.32,
+            "last_frame": 1401,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "grana",
+              "padano"
+            ],
+            "start_seconds_clip": 270.44,
+            "adjusted_start_broadcast": 3531.44
+          }
+        },
+        {
+          "unique_id": "VCCCOMP758030",
+          "brand": "Comparethemarket.com",
+          "advertiser": "Bisl",
+          "category": "Home & motor insurance",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 310.32,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 280.44,
+            "adjusted_start_broadcast": 3541.44
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.784,
+        "matched_count": 6,
+        "total_count": 8,
+        "reasons": []
+      }
+    }
+  ]
+}

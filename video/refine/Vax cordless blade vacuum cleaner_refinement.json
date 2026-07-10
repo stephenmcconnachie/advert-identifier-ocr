@@ -1,0 +1,47 @@
+{
+  "brand": "Vax cordless blade vacuum cleaner",
+  "T_clip": 90.2,
+  "T_broadcast": 2317.2,
+  "current_5fps_text": "Vax Blade 4 RANGE\nFROM\n£159.99\n+ FREE DELIVERY\nVax.co.uk\nCALL 0800 0314 972\nKlarna.\nUK sales volume Jan-Dec 2022. Dust removal from carpet. For verification email claimsinfo@vax.co.uk",
+  "next_5fps_text": "Offer ends 28/04/24. Subject to availability. Participating restaurants only. See kfc.co.uk for T&Cs.",
+  "current_next_similarity": 0.197,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "Vax Blade 4 RANGE\nFROM\n£159.99\n+ FREE DELIVERY\nVax.co.uk\nCALL 0800 0314 972\nKlarna.\nUK sales volume Jan-Dec 2022. Dust removal from carpet. For verification email claimsinfo@vax.co.uk",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.197
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "Vax Blade 4 RANGE\nFROM\n£159.99\n+ FREE DELIVERY\nVax.co.uk\nCALL 0800 0314 972\nKlarna.\nUK sales volume Jan-Dec 2022. Dust removal from carpet. For verification email claimsinfo@vax.co.uk",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.197
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "Vax Blade 4 RANGE\nFROM\n£159.99\n+ FREE DELIVERY\nVax.co.uk\nCALL 0800 0314 972\nKlarna.\nUK sales volume Jan-Dec 2022. Dust removal from carpet. For verification email claimsinfo@vax.co.uk",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.197
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "Offer ends 28/04/24. Subject to availability. Participating restaurants only. See kfc.co.uk for T&Cs.",
+      "sim_to_current": 0.218,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "Offer ends 28/04/24. Subject to availability. Participating restaurants only. See kfc.co.uk for T&Cs.",
+      "sim_to_current": 0.218,
+      "sim_to_next": 1.0
+    }
+  ]
+}

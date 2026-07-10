@@ -1,0 +1,47 @@
+{
+  "brand": "Smart energy smart meters",
+  "T_clip": 136.2,
+  "T_broadcast": 3493.2,
+  "current_5fps_text": "Save up to £245 a year\nget a smart meter\nJoin the energy revolution\nSavings based on reductions from 8 min showers, 80°C boiler flow temperature, 22°C thermostat - typical 3 bedroom, combi boiler gas-heated GB home, correct as of January 2024. Eligibility may vary.",
+  "next_5fps_text": "",
+  "current_next_similarity": 0.0,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "Save up to £245 a year\nget a smart meter\nSavings based on reductions from 8 min showers, 80°C boiler flow temperature, 22°C thermostat - typical 3 bedroom, combi boiler gas-heated GB home, correct as of January 2024. Eligibility may vary.",
+      "sim_to_current": 0.946,
+      "sim_to_next": 0.0
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "Save up to £245 a year\nget a smart meter\nSavings based on reductions from 8 min showers, 80°C boiler flow temperature, 22°C thermostat - typical 3 bedroom, combi boiler gas-heated GB home, correct as of January 2024. Eligibility may vary.",
+      "sim_to_current": 0.946,
+      "sim_to_next": 0.0
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "Save up to £245 a year\nget a smart meter\nJoin the energy revolution\nSavings based on reductions from 8 min showers, 80°C boiler flow temperature, 22°C thermostat - typical 3 bedroom, combi boiler gas-heated GB home, correct as of January 2024. Eligibility may vary.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.0
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "Save up to £245 a year\nget a smart meter\nJoin the energy revolution\nSavings based on reductions from 8 min showers, 80°C boiler flow temperature, 22°C thermostat - typical 3 bedroom, combi boiler gas-heated GB home, correct as of January 2024. Eligibility may vary.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.0
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "Save up to £245 a year\nget a smart meter\nJoin the energy revolution\nSavings based on reductions from 8 min showers, 80°C boiler flow temperature, 22°C thermostat - typical 3 bedroom, combi boiler gas-heated GB home, correct as of January 2024. Eligibility may vary.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.0
+    }
+  ]
+}

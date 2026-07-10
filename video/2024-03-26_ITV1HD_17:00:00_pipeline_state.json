@@ -1,0 +1,588 @@
+{
+  "pipeline_version": 2,
+  "before_secs": 10.0,
+  "video_info": {
+    "filepath": "/mnt/qnap_04/Admin/code/ai_machine_learning/advert-identifier-ocr/video/2024-03-26_ITV1HD_17:00:00.mp4",
+    "start_time": "17:00:00"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "start_time": "17:20:02",
+      "clip_offset": 1192.0,
+      "adverts": [
+        {
+          "unique_id": "LMIMTWY002010",
+          "brand": "Motorway.co.uk",
+          "advertiser": "Motorway online",
+          "category": "Automotive marketplace",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "-1:54.800",
+            "last_seconds_clip": -5.199999999999999,
+            "last_frame": -25,
+            "match_tier": "anchor",
+            "matched_terms": [],
+            "start_seconds_clip": -15.08,
+            "adjusted_start_broadcast": 1176.92
+          }
+        },
+        {
+          "unique_id": "MTCFAGE003020",
+          "brand": "Total greek yoghurt",
+          "advertiser": "Fage uk",
+          "category": "Yogurt - natural/greek",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:14.800",
+            "last_seconds_clip": 14.8,
+            "last_frame": 74,
+            "match_tier": "anchor-verified",
+            "matched_terms": [
+              "total"
+            ],
+            "start_seconds_clip": -5.08,
+            "adjusted_start_broadcast": 1186.92
+          }
+        },
+        {
+          "unique_id": "BEMMSEA214030",
+          "brand": "Marks & spencer easter",
+          "advertiser": "Marks & spencer",
+          "category": "Hot cross buns",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:44.800",
+            "last_seconds_clip": 44.8,
+            "last_frame": 224,
+            "match_tier": "anchor",
+            "matched_terms": [],
+            "start_seconds_clip": 14.92,
+            "adjusted_start_broadcast": 1206.92
+          }
+        },
+        {
+          "unique_id": "MLLDHSC301030",
+          "brand": "Ccs cardiovascular disease",
+          "advertiser": "Ccs",
+          "category": "Chemists",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:14.800",
+            "last_seconds_clip": 74.8,
+            "last_frame": 374,
+            "match_tier": "anchor",
+            "matched_terms": [],
+            "start_seconds_clip": 44.92,
+            "adjusted_start_broadcast": 1236.92
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.57,
+        "matched_count": 1,
+        "total_count": 4,
+        "reasons": [
+          "low match ratio (1/4)",
+          "first advert weak match tier (anchor)"
+        ]
+      }
+    },
+    {
+      "index": 2,
+      "start_time": "17:31:10",
+      "clip_offset": 1860.0,
+      "adverts": [
+        {
+          "unique_id": "ICPEONN510020",
+          "brand": "E on next",
+          "advertiser": "E on",
+          "category": "Residential renewable energy",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:05.200",
+            "last_seconds_clip": 5.200000000000003,
+            "last_frame": 26,
+            "match_tier": "anchor",
+            "matched_terms": [],
+            "start_seconds_clip": -14.68,
+            "adjusted_start_broadcast": 1845.32
+          }
+        },
+        {
+          "unique_id": "WCRSKNW064030",
+          "brand": "Sky now tv",
+          "advertiser": "Sky uk",
+          "category": "Film/programme downloads/streaming",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:35.200",
+            "last_seconds_clip": 35.2,
+            "last_frame": 176,
+            "match_tier": "anchor",
+            "matched_terms": [],
+            "start_seconds_clip": 5.32,
+            "adjusted_start_broadcast": 1865.32
+          }
+        },
+        {
+          "unique_id": "VCCPEWK039020",
+          "brand": "Walkers crisps",
+          "advertiser": "Walkers snack foods",
+          "category": "Crisps/snacks - countlines",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:55.200",
+            "last_seconds_clip": 55.2,
+            "last_frame": 276,
+            "match_tier": "anchor-verified",
+            "matched_terms": [
+              "crisps",
+              "walkers"
+            ],
+            "start_seconds_clip": 35.32,
+            "adjusted_start_broadcast": 1895.32
+          }
+        },
+        {
+          "unique_id": "MLLDHSC301030",
+          "brand": "Ccs cardiovascular disease",
+          "advertiser": "Ccs",
+          "category": "Chemists",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:25.200",
+            "last_seconds_clip": 85.2,
+            "last_frame": 426,
+            "match_tier": "anchor",
+            "matched_terms": [],
+            "start_seconds_clip": 55.32,
+            "adjusted_start_broadcast": 1915.32
+          }
+        },
+        {
+          "unique_id": "HOMJHOL124030",
+          "brand": "Jet2.com",
+          "advertiser": "Jet2",
+          "category": "Overseas tour operators",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:28.200",
+            "last_seconds_clip": 88.2,
+            "last_frame": 441,
+            "match_tier": "anchor-verified",
+            "matched_terms": [
+              "jet2.com"
+            ],
+            "start_seconds_clip": 58.32,
+            "adjusted_start_broadcast": 1918.32
+          }
+        },
+        {
+          "unique_id": "BDUPBEE031030",
+          "brand": "Pensionbee plans",
+          "advertiser": "Pensionbee",
+          "category": "Pensions - general/multi product",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:25.200",
+            "last_seconds_clip": 145.2,
+            "last_frame": 726,
+            "match_tier": "anchor",
+            "matched_terms": [],
+            "start_seconds_clip": 115.32,
+            "adjusted_start_broadcast": 1975.32
+          }
+        },
+        {
+          "unique_id": "MUMIEGL848030",
+          "brand": "Ikea stores",
+          "advertiser": "Ikea",
+          "category": "Furniture & furnishings",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:55.200",
+            "last_seconds_clip": 175.2,
+            "last_frame": 876,
+            "match_tier": "anchor-verified",
+            "matched_terms": [
+              "ikea"
+            ],
+            "start_seconds_clip": 145.32,
+            "adjusted_start_broadcast": 2005.32
+          }
+        },
+        {
+          "unique_id": "ICPBADG465020",
+          "brand": "Baileys irish cream",
+          "advertiser": "Diageo",
+          "category": "Liqueurs",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:00.400",
+            "last_seconds_clip": 180.4,
+            "last_frame": 902,
+            "match_tier": "anchor-verified",
+            "matched_terms": [
+              "baileys"
+            ],
+            "start_seconds_clip": 160.52,
+            "adjusted_start_broadcast": 2020.52
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.66,
+        "matched_count": 4,
+        "total_count": 8,
+        "reasons": [
+          "first advert weak match tier (anchor)"
+        ]
+      }
+    },
+    {
+      "index": 3,
+      "start_time": "17:45:09",
+      "clip_offset": 2699.0,
+      "adverts": [
+        {
+          "unique_id": "ATGBKCL135030",
+          "brand": "Actegy revitive circulation booster",
+          "advertiser": "Actegy",
+          "category": "Health & fitness appliances",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:16.360",
+            "last_seconds_clip": 16.36,
+            "last_frame": 81,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "revitive"
+            ],
+            "start_seconds_clip": -13.52,
+            "adjusted_start_broadcast": 2685.48
+          }
+        },
+        {
+          "unique_id": "AEDAVGI130020",
+          "brand": "Aviva insurance",
+          "advertiser": "Aviva",
+          "category": "Car insurance",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:36.360",
+            "last_seconds_clip": 36.36,
+            "last_frame": 181,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "insurance"
+            ],
+            "start_seconds_clip": 16.48,
+            "adjusted_start_broadcast": 2715.48
+          }
+        },
+        {
+          "unique_id": "HHPSLAP068020",
+          "brand": "Axa sun life over 50 ins plan",
+          "advertiser": "Axa sun life",
+          "category": "Life protection - over 50",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:56.360",
+            "last_seconds_clip": 56.36,
+            "last_frame": 281,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "plan",
+              "over"
+            ],
+            "start_seconds_clip": 36.48,
+            "adjusted_start_broadcast": 2735.48
+          }
+        },
+        {
+          "unique_id": "HOGBOSP779020",
+          "brand": "Boots cosmetics",
+          "advertiser": "Boots company",
+          "category": "Chemists",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:16.360",
+            "last_seconds_clip": 76.36,
+            "last_frame": 381,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "boots"
+            ],
+            "start_seconds_clip": 56.48,
+            "adjusted_start_broadcast": 2755.48
+          }
+        },
+        {
+          "unique_id": "HMTMAFO019020",
+          "brand": "Material focus recycyle your electr",
+          "advertiser": "Material focus",
+          "category": "Business & industrial - other",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:36.360",
+            "last_seconds_clip": 96.36,
+            "last_frame": 481,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "your"
+            ],
+            "start_seconds_clip": 76.48,
+            "adjusted_start_broadcast": 2775.48
+          }
+        },
+        {
+          "unique_id": "TTBGSSD091020",
+          "brand": "Sensodyne toothpaste",
+          "advertiser": "Haleon uk",
+          "category": "Toothpaste/polish",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:56.360",
+            "last_seconds_clip": 116.36,
+            "last_frame": 581,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "sensodyne"
+            ],
+            "start_seconds_clip": 96.48,
+            "adjusted_start_broadcast": 2795.48
+          }
+        },
+        {
+          "unique_id": "BLBFURN201030",
+          "brand": "Furniture village",
+          "advertiser": "Furniture village",
+          "category": "Furniture & furnishings",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:26.360",
+            "last_seconds_clip": 146.35999999999999,
+            "last_frame": 731,
+            "match_tier": "exact(original)",
+            "matched_terms": [
+              "furniture village"
+            ],
+            "start_seconds_clip": 116.48,
+            "adjusted_start_broadcast": 2815.48
+          }
+        },
+        {
+          "unique_id": "OGYVODF446030",
+          "brand": "Vodafone broadband",
+          "advertiser": "Vodafone group",
+          "category": "Business mobile broadband",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:56.360",
+            "last_seconds_clip": 176.35999999999999,
+            "last_frame": 881,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "vodafone",
+              "broadband"
+            ],
+            "start_seconds_clip": 146.48,
+            "adjusted_start_broadcast": 2845.48
+          }
+        },
+        {
+          "unique_id": "ICPEONN510020",
+          "brand": "E on next",
+          "advertiser": "E on",
+          "category": "Residential renewable energy",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 196.35999999999999,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 176.48,
+            "adjusted_start_broadcast": 2875.48
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.875,
+        "matched_count": 8,
+        "total_count": 9,
+        "reasons": []
+      }
+    },
+    {
+      "index": 4,
+      "start_time": "17:56:07",
+      "clip_offset": 3357.0,
+      "adverts": [
+        {
+          "unique_id": "JLNUSWT092020",
+          "brand": "Uswitch.com",
+          "advertiser": "Uswitch",
+          "category": "Internet services including isps",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:06.360",
+            "last_seconds_clip": 6.36,
+            "last_frame": 31,
+            "match_tier": "exact(original)",
+            "matched_terms": [
+              "uswitch.com"
+            ],
+            "start_seconds_clip": -13.52,
+            "adjusted_start_broadcast": 3343.48
+          }
+        },
+        {
+          "unique_id": "BBHTCPT535010",
+          "brand": "Tesco easter",
+          "advertiser": "Tesco stores",
+          "category": "Meat/poultry - multi product",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:16.360",
+            "last_seconds_clip": 16.36,
+            "last_frame": 81,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "tesco"
+            ],
+            "start_seconds_clip": 6.48,
+            "adjusted_start_broadcast": 3363.48
+          }
+        },
+        {
+          "unique_id": "BURTMDO527030",
+          "brand": "Mcdonalds restaurant",
+          "advertiser": "Mcdonalds restaurant",
+          "category": "Fast food restaurants - multi product",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:46.360",
+            "last_seconds_clip": 46.36,
+            "last_frame": 231,
+            "match_tier": "words(poss(0))",
+            "matched_terms": [
+              "mcdonald's"
+            ],
+            "start_seconds_clip": 16.48,
+            "adjusted_start_broadcast": 3373.48
+          }
+        },
+        {
+          "unique_id": "LIPWARB002060",
+          "brand": "Warburtons bread",
+          "advertiser": "Warburtons",
+          "category": "Bread",
+          "scheduled_duration_seconds": 60,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:46.360",
+            "last_seconds_clip": 106.36,
+            "last_frame": 531,
+            "match_tier": "words(poss(0))",
+            "matched_terms": [
+              "warburton's"
+            ],
+            "start_seconds_clip": 46.48,
+            "adjusted_start_broadcast": 3403.48
+          }
+        },
+        {
+          "unique_id": "AMVSETP244030",
+          "brand": "Smart energy smart meters",
+          "advertiser": "Smart energy gb",
+          "category": "Residential combined utilities",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:16.360",
+            "last_seconds_clip": 136.35999999999999,
+            "last_frame": 681,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "smart",
+              "energy"
+            ],
+            "start_seconds_clip": 106.48,
+            "adjusted_start_broadcast": 3463.48
+          }
+        },
+        {
+          "unique_id": "MRPFERR001030",
+          "brand": "Ferrero rocher chocolates",
+          "advertiser": "Ferrero uk",
+          "category": "Chocolate - boxed/tinned",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:46.360",
+            "last_seconds_clip": 166.35999999999999,
+            "last_frame": 831,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "ferrero",
+              "rocher"
+            ],
+            "start_seconds_clip": 136.48,
+            "adjusted_start_broadcast": 3493.48
+          }
+        },
+        {
+          "unique_id": "HOGVOLV251030",
+          "brand": "Volvo ex30",
+          "advertiser": "Volvo car uk",
+          "category": "H - dual purpose",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:16.360",
+            "last_seconds_clip": 196.35999999999999,
+            "last_frame": 981,
+            "match_tier": "exact(original)",
+            "matched_terms": [
+              "volvo ex30"
+            ],
+            "start_seconds_clip": 166.48,
+            "adjusted_start_broadcast": 3523.48
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.946,
+        "matched_count": 7,
+        "total_count": 7,
+        "reasons": []
+      }
+    }
+  ]
+}

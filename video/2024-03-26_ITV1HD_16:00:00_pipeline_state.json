@@ -1,0 +1,499 @@
+{
+  "pipeline_version": 2,
+  "before_secs": 10.0,
+  "video_info": {
+    "filepath": "/mnt/qnap_04/Admin/code/ai_machine_learning/advert-identifier-ocr/video/2024-03-26_ITV1HD_16:00:00.mp4",
+    "start_time": "16:00:00"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "start_time": "16:11:29",
+      "clip_offset": 679.0,
+      "adverts": [
+        {
+          "unique_id": "OGYDULX002020",
+          "brand": "Dulux colour",
+          "advertiser": "I c i paints",
+          "category": "Paints",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:11.960",
+            "last_seconds_clip": 11.96,
+            "last_frame": 59,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "dulux"
+            ],
+            "start_seconds_clip": -7.92,
+            "adjusted_start_broadcast": 671.08
+          }
+        },
+        {
+          "unique_id": "TTBDGCH001030",
+          "brand": "Chocomel milk drink",
+          "advertiser": "Frieslandcampina",
+          "category": "Milk drinks",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 41.96,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 12.08,
+            "adjusted_start_broadcast": 691.08
+          }
+        },
+        {
+          "unique_id": "TBMMPHY459030",
+          "brand": "Merlin annual pass",
+          "advertiser": "Merlin entertainment",
+          "category": "Theme parks",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:11.800",
+            "last_seconds_clip": 71.8,
+            "last_frame": 359,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "pass",
+              "annual",
+              "merlin"
+            ],
+            "start_seconds_clip": 41.92,
+            "adjusted_start_broadcast": 720.92
+          }
+        },
+        {
+          "unique_id": "AEDUNPN377010",
+          "brand": "Pot noodle",
+          "advertiser": "Unilever bestfoods",
+          "category": "Instant snack pasta/rice/noodles",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:21.800",
+            "last_seconds_clip": 81.8,
+            "last_frame": 409,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "noodle"
+            ],
+            "start_seconds_clip": 71.92,
+            "adjusted_start_broadcast": 750.92
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.775,
+        "matched_count": 3,
+        "total_count": 4,
+        "reasons": []
+      }
+    },
+    {
+      "index": 2,
+      "start_time": "16:23:53",
+      "clip_offset": 1423.0,
+      "adverts": [
+        {
+          "unique_id": "MCPSTVO007060",
+          "brand": "Save the children fund",
+          "advertiser": "Save the children fu",
+          "category": "Children charities",
+          "scheduled_duration_seconds": 60,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:10.280",
+            "last_seconds_clip": 70.28,
+            "last_frame": 351,
+            "match_tier": "exact(concat(3))",
+            "matched_terms": [
+              "savethechildren"
+            ],
+            "start_seconds_clip": 10.4,
+            "adjusted_start_broadcast": 1433.4
+          }
+        },
+        {
+          "unique_id": "BURTMOR079020",
+          "brand": "Morrisons supermarket",
+          "advertiser": "William morrison sup",
+          "category": "Hot cross buns",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:30.280",
+            "last_seconds_clip": 90.28,
+            "last_frame": 451,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "morrisons"
+            ],
+            "start_seconds_clip": 70.4,
+            "adjusted_start_broadcast": 1493.4
+          }
+        },
+        {
+          "unique_id": "PGOGILE018030",
+          "brand": "Gillette labs razor & shave gel",
+          "advertiser": "Procter & gamble uk",
+          "category": "Razors - manual",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:00.280",
+            "last_seconds_clip": 120.28,
+            "last_frame": 601,
+            "match_tier": "exact(concat(2))",
+            "matched_terms": [
+              "gillettelabs"
+            ],
+            "start_seconds_clip": 90.4,
+            "adjusted_start_broadcast": 1513.4
+          }
+        },
+        {
+          "unique_id": "BRITOTR077020",
+          "brand": "Toffifee",
+          "advertiser": "Storck uk",
+          "category": "Chocolate - boxed/tinned",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:20.280",
+            "last_seconds_clip": 140.28,
+            "last_frame": 701,
+            "match_tier": "exact(original)",
+            "matched_terms": [
+              "toffifee"
+            ],
+            "start_seconds_clip": 120.4,
+            "adjusted_start_broadcast": 1543.4
+          }
+        },
+        {
+          "unique_id": "QSTOTBE279030",
+          "brand": "Onthebeach.co.uk",
+          "advertiser": "On the beach",
+          "category": "Travel agents",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:50.280",
+            "last_seconds_clip": 170.28,
+            "last_frame": 851,
+            "match_tier": "advertiser",
+            "matched_terms": [
+              "on the beach"
+            ],
+            "start_seconds_clip": 140.4,
+            "adjusted_start_broadcast": 1563.4
+          }
+        },
+        {
+          "unique_id": "HASFCPA002030",
+          "brand": "Fast cash property",
+          "advertiser": "Fastcashproperty",
+          "category": "General property services",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:20.280",
+            "last_seconds_clip": 200.28,
+            "last_frame": 1001,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "fast cash property",
+              "property",
+              "cash",
+              "fast"
+            ],
+            "start_seconds_clip": 170.4,
+            "adjusted_start_broadcast": 1593.4
+          }
+        },
+        {
+          "unique_id": "HOGBOSP779020",
+          "brand": "Boots cosmetics",
+          "advertiser": "Boots company",
+          "category": "Chemists",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:40.280",
+            "last_seconds_clip": 220.28,
+            "last_frame": 1101,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "boots"
+            ],
+            "start_seconds_clip": 200.4,
+            "adjusted_start_broadcast": 1623.4
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.927,
+        "matched_count": 7,
+        "total_count": 7,
+        "reasons": []
+      }
+    },
+    {
+      "index": 3,
+      "start_time": "16:37:17",
+      "clip_offset": 2227.0,
+      "adverts": [
+        {
+          "unique_id": "HKXDETE141030",
+          "brand": "Ccs childcare careers",
+          "advertiser": "Ccs",
+          "category": "Company & agency recruitment",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:40.280",
+            "last_seconds_clip": 40.28,
+            "last_frame": 201,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "careers"
+            ],
+            "start_seconds_clip": 10.4,
+            "adjusted_start_broadcast": 2237.4
+          }
+        },
+        {
+          "unique_id": "VCCCOMP759030",
+          "brand": "Comparethemarket.com",
+          "advertiser": "Bisl",
+          "category": "Home & motor insurance",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 70.28,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 40.4,
+            "adjusted_start_broadcast": 2267.4
+          }
+        },
+        {
+          "unique_id": "MCZVAXV089020",
+          "brand": "Vax cordless blade vacuum cleaner",
+          "advertiser": "Vax",
+          "category": "Small appliances - home",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:30.280",
+            "last_seconds_clip": 90.28,
+            "last_frame": 451,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "blade"
+            ],
+            "start_seconds_clip": 70.4,
+            "adjusted_start_broadcast": 2297.4
+          }
+        },
+        {
+          "unique_id": "MUMKNVA321010",
+          "brand": "Kfc original recipe deal",
+          "advertiser": "Kentucky fried chick",
+          "category": "Fast food restaurants - multi product",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 100.28,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 90.4,
+            "adjusted_start_broadcast": 2317.4
+          }
+        },
+        {
+          "unique_id": "LIPWARB002060",
+          "brand": "Warburtons bread",
+          "advertiser": "Warburtons",
+          "category": "Bread",
+          "scheduled_duration_seconds": 60,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:40.280",
+            "last_seconds_clip": 160.28,
+            "last_frame": 801,
+            "match_tier": "words(poss(0))",
+            "matched_terms": [
+              "warburton's"
+            ],
+            "start_seconds_clip": 100.4,
+            "adjusted_start_broadcast": 2327.4
+          }
+        },
+        {
+          "unique_id": "ANOCRUK414030",
+          "brand": "Cancer research race for life",
+          "advertiser": "Cancer research uk",
+          "category": "Cancer charities",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:10.280",
+            "last_seconds_clip": 190.28,
+            "last_frame": 951,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "research",
+              "life",
+              "race",
+              "cancer"
+            ],
+            "start_seconds_clip": 160.4,
+            "adjusted_start_broadcast": 2387.4
+          }
+        },
+        {
+          "unique_id": "DVNPLMF020030",
+          "brand": "Poundland stores",
+          "advertiser": "Poundland",
+          "category": "Other retail",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:40.280",
+            "last_seconds_clip": 220.28,
+            "last_frame": 1101,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "stores",
+              "poundland"
+            ],
+            "start_seconds_clip": 190.4,
+            "adjusted_start_broadcast": 2417.4
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.775,
+        "matched_count": 5,
+        "total_count": 7,
+        "reasons": []
+      }
+    },
+    {
+      "index": 4,
+      "start_time": "16:56:26",
+      "clip_offset": 3376.0,
+      "adverts": [
+        {
+          "unique_id": "VCCCOMP760030",
+          "brand": "Comparethemarket.com",
+          "advertiser": "Bisl",
+          "category": "Home & motor insurance",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:34.760",
+            "last_seconds_clip": 34.75999999999999,
+            "last_frame": 173,
+            "match_tier": "anchor",
+            "matched_terms": [],
+            "start_seconds_clip": 4.88,
+            "adjusted_start_broadcast": 3380.88
+          }
+        },
+        {
+          "unique_id": "ANOANCY154030",
+          "brand": "Ancestry.co.uk",
+          "advertiser": "Ancestry.com uk",
+          "category": "Internet services including isps",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:04.760",
+            "last_seconds_clip": 64.75999999999999,
+            "last_frame": 323,
+            "match_tier": "anchor",
+            "matched_terms": [],
+            "start_seconds_clip": 34.88,
+            "adjusted_start_broadcast": 3410.88
+          }
+        },
+        {
+          "unique_id": "SSCEEDR028030",
+          "brand": "Ee sim only",
+          "advertiser": "Everything everywher",
+          "category": "Mobile pay monthly - sim only",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:34.760",
+            "last_seconds_clip": 94.75999999999999,
+            "last_frame": 473,
+            "match_tier": "anchor",
+            "matched_terms": [],
+            "start_seconds_clip": 64.88,
+            "adjusted_start_broadcast": 3440.88
+          }
+        },
+        {
+          "unique_id": "CPBMARI008060",
+          "brand": "Marie curie cancer care",
+          "advertiser": "Marie curie cancer c",
+          "category": "Cancer charities",
+          "scheduled_duration_seconds": 60,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:34.600",
+            "last_seconds_clip": 154.6,
+            "last_frame": 773,
+            "match_tier": "anchor-verified",
+            "matched_terms": [
+              "care",
+              "curie",
+              "marie"
+            ],
+            "start_seconds_clip": 94.72,
+            "adjusted_start_broadcast": 3470.72
+          }
+        },
+        {
+          "unique_id": "AEDVEPW065060",
+          "brand": "Vegetable power awareness",
+          "advertiser": "Vegpower",
+          "category": "Media - brand building",
+          "scheduled_duration_seconds": 60,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:34.760",
+            "last_seconds_clip": 214.76,
+            "last_frame": 1073,
+            "match_tier": "anchor",
+            "matched_terms": [],
+            "start_seconds_clip": 154.88,
+            "adjusted_start_broadcast": 3530.88
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.552,
+        "matched_count": 1,
+        "total_count": 5,
+        "reasons": [
+          "low match ratio (1/5)",
+          "first advert weak match tier (anchor)"
+        ]
+      }
+    }
+  ]
+}

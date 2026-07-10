@@ -1,0 +1,47 @@
+{
+  "brand": "Heinz baked beans",
+  "T_clip": 143.2,
+  "T_broadcast": 3415.2,
+  "current_5fps_text": "BEANZ MEANZ HEINZ\nESTP 1869",
+  "next_5fps_text": "1",
+  "current_next_similarity": 0.071,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "BEANZ MEANZ HEINZ\nESTP 1869",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.071
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "BEANZ MEANZ HEINZ\nESTP 1869",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.071
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "BEANZ MEANZ HEINZ\nESTP 1869",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.071
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "",
+      "sim_to_current": 0.0,
+      "sim_to_next": 0.0
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "",
+      "sim_to_current": 0.0,
+      "sim_to_next": 0.0
+    }
+  ]
+}

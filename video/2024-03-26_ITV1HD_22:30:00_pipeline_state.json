@@ -1,0 +1,9 @@
+{
+  "pipeline_version": 2,
+  "before_secs": 10.0,
+  "video_info": {
+    "filepath": "/mnt/qnap_04/Admin/code/ai_machine_learning/advert-identifier-ocr/video/2024-03-26_ITV1HD_22:30:00.mp4",
+    "start_time": "22:30:00"
+  },
+  "ad_breaks": []
+}

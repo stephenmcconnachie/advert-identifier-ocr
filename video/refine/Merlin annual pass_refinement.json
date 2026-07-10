@@ -1,0 +1,47 @@
+{
+  "brand": "Merlin annual pass",
+  "T_clip": 71.8,
+  "T_broadcast": 750.8,
+  "current_5fps_text": "£60.00pp saving based on Merlin Platinum Annual Pass. Discovery offer for new customers only. Offer ends 07/04/2024. T&Cs apply, see website for full details.",
+  "next_5fps_text": "£60.00pp saving based on Merlin Platinum Annual Pass. Discovery offer for new customers only. Offer ends 07/04/2024. T&Cs apply, see website for full details.",
+  "current_next_similarity": 1.0,
+  "has_boundary": false,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "£60.00pp saving based on Merlin Platinum Annual Pass. Discovery offer for new customers only. Offer ends 07/04/2024. T&Cs apply, see website for full details.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "£60.00pp saving based on Merlin Platinum Annual Pass. Discovery offer for new customers only. Offer ends 07/04/2024. T&Cs apply, see website for full details.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "£60.00pp saving based on Merlin Platinum Annual Pass. Discovery offer for new customers only. Offer ends 07/04/2024. T&Cs apply, see website for full details.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "£60.00pp saving based on Merlin Platinum Annual Pass. Discovery offer for new customers only. Offer ends 07/04/2024. T&Cs apply, see website for full details.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "£60.00pp saving based on Merlin Platinum Annual Pass. Discovery offer for new customers only. Offer ends 07/04/2024. T&Cs apply, see website for full details.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 1.0
+    }
+  ]
+}

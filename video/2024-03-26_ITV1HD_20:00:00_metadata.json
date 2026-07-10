@@ -1,0 +1,415 @@
+{
+  "video_info": {
+    "filepath": "/mnt/qnap_04/Admin/code/ai_machine_learning/advert-identifier-ocr/video/2024-03-26_ITV1HD_20:00:00.mp4",
+    "date": "2024-03-26",
+    "channel": "ITV1HD",
+    "start_time": "20:00:00",
+    "duration_seconds": 3664.92,
+    "end_time": "21:01:04"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "is_partial": false,
+      "programme_before": {
+        "title": "WHO WANTS TO BE A MILLION RPT",
+        "channel": "ITV1 HD"
+      },
+      "programme_after": {
+        "title": "WHO WANTS TO BE A MILLION RPT",
+        "channel": "ITV1 HD"
+      },
+      "start_time": "20:13:08",
+      "end_time": "20:16:28",
+      "adverts": [
+        {
+          "unique_id": "VCCVMBR127030",
+          "advertiser": "Virgin media",
+          "brand": "Virgin media broadband & tv",
+          "category": "Home broadband",
+          "duration_seconds": 30,
+          "start_time": "20:13:08",
+          "position_in_break": "First"
+        },
+        {
+          "unique_id": "MCLAJCG004010",
+          "advertiser": "Aj bell",
+          "brand": "Aj bell investments",
+          "category": "Investment - brand building",
+          "duration_seconds": 10,
+          "start_time": "20:13:38",
+          "position_in_break": "2nd"
+        },
+        {
+          "unique_id": "MCMMATA145010",
+          "advertiser": "Matalan retail",
+          "brand": "Matalan wholesale clothing store",
+          "category": "Unisex wear/ men & womens clothing",
+          "duration_seconds": 10,
+          "start_time": "20:13:48",
+          "position_in_break": "3rd"
+        },
+        {
+          "unique_id": "UTVCHIL236030",
+          "advertiser": "Childs farm",
+          "brand": "Childs farm toiletries",
+          "category": "Multi product - skincare",
+          "duration_seconds": 30,
+          "start_time": "20:13:58",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "BEMMSEA214030",
+          "advertiser": "Marks & spencer",
+          "brand": "Marks & spencer easter",
+          "category": "Hot cross buns",
+          "duration_seconds": 30,
+          "start_time": "20:14:28",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "HKXDFEN017020",
+          "advertiser": "Edf energy",
+          "brand": "Edf energy",
+          "category": "Residential renewable energy",
+          "duration_seconds": 20,
+          "start_time": "20:14:58",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "REPAMEX033030",
+          "advertiser": "American express eur",
+          "brand": "Amex business card",
+          "category": "Business credit cards",
+          "duration_seconds": 30,
+          "start_time": "20:15:18",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "TGSGNTA005010",
+          "advertiser": "Samworth brothers",
+          "brand": "Ginsters",
+          "category": "Pasties & slices",
+          "duration_seconds": 10,
+          "start_time": "20:15:48",
+          "position_in_break": "3rd last"
+        },
+        {
+          "unique_id": "DESLVHO115010",
+          "advertiser": "Liverpool victoria f",
+          "brand": "Liverpool victoria home insurance",
+          "category": "Home ins (including buildings & content)",
+          "duration_seconds": 10,
+          "start_time": "20:15:58",
+          "position_in_break": "2nd last"
+        },
+        {
+          "unique_id": "MUMIEGL848030",
+          "advertiser": "Ikea",
+          "brand": "Ikea stores",
+          "category": "Furniture & furnishings",
+          "duration_seconds": 30,
+          "start_time": "20:16:08",
+          "position_in_break": "Last"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "is_partial": false,
+      "programme_before": {
+        "title": "WHO WANTS TO BE A MILLION RPT",
+        "channel": "ITV1 HD"
+      },
+      "programme_after": {
+        "title": "WHO WANTS TO BE A MILLION RPT",
+        "channel": "ITV1 HD"
+      },
+      "start_time": "20:32:14",
+      "end_time": "20:35:44",
+      "adverts": [
+        {
+          "unique_id": "ANOANGP104020",
+          "advertiser": "Google uk",
+          "brand": "Google pixel 8 phone",
+          "category": "Mobile handsets - smartphones",
+          "duration_seconds": 20,
+          "start_time": "20:32:14",
+          "position_in_break": "First"
+        },
+        {
+          "unique_id": "HOGTOLX095030",
+          "advertiser": "Toyota gb",
+          "brand": "Toyota lexus rz",
+          "category": "H - dual purpose",
+          "duration_seconds": 30,
+          "start_time": "20:32:34",
+          "position_in_break": "2nd"
+        },
+        {
+          "unique_id": "CLDDUHH006010",
+          "advertiser": "Dunelm",
+          "brand": "Dunelm mill store",
+          "category": "Bed & bath linens & towels",
+          "duration_seconds": 10,
+          "start_time": "20:33:04",
+          "position_in_break": "3rd"
+        },
+        {
+          "unique_id": "MUMKNVA321010",
+          "advertiser": "Kentucky fried chick",
+          "brand": "Kfc original recipe deal",
+          "category": "Fast food restaurants - multi product",
+          "duration_seconds": 10,
+          "start_time": "20:33:14",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "ALPYTCT002010",
+          "advertiser": "Yellow tail wines",
+          "brand": "Yellow tail shiraz wine",
+          "category": "Red",
+          "duration_seconds": 10,
+          "start_time": "20:33:24",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "ICPEONN510020",
+          "advertiser": "E on",
+          "brand": "E on next",
+          "category": "Residential renewable energy",
+          "duration_seconds": 20,
+          "start_time": "20:33:34",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "TBMCHWJ456030",
+          "advertiser": "Merlin entertainment",
+          "brand": "Chessington world of adventure",
+          "category": "Theme parks",
+          "duration_seconds": 30,
+          "start_time": "20:33:54",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "JLNUSWT092020",
+          "advertiser": "Uswitch",
+          "brand": "Uswitch.com",
+          "category": "Internet services including isps",
+          "duration_seconds": 20,
+          "start_time": "20:34:24",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "PCHPPGP001010",
+          "advertiser": "Consorzio tutela gra",
+          "brand": "Consorzio grana padano cheese",
+          "category": "Cheese - continental",
+          "duration_seconds": 10,
+          "start_time": "20:34:44",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "TTBERHO035020",
+          "advertiser": "Expedia.co.uk",
+          "brand": "Hotels.com",
+          "category": "Online travel/booking agents",
+          "duration_seconds": 20,
+          "start_time": "20:34:54",
+          "position_in_break": "3rd last"
+        },
+        {
+          "unique_id": "TMWOFLT014010",
+          "advertiser": "Oak furnitureland",
+          "brand": "Oakfurnitureland.co.uk",
+          "category": "Furniture & furnishings",
+          "duration_seconds": 10,
+          "start_time": "20:35:14",
+          "position_in_break": "2nd last"
+        },
+        {
+          "unique_id": "UCSBQBR010020",
+          "advertiser": "B & q",
+          "brand": "B&q value",
+          "category": "Diy stores",
+          "duration_seconds": 20,
+          "start_time": "20:35:24",
+          "position_in_break": "Last"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "is_partial": false,
+      "programme_before": {
+        "title": "WHO WANTS TO BE A MILLION RPT",
+        "channel": "ITV1 HD"
+      },
+      "programme_after": {
+        "title": "WHO WANTS TO BE A MILLION RPT",
+        "channel": "ITV1 HD"
+      },
+      "start_time": "20:46:00",
+      "end_time": "20:49:40",
+      "adverts": [
+        {
+          "unique_id": "TTBBDNV113020",
+          "advertiser": "Beiersdorf uk",
+          "brand": "Nivea q10 wrinkle filler serum",
+          "category": "Skin serum",
+          "duration_seconds": 20,
+          "start_time": "20:46:00",
+          "position_in_break": "First"
+        },
+        {
+          "unique_id": "CLDDUHH008030",
+          "advertiser": "Dunelm",
+          "brand": "Dunelm mill store",
+          "category": "Furniture & furnishings",
+          "duration_seconds": 30,
+          "start_time": "20:46:20",
+          "position_in_break": "2nd"
+        },
+        {
+          "unique_id": "BURTMDO515010",
+          "advertiser": "Mcdonalds restaurant",
+          "brand": "Mcdonalds winning sips",
+          "category": "Fast food restaurants - brand building",
+          "duration_seconds": 10,
+          "start_time": "20:46:50",
+          "position_in_break": "3rd"
+        },
+        {
+          "unique_id": "HOGSKSH891020",
+          "advertiser": "Skechers",
+          "brand": "Skechers sport shoes",
+          "category": "Sports shoes and trainers",
+          "duration_seconds": 20,
+          "start_time": "20:47:00",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "ACBLIUK090020",
+          "advertiser": "Lidl uk gmbh",
+          "brand": "Lidl easter",
+          "category": "Food & drink - multi product",
+          "duration_seconds": 20,
+          "start_time": "20:47:20",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "OHLHOME001030",
+          "advertiser": "Homebase",
+          "brand": "Homebase stores",
+          "category": "Diy stores",
+          "duration_seconds": 30,
+          "start_time": "20:47:40",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "UCSIGAV003030",
+          "advertiser": "Avios group",
+          "brand": "Avios",
+          "category": "Loyalty/reward cards",
+          "duration_seconds": 30,
+          "start_time": "20:48:10",
+          "position_in_break": "Middle"
+        },
+        {
+          "unique_id": "BEVAGIM001030",
+          "advertiser": "Paramount pictures",
+          "brand": "Paramount plus video streaming",
+          "category": "Film/programme downloads/streaming",
+          "duration_seconds": 30,
+          "start_time": "20:48:40",
+          "position_in_break": "3rd last"
+        },
+        {
+          "unique_id": "HOGBECL301010",
+          "advertiser": "Bayer",
+          "brand": "Clarityn hayfever treatment",
+          "category": "Asthma & hay fever remedies",
+          "duration_seconds": 10,
+          "start_time": "20:49:10",
+          "position_in_break": "2nd last"
+        },
+        {
+          "unique_id": "LMIMTWY004010",
+          "advertiser": "Motorway online",
+          "brand": "Motorway.co.uk",
+          "category": "Automotive marketplace",
+          "duration_seconds": 10,
+          "start_time": "20:49:20",
+          "position_in_break": "Last"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "is_partial": true,
+      "programme_before": {
+        "title": "WHO WANTS TO BE A MILLION RPT",
+        "channel": "ITV1 HD"
+      },
+      "programme_after": {
+        "title": "KATE GARRAWAY DEREKS STORY",
+        "channel": "ITV1 HD"
+      },
+      "start_time": "20:59:29",
+      "end_time": "21:01:09",
+      "adverts": [
+        {
+          "unique_id": "TGWSMLM011030",
+          "advertiser": "Hutchison 3g uk",
+          "brand": "Hutchison 3g smarty",
+          "category": "Mobile pay monthly - sim only",
+          "duration_seconds": 30,
+          "start_time": "20:59:29",
+          "position_in_break": "First"
+        },
+        {
+          "unique_id": "TMWOFLT014010",
+          "advertiser": "Oak furnitureland",
+          "brand": "Oakfurnitureland.co.uk",
+          "category": "Furniture & furnishings",
+          "duration_seconds": 10,
+          "start_time": "20:59:59",
+          "position_in_break": "2nd"
+        },
+        {
+          "unique_id": "LMIMTWY004010",
+          "advertiser": "Motorway online",
+          "brand": "Motorway.co.uk",
+          "category": "Automotive marketplace",
+          "duration_seconds": 10,
+          "start_time": "21:00:09",
+          "position_in_break": "3rd"
+        },
+        {
+          "unique_id": "MUMKNLU330030",
+          "advertiser": "Kentucky fried chick",
+          "brand": "Kfc lunch meal deal",
+          "category": "Fast food restaurants - multi product",
+          "duration_seconds": 30,
+          "start_time": "21:00:19",
+          "position_in_break": "2nd last"
+        },
+        {
+          "unique_id": "BLBFURN204010",
+          "advertiser": "Furniture village",
+          "brand": "Furniture village",
+          "category": "Furniture & furnishings",
+          "duration_seconds": 10,
+          "start_time": "21:00:49",
+          "position_in_break": "Last"
+        }
+      ],
+      "missing_end_adverts": 1
+    }
+  ],
+  "summary": {
+    "total_ad_breaks": 4,
+    "partial_breaks": 1,
+    "total_adverts": 37
+  }
+}

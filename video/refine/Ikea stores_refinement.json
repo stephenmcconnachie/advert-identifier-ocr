@@ -1,0 +1,47 @@
+{
+  "brand": "Ikea stores",
+  "T_clip": 190.2,
+  "T_broadcast": 968.2,
+  "current_5fps_text": "IKEA\nTHE WONDERFUL EVERYDAY",
+  "next_5fps_text": "1\n1\n1\n1\n1",
+  "current_next_similarity": 0.167,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "IKEA\nTHE WONDERFUL EVERYDAY",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.167
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "IKEA\nTHE WONDERFUL EVERYDAY",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.167
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "IKEA\nTHE WONDERFUL EVERYDAY",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.167
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "111",
+      "sim_to_current": 0.0,
+      "sim_to_next": 0.5
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "111",
+      "sim_to_current": 0.0,
+      "sim_to_next": 0.5
+    }
+  ]
+}

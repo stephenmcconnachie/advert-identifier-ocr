@@ -1,0 +1,47 @@
+{
+  "brand": "Etsy.com online shopping",
+  "T_clip": 176.2,
+  "T_broadcast": 1697.2,
+  "current_5fps_text": "Gift Mode | Etsy Gift Mode\nGift easy with Gift Mode | The Cowgirl",
+  "next_5fps_text": "SAVE ON EVERY RANGE\nEASTER SALE\n3 years interest free credit from £499. Finance T&Cs apply. Oak Furnitureland FRN:928005 is a credit broker not a lender. Ends 07.04. Now on.",
+  "current_next_similarity": 0.202,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "Gift Mode | Etsy Gift Mode\nGift easy with Gift Mode | The Cowgirl",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.202
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "Gift Mode | Etsy Gift Mode\nGift easy with Gift Mode | The Cowgirl",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.202
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "Gift Mode | Etsy Gift Mode\nGift easy with Gift Mode | The Cowgirl",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.202
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "SAVE ON EVERY RANGE\nEASTER SALE\n3 years interest free credit from £499. Finance T&Cs apply. Oak Furnitureland FRN:928005 is a credit broker not a lender. Ends 07.04. Now on.",
+      "sim_to_current": 0.193,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "SAVE ON EVERY RANGE\nEASTER SALE\n3 years interest free credit from £499. Finance T&Cs apply. Oak Furnitureland FRN:928005 is a credit broker not a lender. Ends 07.04. Now on.",
+      "sim_to_current": 0.193,
+      "sim_to_next": 1.0
+    }
+  ]
+}

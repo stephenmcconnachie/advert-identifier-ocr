@@ -1,0 +1,47 @@
+{
+  "brand": "Nivea q10 wrinkle filler serum",
+  "T_clip": 0.2,
+  "T_broadcast": 2750.2,
+  "current_5fps_text": "Targeted Wrinkle Filler Serum\nAvailable at\nTESCO\nAvailable in selected stores and online. Excludes Express. Clubcard/app required. Ends 20/04. *71% of 119 women agreed.",
+  "next_5fps_text": "WELCOME",
+  "current_next_similarity": 0.08,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "Targeted Wrinkle Filler Serum\nAvailable at\nTESCO\nAvailable in selected stores and online. Excludes Express. Clubcard/app required. Ends 20/04. *71% of 119 women agreed.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.08
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "Targeted Wrinkle Filler Serum\nAvailable at\nTESCO\nAvailable in selected stores and online. Excludes Express. Clubcard/app required. Ends 20/04. *71% of 119 women agreed.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.08
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "Targeted Wrinkle Filler Serum\nAvailable at\nTESCO\nAvailable in selected stores and online. Excludes Express. Clubcard/app required. Ends 20/04. *71% of 119 women agreed.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.08
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "Welcome",
+      "sim_to_current": 0.08,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "WELCOME",
+      "sim_to_current": 0.08,
+      "sim_to_next": 1.0
+    }
+  ]
+}

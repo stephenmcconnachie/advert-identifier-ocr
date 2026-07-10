@@ -1,0 +1,47 @@
+{
+  "brand": "Intuit quickbooks",
+  "T_clip": 46.2,
+  "T_broadcast": 1713.2,
+  "current_5fps_text": "Free customer support",
+  "next_5fps_text": "ideal HOME SHOW 22 MARCH - 7 APRIL OLYMPIA LONDON",
+  "current_next_similarity": 0.286,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "Free customer support",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.286
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "Free customer support",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.286
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "Free customer support",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.286
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "Free customer support",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.286
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "Free customer support",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.286
+    }
+  ]
+}

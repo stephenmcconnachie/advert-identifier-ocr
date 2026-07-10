@@ -1,0 +1,503 @@
+{
+  "pipeline_version": 2,
+  "before_secs": 10.0,
+  "video_info": {
+    "filepath": "/mnt/qnap_04/Admin/code/ai_machine_learning/advert-identifier-ocr/video/2024-03-26_ITV1HD_14:00:00.mp4",
+    "start_time": "14:00:00"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "start_time": "14:08:35",
+      "clip_offset": 505.0,
+      "adverts": [
+        {
+          "unique_id": "RBRHIES236030",
+          "brand": "Hillarys blinds",
+          "advertiser": "Hillarys blinds",
+          "category": "Furniture & furnishings",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:31.600",
+            "last_seconds_clip": 31.6,
+            "last_frame": 158,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "hillarys"
+            ],
+            "start_seconds_clip": 1.72,
+            "adjusted_start_broadcast": 506.72
+          }
+        },
+        {
+          "unique_id": "BBHBBPR820030",
+          "brand": "Barclays lifeskills programme",
+          "advertiser": "Barclays bank",
+          "category": "Finance brand building",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:01.600",
+            "last_seconds_clip": 61.6,
+            "last_frame": 308,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "barclays",
+              "lifeskills"
+            ],
+            "start_seconds_clip": 31.72,
+            "adjusted_start_broadcast": 536.72
+          }
+        },
+        {
+          "unique_id": "AORAODL251030",
+          "brand": "Appliancesonline.co.uk",
+          "advertiser": "Ao retail",
+          "category": "Electronics & home appl - brand building",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 91.6,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 61.72,
+            "adjusted_start_broadcast": 566.72
+          }
+        },
+        {
+          "unique_id": "WPPEMMA316010",
+          "brand": "Emma mattress",
+          "advertiser": "Emma mattress",
+          "category": "Beds & mattresses",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:41.600",
+            "last_seconds_clip": 101.6,
+            "last_frame": 508,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "emma"
+            ],
+            "start_seconds_clip": 91.72,
+            "adjusted_start_broadcast": 596.72
+          }
+        },
+        {
+          "unique_id": "LBEDISN002020",
+          "brand": "Disneyland paris",
+          "advertiser": "Walt disney company",
+          "category": "Overseas resorts",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 121.6,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 101.72,
+            "adjusted_start_broadcast": 606.72
+          }
+        },
+        {
+          "unique_id": "MLLDHSC299030",
+          "brand": "Ccs phe stop smoking",
+          "advertiser": "Ccs",
+          "category": "Doctors/hospitals",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:31.600",
+            "last_seconds_clip": 151.6,
+            "last_frame": 758,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "smoking"
+            ],
+            "start_seconds_clip": 121.72,
+            "adjusted_start_broadcast": 626.72
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.75,
+        "matched_count": 4,
+        "total_count": 6,
+        "reasons": []
+      }
+    },
+    {
+      "index": 2,
+      "start_time": "14:20:27",
+      "clip_offset": 1217.0,
+      "adverts": [
+        {
+          "unique_id": "AMVSETP244030",
+          "brand": "Smart energy smart meters",
+          "advertiser": "Smart energy gb",
+          "category": "Residential combined utilities",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:54.320",
+            "last_seconds_clip": 54.32,
+            "last_frame": 271,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "energy",
+              "smart"
+            ],
+            "start_seconds_clip": 24.44,
+            "adjusted_start_broadcast": 1241.44
+          }
+        },
+        {
+          "unique_id": "HKXGADA032020",
+          "brand": "Gaviscon double action",
+          "advertiser": "Reckitt benckiser",
+          "category": "Indigestion remedies",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:14.320",
+            "last_seconds_clip": 74.32000000000001,
+            "last_frame": 371,
+            "match_tier": "exact(original)",
+            "matched_terms": [
+              "gaviscon double action"
+            ],
+            "start_seconds_clip": 54.44,
+            "adjusted_start_broadcast": 1271.44
+          }
+        },
+        {
+          "unique_id": "HWFTRLF002030",
+          "brand": "Trailfinders travel experts",
+          "advertiser": "Trailfinders",
+          "category": "Overseas tour operators",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:44.320",
+            "last_seconds_clip": 104.32000000000001,
+            "last_frame": 521,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "travel",
+              "experts",
+              "trailfinders"
+            ],
+            "start_seconds_clip": 74.44,
+            "adjusted_start_broadcast": 1291.44
+          }
+        },
+        {
+          "unique_id": "ITCITVW001030",
+          "brand": "Itv competitions portal",
+          "advertiser": "Itv",
+          "category": "Promo prods/incentives/competitions",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:14.320",
+            "last_seconds_clip": 134.32,
+            "last_frame": 671,
+            "match_tier": "advertiser",
+            "matched_terms": [
+              "itv"
+            ],
+            "start_seconds_clip": 104.44,
+            "adjusted_start_broadcast": 1321.44
+          }
+        },
+        {
+          "unique_id": "DVNPLMF020030",
+          "brand": "Poundland stores",
+          "advertiser": "Poundland",
+          "category": "Other retail",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 164.32,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 134.44,
+            "adjusted_start_broadcast": 1351.44
+          }
+        },
+        {
+          "unique_id": "PCHPPGP001010",
+          "brand": "Consorzio grana padano cheese",
+          "advertiser": "Consorzio tutela gra",
+          "category": "Cheese - continental",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 174.32,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 164.44,
+            "adjusted_start_broadcast": 1381.44
+          }
+        },
+        {
+          "unique_id": "CKCBRIT016020",
+          "brand": "Bisto gravy",
+          "advertiser": "Premier foods",
+          "category": "Food cupboard/grocery - multi product",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 194.32,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 174.44,
+            "adjusted_start_broadcast": 1391.44
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.691,
+        "matched_count": 4,
+        "total_count": 7,
+        "reasons": [
+          "low average tier score (0.40)"
+        ]
+      }
+    },
+    {
+      "index": 3,
+      "start_time": "14:39:56",
+      "clip_offset": 2386.0,
+      "adverts": [
+        {
+          "unique_id": "UCSIGAV003030",
+          "brand": "Avios",
+          "advertiser": "Avios group",
+          "category": "Loyalty/reward cards",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "HOMWREN073030",
+          "brand": "Wren kitchens",
+          "advertiser": "Wren kitchens",
+          "category": "Furniture - kitchen",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:04.160",
+            "last_seconds_clip": 64.16,
+            "last_frame": 320,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "wren"
+            ],
+            "start_seconds_clip": 34.28,
+            "adjusted_start_broadcast": 2420.28
+          }
+        },
+        {
+          "unique_id": "HKXVAVP039030",
+          "brand": "Vanish oxi action stain remover",
+          "advertiser": "Reckitt benckiser",
+          "category": "Stain removers/whiteners",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:34.000",
+            "last_seconds_clip": 94.0,
+            "last_frame": 470,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "stain",
+              "vanish"
+            ],
+            "start_seconds_clip": 64.12,
+            "adjusted_start_broadcast": 2450.12
+          }
+        },
+        {
+          "unique_id": "HASFCPA002030",
+          "brand": "Fast cash property",
+          "advertiser": "Fastcashproperty",
+          "category": "General property services",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:04.000",
+            "last_seconds_clip": 124.0,
+            "last_frame": 620,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "cash",
+              "fast",
+              "fast cash property",
+              "property"
+            ],
+            "start_seconds_clip": 94.12,
+            "adjusted_start_broadcast": 2480.12
+          }
+        },
+        {
+          "unique_id": "CHIPEAH029030",
+          "brand": "Pets at home",
+          "advertiser": "Pets at home",
+          "category": "Pet food & care - multi product",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:34.000",
+            "last_seconds_clip": 154.0,
+            "last_frame": 770,
+            "match_tier": "exact(concat)",
+            "matched_terms": [
+              "petsathome"
+            ],
+            "start_seconds_clip": 124.12,
+            "adjusted_start_broadcast": 2510.12
+          }
+        },
+        {
+          "unique_id": "ANOCRUK414030",
+          "brand": "Cancer research race for life",
+          "advertiser": "Cancer research uk",
+          "category": "Cancer charities",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:04.000",
+            "last_seconds_clip": 184.0,
+            "last_frame": 920,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "race",
+              "research",
+              "life",
+              "cancer"
+            ],
+            "start_seconds_clip": 154.12,
+            "adjusted_start_broadcast": 2540.12
+          }
+        },
+        {
+          "unique_id": "AEDGWRW193030",
+          "brand": "First great western",
+          "advertiser": "Great western railwa",
+          "category": "Railways",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:34.000",
+            "last_seconds_clip": 214.0,
+            "last_frame": 1070,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "great",
+              "western"
+            ],
+            "start_seconds_clip": 184.12,
+            "adjusted_start_broadcast": 2570.12
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.739,
+        "matched_count": 6,
+        "total_count": 7,
+        "reasons": [
+          "first advert weak match tier (fallback)"
+        ]
+      }
+    },
+    {
+      "index": 4,
+      "start_time": "14:56:35",
+      "clip_offset": 3385.0,
+      "adverts": [
+        {
+          "unique_id": "HHPSLPL129030",
+          "brand": "Axa sun life over 50 ins plan",
+          "advertiser": "Axa sun life",
+          "category": "Life protection - over 50",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:54.320",
+            "last_seconds_clip": 54.32,
+            "last_frame": 271,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "life",
+              "over",
+              "plan"
+            ],
+            "start_seconds_clip": 24.44,
+            "adjusted_start_broadcast": 3409.44
+          }
+        },
+        {
+          "unique_id": "MCMHSLC407030",
+          "brand": "Hsl chairs",
+          "advertiser": "High seat",
+          "category": "Furniture - range",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:24.320",
+            "last_seconds_clip": 84.32000000000001,
+            "last_frame": 421,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "chairs"
+            ],
+            "start_seconds_clip": 54.44,
+            "adjusted_start_broadcast": 3439.44
+          }
+        },
+        {
+          "unique_id": "MCBYEOV094030",
+          "brand": "Yeo valley organic",
+          "advertiser": "Yeo valley farms",
+          "category": "Dairy - multi product",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:54.320",
+            "last_seconds_clip": 114.32000000000001,
+            "last_frame": 571,
+            "match_tier": "exact(original)",
+            "matched_terms": [
+              "yeo valley organic"
+            ],
+            "start_seconds_clip": 84.44,
+            "adjusted_start_broadcast": 3469.44
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.9,
+        "matched_count": 3,
+        "total_count": 3,
+        "reasons": []
+      }
+    }
+  ]
+}

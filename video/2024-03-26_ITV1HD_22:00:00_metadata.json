@@ -1,0 +1,16 @@
+{
+  "video_info": {
+    "filepath": "/mnt/qnap_04/Admin/code/ai_machine_learning/advert-identifier-ocr/video/2024-03-26_ITV1HD_22:00:00.mp4",
+    "date": "2024-03-26",
+    "channel": "ITV1HD",
+    "start_time": "22:00:00",
+    "duration_seconds": 1897.12,
+    "end_time": "22:31:37"
+  },
+  "ad_breaks": [],
+  "summary": {
+    "total_ad_breaks": 0,
+    "partial_breaks": 0,
+    "total_adverts": 0
+  }
+}

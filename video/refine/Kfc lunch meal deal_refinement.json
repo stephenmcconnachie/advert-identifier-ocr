@@ -1,0 +1,47 @@
+{
+  "brand": "Kfc lunch meal deal",
+  "T_clip": 60.2,
+  "T_broadcast": 3619.2,
+  "current_5fps_text": "KFC",
+  "next_5fps_text": "Furniture Village",
+  "current_next_similarity": 0.1,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "KFC",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.1
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "KFC",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.1
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "KFC",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.1
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "Furniture Village",
+      "sim_to_current": 0.1,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "Furniture Village",
+      "sim_to_current": 0.1,
+      "sim_to_next": 1.0
+    }
+  ]
+}

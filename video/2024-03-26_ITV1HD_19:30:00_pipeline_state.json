@@ -1,0 +1,426 @@
+{
+  "pipeline_version": 2,
+  "before_secs": 10.0,
+  "video_info": {
+    "filepath": "/mnt/qnap_04/Admin/code/ai_machine_learning/advert-identifier-ocr/video/2024-03-26_ITV1HD_19:30:00.mp4",
+    "start_time": "19:30:00"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "start_time": "19:39:58",
+      "clip_offset": 588.0,
+      "adverts": [
+        {
+          "unique_id": "PGOHERB003030",
+          "brand": "Herbal essences shampoo",
+          "advertiser": "Procter & gamble uk",
+          "category": "Multi product - hair care",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:46.280",
+            "last_seconds_clip": 106.28,
+            "last_frame": 531,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "shampoo",
+              "herbal",
+              "essences"
+            ],
+            "start_seconds_clip": 76.4,
+            "adjusted_start_broadcast": 664.4
+          }
+        },
+        {
+          "unique_id": "TGFMGFN435030",
+          "brand": "Mg motors",
+          "advertiser": "Mg motor uk",
+          "category": "C - lower medium",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 136.28,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 106.4,
+            "adjusted_start_broadcast": 694.4
+          }
+        },
+        {
+          "unique_id": "AMVSCCA524020",
+          "brand": "Essity plenty kitchen towel",
+          "advertiser": "Essity holding uk",
+          "category": " papers & wipes\"",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:36.280",
+            "last_seconds_clip": 156.28,
+            "last_frame": 781,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "plenty"
+            ],
+            "start_seconds_clip": 136.4,
+            "adjusted_start_broadcast": 724.4
+          }
+        },
+        {
+          "unique_id": "ACBLIUK090020",
+          "brand": "Lidl easter",
+          "advertiser": "Lidl uk gmbh",
+          "category": "Food & drink - multi product",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:56.280",
+            "last_seconds_clip": 176.28,
+            "last_frame": 881,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "lidl",
+              "easter"
+            ],
+            "start_seconds_clip": 156.4,
+            "adjusted_start_broadcast": 744.4
+          }
+        },
+        {
+          "unique_id": "ITCPPLB012030",
+          "brand": "Postcode lottery",
+          "advertiser": "Postcode lottery",
+          "category": "Lottery",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:26.280",
+            "last_seconds_clip": 206.28,
+            "last_frame": 1031,
+            "match_tier": "exact(concat)",
+            "matched_terms": [
+              "postcodelottery"
+            ],
+            "start_seconds_clip": 176.4,
+            "adjusted_start_broadcast": 764.4
+          }
+        },
+        {
+          "unique_id": "OHLHOME001030",
+          "brand": "Homebase stores",
+          "advertiser": "Homebase",
+          "category": "Diy stores",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:56.280",
+            "last_seconds_clip": 236.28,
+            "last_frame": 1181,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "homebase"
+            ],
+            "start_seconds_clip": 206.4,
+            "adjusted_start_broadcast": 794.4
+          }
+        },
+        {
+          "unique_id": "KROSCSS115030",
+          "brand": "Scs furniture & carpets",
+          "advertiser": "A share & sons",
+          "category": "Furniture - lounge & dining",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 266.28,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 236.4,
+            "adjusted_start_broadcast": 824.4
+          }
+        },
+        {
+          "unique_id": "EGPCCLW243020",
+          "brand": "Cesar dog food",
+          "advertiser": "Mars uk",
+          "category": "Dog food - wet",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:46.280",
+            "last_seconds_clip": 286.28,
+            "last_frame": 1431,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "cesar"
+            ],
+            "start_seconds_clip": 266.4,
+            "adjusted_start_broadcast": 854.4
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.803,
+        "matched_count": 6,
+        "total_count": 8,
+        "reasons": []
+      }
+    },
+    {
+      "index": 2,
+      "start_time": "19:55:31",
+      "clip_offset": 1521.0,
+      "adverts": [
+        {
+          "unique_id": "WCRSKNW064030",
+          "brand": "Sky now tv",
+          "advertiser": "Sky uk",
+          "category": "Film/programme downloads/streaming",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:45.800",
+            "last_seconds_clip": 105.8,
+            "last_frame": 529,
+            "match_tier": "advertiser",
+            "matched_terms": [
+              "sky uk"
+            ],
+            "start_seconds_clip": 75.92,
+            "adjusted_start_broadcast": 1596.92
+          }
+        },
+        {
+          "unique_id": "ANOANGP105020",
+          "brand": "Google pixel 8 phone",
+          "advertiser": "Google uk",
+          "category": "Mobile handsets - smartphones",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:06.280",
+            "last_seconds_clip": 126.28,
+            "last_frame": 631,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "phone",
+              "pixel",
+              "google"
+            ],
+            "start_seconds_clip": 106.4,
+            "adjusted_start_broadcast": 1627.4
+          }
+        },
+        {
+          "unique_id": "BURTMDO515010",
+          "brand": "Mcdonalds winning sips",
+          "advertiser": "Mcdonalds restaurant",
+          "category": "Fast food restaurants - brand building",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:16.280",
+            "last_seconds_clip": 136.28,
+            "last_frame": 681,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "sips",
+              "winning"
+            ],
+            "start_seconds_clip": 126.4,
+            "adjusted_start_broadcast": 1647.4
+          }
+        },
+        {
+          "unique_id": "DESLVCA379010",
+          "brand": "Liverpool victoria motor insurance",
+          "advertiser": "Liverpool victoria f",
+          "category": "Car insurance",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:26.280",
+            "last_seconds_clip": 146.28,
+            "last_frame": 731,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "liverpool",
+              "insurance",
+              "victoria",
+              "motor"
+            ],
+            "start_seconds_clip": 136.4,
+            "adjusted_start_broadcast": 1657.4
+          }
+        },
+        {
+          "unique_id": "OCHCOWG001030",
+          "brand": "Etsy.com online shopping",
+          "advertiser": "Etsy.com",
+          "category": "Online shopping general",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:56.280",
+            "last_seconds_clip": 176.28,
+            "last_frame": 881,
+            "match_tier": "words(no-tld)",
+            "matched_terms": [
+              "etsy"
+            ],
+            "start_seconds_clip": 146.4,
+            "adjusted_start_broadcast": 1667.4
+          }
+        },
+        {
+          "unique_id": "TMWOFLT014010",
+          "brand": "Oakfurnitureland.co.uk",
+          "advertiser": "Oak furnitureland",
+          "category": "Furniture & furnishings",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:06.280",
+            "last_seconds_clip": 186.28,
+            "last_frame": 931,
+            "match_tier": "advertiser",
+            "matched_terms": [
+              "oak furnitureland"
+            ],
+            "start_seconds_clip": 176.4,
+            "adjusted_start_broadcast": 1697.4
+          }
+        },
+        {
+          "unique_id": "PCHPPGP003010",
+          "brand": "Consorzio grana padano cheese",
+          "advertiser": "Consorzio tutela gra",
+          "category": "Cheese - continental",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:16.280",
+            "last_seconds_clip": 196.28,
+            "last_frame": 981,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "padano",
+              "grana"
+            ],
+            "start_seconds_clip": 186.4,
+            "adjusted_start_broadcast": 1707.4
+          }
+        },
+        {
+          "unique_id": "BURTPRM038010",
+          "brand": "Premier inn hotels",
+          "advertiser": "Premier inn",
+          "category": "Hotels/b&b uk general",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:26.280",
+            "last_seconds_clip": 206.28,
+            "last_frame": 1031,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "premier"
+            ],
+            "start_seconds_clip": 196.4,
+            "adjusted_start_broadcast": 1717.4
+          }
+        },
+        {
+          "unique_id": "HKXGADA032020",
+          "brand": "Gaviscon double action",
+          "advertiser": "Reckitt benckiser",
+          "category": "Indigestion remedies",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:46.280",
+            "last_seconds_clip": 226.28,
+            "last_frame": 1131,
+            "match_tier": "exact(original)",
+            "matched_terms": [
+              "gaviscon double action"
+            ],
+            "start_seconds_clip": 206.4,
+            "adjusted_start_broadcast": 1727.4
+          }
+        },
+        {
+          "unique_id": "ANOCRUK414030",
+          "brand": "Cancer research race for life",
+          "advertiser": "Cancer research uk",
+          "category": "Cancer charities",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:16.280",
+            "last_seconds_clip": 256.28,
+            "last_frame": 1281,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "race",
+              "life",
+              "cancer",
+              "research"
+            ],
+            "start_seconds_clip": 226.4,
+            "adjusted_start_broadcast": 1747.4
+          }
+        },
+        {
+          "unique_id": "LBEDISN004020",
+          "brand": "Disneyland paris",
+          "advertiser": "Walt disney company",
+          "category": "Overseas resorts",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 276.28,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 256.4,
+            "adjusted_start_broadcast": 1777.4
+          }
+        },
+        {
+          "unique_id": "MCEPRBT185010",
+          "brand": "Batchelors super noodles",
+          "advertiser": "Premier foods",
+          "category": "Instant snack pasta/rice/noodles",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:46.280",
+            "last_seconds_clip": 286.28,
+            "last_frame": 1431,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "noodles",
+              "super"
+            ],
+            "start_seconds_clip": 276.4,
+            "adjusted_start_broadcast": 1797.4
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.765,
+        "matched_count": 11,
+        "total_count": 12,
+        "reasons": [
+          "first advert weak match tier (advertiser)"
+        ]
+      }
+    }
+  ]
+}

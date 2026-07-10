@@ -1,0 +1,353 @@
+{
+  "pipeline_version": 2,
+  "before_secs": 10.0,
+  "video_info": {
+    "filepath": "/mnt/qnap_04/Admin/code/ai_machine_learning/advert-identifier-ocr/video/2024-03-26_ITV1HD_09:00:00.mp4",
+    "start_time": "09:00:00"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "start_time": "09:41:27",
+      "clip_offset": 2477.0,
+      "adverts": [
+        {
+          "unique_id": "LBEDISN002020",
+          "brand": "Disneyland paris",
+          "advertiser": "Walt disney company",
+          "category": "Overseas resorts",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": null,
+            "last_frame": null,
+            "match_tier": "fallback",
+            "matched_terms": []
+          }
+        },
+        {
+          "unique_id": "ANOANGP104020",
+          "brand": "Google pixel 8 phone",
+          "advertiser": "Google uk",
+          "category": "Mobile handsets - smartphones",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:24.160",
+            "last_seconds_clip": 144.16,
+            "last_frame": 720,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "pixel",
+              "phone",
+              "google"
+            ],
+            "start_seconds_clip": 124.28,
+            "adjusted_start_broadcast": 2601.28
+          }
+        },
+        {
+          "unique_id": "MLLDOPF060020",
+          "brand": "Domestos power foam",
+          "advertiser": "Unilever uk home & p",
+          "category": "Toilet cleaners/fresheners",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:44.160",
+            "last_seconds_clip": 164.16,
+            "last_frame": 820,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "foam",
+              "power"
+            ],
+            "start_seconds_clip": 144.28,
+            "adjusted_start_broadcast": 2621.28
+          }
+        },
+        {
+          "unique_id": "ACBLIUK090020",
+          "brand": "Lidl easter",
+          "advertiser": "Lidl uk gmbh",
+          "category": "Food & drink - multi product",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:04.160",
+            "last_seconds_clip": 184.16,
+            "last_frame": 920,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "lidl",
+              "easter"
+            ],
+            "start_seconds_clip": 164.28,
+            "adjusted_start_broadcast": 2641.28
+          }
+        },
+        {
+          "unique_id": "DAAINSU007030",
+          "brand": "Insure & go travel insurance",
+          "advertiser": "Insure & go",
+          "category": "Travel & sport insurance",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:34.160",
+            "last_seconds_clip": 214.16,
+            "last_frame": 1070,
+            "match_tier": "exact(concat(3))",
+            "matched_terms": [
+              "insureandgo"
+            ],
+            "start_seconds_clip": 184.28,
+            "adjusted_start_broadcast": 2661.28
+          }
+        },
+        {
+          "unique_id": "WPNALIL049060",
+          "brand": "Age uk weekly lottery",
+          "advertiser": "Age uk",
+          "category": "Lottery",
+          "scheduled_duration_seconds": 60,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:34.160",
+            "last_seconds_clip": 274.16,
+            "last_frame": 1370,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "lottery"
+            ],
+            "start_seconds_clip": 214.28,
+            "adjusted_start_broadcast": 2691.28
+          }
+        },
+        {
+          "unique_id": "PCHPPGP001010",
+          "brand": "Consorzio grana padano cheese",
+          "advertiser": "Consorzio tutela gra",
+          "category": "Cheese - continental",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:44.160",
+            "last_seconds_clip": 284.16,
+            "last_frame": 1420,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "padano",
+              "grana"
+            ],
+            "start_seconds_clip": 274.28,
+            "adjusted_start_broadcast": 2751.28
+          }
+        },
+        {
+          "unique_id": "HASFCPA002030",
+          "brand": "Fast cash property",
+          "advertiser": "Fastcashproperty",
+          "category": "General property services",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "05:14.160",
+            "last_seconds_clip": 314.16,
+            "last_frame": 1570,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "property",
+              "fast cash property",
+              "cash",
+              "fast"
+            ],
+            "start_seconds_clip": 284.28,
+            "adjusted_start_broadcast": 2761.28
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.75,
+        "matched_count": 7,
+        "total_count": 8,
+        "reasons": [
+          "first advert weak match tier (fallback)"
+        ]
+      }
+    },
+    {
+      "index": 2,
+      "start_time": "09:54:42",
+      "clip_offset": 3272.0,
+      "adverts": [
+        {
+          "unique_id": "AMVMWMT059020",
+          "brand": "Mars maltesers",
+          "advertiser": "Mars uk",
+          "category": "Chocolate - countlines",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:03.280",
+            "last_seconds_clip": 123.28,
+            "last_frame": 616,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "mars"
+            ],
+            "start_seconds_clip": 103.4,
+            "adjusted_start_broadcast": 3375.4
+          }
+        },
+        {
+          "unique_id": "HOGHZBE665020",
+          "brand": "Heinz baked beans",
+          "advertiser": "H j heinz company",
+          "category": "Tinned beans/pasta",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:23.280",
+            "last_seconds_clip": 143.28,
+            "last_frame": 716,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "heinz"
+            ],
+            "start_seconds_clip": 123.4,
+            "adjusted_start_broadcast": 3395.4
+          }
+        },
+        {
+          "unique_id": "BURTBUT070010",
+          "brand": "Butlins holiday worlds drtv",
+          "advertiser": "Butlins skyline",
+          "category": "Uk holiday resorts",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:33.280",
+            "last_seconds_clip": 153.28,
+            "last_frame": 766,
+            "match_tier": "words(poss(0))",
+            "matched_terms": [
+              "butlin's"
+            ],
+            "start_seconds_clip": 143.4,
+            "adjusted_start_broadcast": 3415.4
+          }
+        },
+        {
+          "unique_id": "HASFCPA002030",
+          "brand": "Fast cash property",
+          "advertiser": "Fastcashproperty",
+          "category": "General property services",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:03.280",
+            "last_seconds_clip": 183.28,
+            "last_frame": 916,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "fast cash property",
+              "cash",
+              "property",
+              "fast"
+            ],
+            "start_seconds_clip": 153.4,
+            "adjusted_start_broadcast": 3425.4
+          }
+        },
+        {
+          "unique_id": "HOGSKSH891020",
+          "brand": "Skechers sport shoes",
+          "advertiser": "Skechers",
+          "category": "Sports shoes and trainers",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:23.280",
+            "last_seconds_clip": 203.28,
+            "last_frame": 1016,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "skechers"
+            ],
+            "start_seconds_clip": 183.4,
+            "adjusted_start_broadcast": 3455.4
+          }
+        },
+        {
+          "unique_id": "TTBGSVO075020",
+          "brand": "Voltarol pain relief",
+          "advertiser": "Haleon uk",
+          "category": "Muscular & rheumatic remedies",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "03:43.280",
+            "last_seconds_clip": 223.28,
+            "last_frame": 1116,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "voltarol",
+              "relief",
+              "pain"
+            ],
+            "start_seconds_clip": 203.4,
+            "adjusted_start_broadcast": 3475.4
+          }
+        },
+        {
+          "unique_id": "TJUIDHS092030",
+          "brand": "Media 10 ideal home show",
+          "advertiser": "Media 10",
+          "category": "Exhibitions",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "04:13.280",
+            "last_seconds_clip": 253.28,
+            "last_frame": 1266,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "home",
+              "show",
+              "ideal"
+            ],
+            "start_seconds_clip": 223.4,
+            "adjusted_start_broadcast": 3495.4
+          }
+        },
+        {
+          "unique_id": "WPNALIL065060",
+          "brand": "Age uk weekly lottery",
+          "advertiser": "Age uk",
+          "category": "Lottery",
+          "scheduled_duration_seconds": 60,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "05:13.280",
+            "last_seconds_clip": 313.28,
+            "last_frame": 1566,
+            "match_tier": "exact(concat(2))",
+            "matched_terms": [
+              "ageuk"
+            ],
+            "start_seconds_clip": 253.4,
+            "adjusted_start_broadcast": 3525.4
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.916,
+        "matched_count": 8,
+        "total_count": 8,
+        "reasons": []
+      }
+    }
+  ]
+}

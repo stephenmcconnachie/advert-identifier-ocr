@@ -1,0 +1,47 @@
+{
+  "brand": "Sensodyne toothpaste",
+  "T_clip": 116.2,
+  "T_broadcast": 2815.2,
+  "current_5fps_text": "SENSODYNE\nNo.1 DENTIST RECOMMENDED BRAND FOR SENSITIVE TEETH*\n*Dentist Surveys, UK & IE, 2023. For verification: mystery.gb@haleon.com",
+  "next_5fps_text": "Furniture Village",
+  "current_next_similarity": 0.053,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "SENSODYNE\nNo.1 DENTIST RECOMMENDED BRAND FOR SENSITIVE TEETH*\n*Dentist Surveys, UK & IE, 2023. For verification: mystery.gb@haleon.com",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.053
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "SENSODYNE\nNo.1 DENTIST RECOMMENDED BRAND FOR SENSITIVE TEETH*\n*Dentist Surveys, UK & IE, 2023. For verification: mystery.gb@haleon.com",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.053
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "SENSODYNE\nNo.1 DENTIST RECOMMENDED BRAND FOR SENSITIVE TEETH*\n*Dentist Surveys, UK & IE, 2023. For verification: mystery.gb@haleon.com",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.053
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "SENSODYNE\nNo.1 DENTIST RECOMMENDED BRAND FOR SENSITIVE TEETH*\n*Dentist Surveys, UK & IE, 2023. For verification: mystery.gb@haleon.com",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.053
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "SENSODYNE\nNo.1 DENTIST RECOMMENDED BRAND FOR SENSITIVE TEETH*\n*Dentist Surveys, UK & IE, 2023. For verification: mystery.gb@haleon.com",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.053
+    }
+  ]
+}

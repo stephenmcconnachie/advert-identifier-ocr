@@ -1,0 +1,47 @@
+{
+  "brand": "32red.com online casino",
+  "T_clip": 240.2,
+  "T_broadcast": 2052.2,
+  "current_5fps_text": "18+ Begambleaware.org\n32Red.com\nSTAY IN CONTROL - SET YOUR LIMITS - NEVER CHASE LOSSES\nNew accounts only. Min. £10 deposit, debit card only. One per household. Up to 50x wagering, game contributions vary, max stake applies, 7 day expiry. No deposit required for NI customers. Call 08081803232 to claim. T&Cs apply.",
+  "next_5fps_text": "it's just a table",
+  "current_next_similarity": 0.03,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "18+ Begambleaware.org\n32Red.com\nSTAY IN CONTROL - SET YOUR LIMITS - NEVER CHASE LOSSES\nNew accounts only. Min. £10 deposit, debit card only. One per household. Up to 50x wagering, game contributions vary, max stake applies, 7 day expiry. No deposit required for NI customers. Call 08081803232 to claim. T&Cs apply.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.03
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "18+ Begambleaware.org\n32Red.com\nSTAY IN CONTROL - SET YOUR LIMITS - NEVER CHASE LOSSES\nNew accounts only. Min. £10 deposit, debit card only. One per household. Up to 50x wagering, game contributions vary, max stake applies, 7 day expiry. No deposit required for NI customers. Call 08081803232 to claim. T&Cs apply.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.03
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "18+ Begambleaware.org\n32Red.com\nSTAY IN CONTROL - SET YOUR LIMITS - NEVER CHASE LOSSES\nNew accounts only. Min. £10 deposit, debit card only. One per household. Up to 50x wagering, game contributions vary, max stake applies, 7 day expiry. No deposit required for NI customers. Call 08081803232 to claim. T&Cs apply.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.03
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "18+ Begambleaware.org\n32Red.com\nSTAY IN CONTROL - SET YOUR LIMITS - NEVER CHASE LOSSES\nNew accounts only. Min. £10 deposit, debit card only. One per household. Up to 50x wagering, game contributions vary, max stake applies, 7 day expiry. No deposit required for NI customers. Call 08081803232 to claim. T&Cs apply.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.03
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "18+ Begambleaware.org\n32Red.com\nSTAY IN CONTROL - SET YOUR LIMITS - NEVER CHASE LOSSES\nNew accounts only. Min. £10 deposit, debit card only. One per household. Up to 50x wagering, game contributions vary, max stake applies, 7 day expiry. No deposit required for NI customers. Call 08081803232 to claim. T&Cs apply.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.03
+    }
+  ]
+}

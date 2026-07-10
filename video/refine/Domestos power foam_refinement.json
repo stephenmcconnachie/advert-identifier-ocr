@@ -1,0 +1,47 @@
+{
+  "brand": "Domestos power foam",
+  "T_clip": 164.0,
+  "T_broadcast": 2641.0,
+  "current_5fps_text": "Winner Toilet Care Category. Survey of 8000 people by Kantar",
+  "next_5fps_text": "18+. GB only. T&Cs apply. See lidl.co.uk/LPTV. Coupon ends 03.04.24. Subject to availability. Selected stores. £5.49 Prosecco Spumante £4.49. Packaging may vary. A cracking Easter with Lidl. Salmon on sale 27 March.",
+  "current_next_similarity": 0.015,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "Winner Toilet Care Category. Survey of 8000 people by Kantar",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.015
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "Winner Toilet Care Category. Survey of 8000 people by Kantar",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.015
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "Winner Toilet Care Category. Survey of 8000 people by Kantar",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.015
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "Winner Toilet Care Category. Survey of 8000 people by Kantar",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.015
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "Winner Toilet Care Category. Survey of 8000 people by Kantar",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.015
+    }
+  ]
+}

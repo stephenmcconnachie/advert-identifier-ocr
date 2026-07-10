@@ -1,0 +1,140 @@
+{
+  "pipeline_version": 2,
+  "before_secs": 10.0,
+  "video_info": {
+    "filepath": "/mnt/qnap_04/Admin/code/ai_machine_learning/advert-identifier-ocr/video/2024-03-26_ITV1HD_18:00:00.mp4",
+    "start_time": "18:00:00"
+  },
+  "ad_breaks": [
+    {
+      "index": 1,
+      "start_time": "18:27:57",
+      "clip_offset": 1667.0,
+      "adverts": [
+        {
+          "unique_id": "CLDDUHH006010",
+          "brand": "Dunelm mill store",
+          "advertiser": "Dunelm",
+          "category": "Bed & bath linens & towels",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:26.360",
+            "last_seconds_clip": 26.36,
+            "last_frame": 131,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "store",
+              "dunelm"
+            ],
+            "start_seconds_clip": 16.48,
+            "adjusted_start_broadcast": 1683.48
+          }
+        },
+        {
+          "unique_id": "FNYQBAD002020",
+          "brand": "Intuit quickbooks",
+          "advertiser": "Intuit",
+          "category": "Accounting-finance",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "00:46.360",
+            "last_seconds_clip": 46.36,
+            "last_frame": 231,
+            "match_tier": "exact(original)",
+            "matched_terms": [
+              "intuit quickbooks"
+            ],
+            "start_seconds_clip": 26.48,
+            "adjusted_start_broadcast": 1693.48
+          }
+        },
+        {
+          "unique_id": "TJUIDHS092030",
+          "brand": "Media 10 ideal home show",
+          "advertiser": "Media 10",
+          "category": "Exhibitions",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:16.360",
+            "last_seconds_clip": 76.36,
+            "last_frame": 381,
+            "match_tier": "subwords(original)",
+            "matched_terms": [
+              "show",
+              "home",
+              "ideal"
+            ],
+            "start_seconds_clip": 46.48,
+            "adjusted_start_broadcast": 1713.48
+          }
+        },
+        {
+          "unique_id": "MLLDHSC301030",
+          "brand": "Ccs cardiovascular disease",
+          "advertiser": "Ccs",
+          "category": "Chemists",
+          "scheduled_duration_seconds": 30,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "",
+            "last_seconds_clip": 106.36,
+            "last_frame": null,
+            "match_tier": "estimated",
+            "matched_terms": [],
+            "start_seconds_clip": 76.48,
+            "adjusted_start_broadcast": 1743.48
+          }
+        },
+        {
+          "unique_id": "HWFTRLF001010",
+          "brand": "Trailfinders travel experts",
+          "advertiser": "Trailfinders",
+          "category": "Overseas tour operators",
+          "scheduled_duration_seconds": 10,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "01:56.360",
+            "last_seconds_clip": 116.36,
+            "last_frame": 581,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "experts",
+              "trailfinders",
+              "travel"
+            ],
+            "start_seconds_clip": 106.48,
+            "adjusted_start_broadcast": 1773.48
+          }
+        },
+        {
+          "unique_id": "VCCCAEA242020",
+          "brand": "Cadbury easter egg hunt",
+          "advertiser": "Mondelez uk",
+          "category": "Chocolate - multi product",
+          "scheduled_duration_seconds": 20,
+          "status": "detected",
+          "detection": {
+            "last_timecode": "02:16.200",
+            "last_seconds_clip": 136.2,
+            "last_frame": 681,
+            "match_tier": "words(original)",
+            "matched_terms": [
+              "cadbury"
+            ],
+            "start_seconds_clip": 116.32,
+            "adjusted_start_broadcast": 1783.32
+          }
+        }
+      ],
+      "confidence": {
+        "score": 0.837,
+        "matched_count": 5,
+        "total_count": 6,
+        "reasons": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "brand": "Motorway.co.uk",
+  "T_clip": 30.2,
+  "T_broadcast": 3589.2,
+  "current_5fps_text": "84% of vehicles sold for more than market price (validated against two independent sources). Visit motorway.co.uk/claims",
+  "next_5fps_text": "",
+  "current_next_similarity": 0.0,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "84% of vehicles sold for more than market price (validated against two independent sources). Visit motorway.co.uk/claims",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.0
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "84% of vehicles sold for more than market price (validated against two independent sources). Visit motorway.co.uk/claims",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.0
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "84% of vehicles sold for more than market price (validated against two independent sources). Visit motorway.co.uk/claims",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.0
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "",
+      "sim_to_current": 0.0,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "",
+      "sim_to_current": 0.0,
+      "sim_to_next": 1.0
+    }
+  ]
+}

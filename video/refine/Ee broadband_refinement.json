@@ -1,0 +1,47 @@
+{
+  "brand": "Ee broadband",
+  "T_clip": 169.6,
+  "T_broadcast": 2642.6,
+  "current_5fps_text": "Increases yearly from 31st March 2025 by Consumer Price Index rate of inflation published in January +3.9%. Up to 1.6Gbps on Busiest Home Bundle only, £69.99 a month. 32.5% UK availability. Terms apply.",
+  "next_5fps_text": "Increases yearly from 31st March 2025 by Consumer Price Index rate of inflation published in January +3.9%. Up to 1.6Gbps on Busiest Home Bundle only, £69.99 a month. 32.5% UK availability. Terms apply.",
+  "current_next_similarity": 1.0,
+  "has_boundary": false,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "Increases yearly from 31st March 2025 by Consumer Price Index rate of inflation published in January +3.9%. Up to 1.6Gbps on Busiest Home Bundle only, £69.99 a month. 32.5% UK availability. Terms apply.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "Increases yearly from 31st March 2025 by Consumer Price Index rate of inflation published in January +3.9%. Up to 1.6Gbps on Busiest Home Bundle only, £69.99 a month. 32.5% UK availability. Terms apply.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "Increases yearly from 31st March 2025 by Consumer Price Index rate of inflation published in January +3.9%. Up to 1.6Gbps on Busiest Home Bundle only, £69.99 a month. 32.5% UK availability. Terms apply.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "Increases yearly from 31st March 2025 by Consumer Price Index rate of inflation published in January +3.9%. Up to 1.6Gbps on Busiest Home Bundle only, £69.99 a month. 32.5% UK availability. Terms apply.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 1.0
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "Increases yearly from 31st March 2025 by Consumer Price Index rate of inflation published in January +3.9%. Up to 1.6Gbps on Busiest Home Bundle only, £69.99 a month. 32.5% UK availability. Terms apply.",
+      "sim_to_current": 1.0,
+      "sim_to_next": 1.0
+    }
+  ]
+}

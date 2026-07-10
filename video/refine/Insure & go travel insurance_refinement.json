@@ -1,0 +1,47 @@
+{
+  "brand": "Insure & go travel insurance",
+  "T_clip": 214.0,
+  "T_broadcast": 2691.0,
+  "current_5fps_text": "INSUREANDGO\nTrusted by over 27 million travellers\n0800 198 0198\nInsureandGo Gold policies endorsed as a Which? Best Buy. InsureandGo Black and Gold products Defaqto 5 star rated.\nMarch 2024\nTrustpilot",
+  "next_5fps_text": "Tse & Cs apply. Only for age 18+",
+  "current_next_similarity": 0.129,
+  "has_boundary": true,
+  "method": "boundary_detection",
+  "frames": [
+    {
+      "index": 0,
+      "time_offset": 0.0,
+      "ocr_text": "INSUREANDGO\nTrusted by over 27 million travellers\n0800 198 0198\nInsureandGo Gold policies endorsed as a Which? Best Buy. InsureandGo Black and Gold products Defaqto 5 star rated.\nMarch 2024\nTrustpilot",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.129
+    },
+    {
+      "index": 1,
+      "time_offset": 0.04,
+      "ocr_text": "INSUREANDGO\nTrusted by over 27 million travellers\n0800 198 0198\nInsurandGo Gold policies endorsed as a Which? Best Buy. InsurandGo Black and Gold products Defaqto 5 star rated.\nMarch 2024\nTrustpilot",
+      "sim_to_current": 0.995,
+      "sim_to_next": 0.13
+    },
+    {
+      "index": 2,
+      "time_offset": 0.08,
+      "ocr_text": "INSUREANDGO\nTrusted by over 27 million travellers\n0800 198 0198\nInsureandGo Gold policies endorsed as a Which? Best Buy. InsureandGo Black and Gold products Defaqto 5 star rated.\nMarch 2024\nTrustpilot",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.129
+    },
+    {
+      "index": 3,
+      "time_offset": 0.12,
+      "ocr_text": "INSUREANDGO\nTrusted by over 27 million travellers\n0800 198 0198\nInsureandGo Gold policies endorsed as a Which? Best Buy. InsureandGo Black and Gold products Defaqto 5 star rated.\nMarch 2024\nTrustpilot",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.129
+    },
+    {
+      "index": 4,
+      "time_offset": 0.16,
+      "ocr_text": "INSUREANDGO\nTrusted by over 27 million travellers\n0800 198 0198\nInsureandGo Gold policies endorsed as a Which? Best Buy. InsureandGo Black and Gold products Defaqto 5 star rated.\nMarch 2024\nTrustpilot",
+      "sim_to_current": 1.0,
+      "sim_to_next": 0.129
+    }
+  ]
+}
