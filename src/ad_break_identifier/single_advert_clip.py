@@ -2,6 +2,7 @@
 """Extract individual advert clips from XML analysis results."""
 
 import argparse
+import concurrent.futures
 import json
 import logging
 import os
@@ -408,6 +409,12 @@ def create_parser() -> argparse.ArgumentParser:
         help="0-based ad break index (default: auto-detect from video URL filename)",
     )
     parser.add_argument(
+        "--max-workers",
+        type=int,
+        default=10,
+        help="Maximum parallel clip extractions (default: 10)",
+    )
+    parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
@@ -464,18 +471,15 @@ def main() -> int:
                     f"Parsed ad break index from video URL: {ad_break_index} (0-based)"
                 )
 
+            clip_tasks: list[dict] = []
             for advert in adverts:
                 if advert["index"] not in indices_to_process:
                     continue
 
-                # Determine start time: prefer XML start_timecode (directly
-                # from OCR frame data), then pipeline state adjusted_start,
-                # then clip-relative timecode + clip_offset fallback.
                 start_secs = None
                 duration = advert["duration_seconds"]
                 time_source_desc = ""
 
-                # Path 1: XML start_timecode from format_xml (most reliable)
                 start_tc = advert.get("start_timecode")
                 last_tc = advert.get("last_timecode")
                 if start_tc and last_tc:
@@ -484,7 +488,6 @@ def main() -> int:
                     duration = last_secs - timecode_to_seconds(start_tc)
                     time_source_desc = f"start_timecode={start_tc} + clip_offset={args.clip_offset:.3f}s"
 
-                # Path 2: pipeline state adjusted_start_broadcast
                 if start_secs is None and args.state_file:
                     try:
                         from ad_break_identifier.pipeline_state import (
@@ -503,7 +506,6 @@ def main() -> int:
                     except Exception as e:
                         logger.warning(f"Could not read pipeline state: {e}")
 
-                # Path 3: clip-relative timecode + clip_offset (last resort)
                 if start_secs is None:
                     time_source = (
                         advert.get("refined_timecode") or advert["last_timecode"]
@@ -568,12 +570,53 @@ def main() -> int:
                     f"Advert {advert['index']}: category={category}, output={output_path.name}"
                 )
 
-                extract_advert_clip(
-                    video_input=video_input,
-                    start_seconds=start_secs,
-                    duration_seconds=duration,
-                    output_path=output_path,
+                clip_tasks.append(
+                    {
+                        "index": advert["index"],
+                        "video_input": video_input,
+                        "start_seconds": start_secs,
+                        "duration_seconds": duration,
+                        "output_path": output_path,
+                    }
                 )
+
+            if not clip_tasks:
+                logger.warning("No advert clips to extract")
+                return 0
+
+            if args.max_workers <= 1:
+                for task in clip_tasks:
+                    extract_advert_clip(
+                        video_input=task["video_input"],
+                        start_seconds=task["start_seconds"],
+                        duration_seconds=task["duration_seconds"],
+                        output_path=task["output_path"],
+                    )
+            else:
+                logger.info(
+                    "Extracting %d advert clips with %d parallel workers...",
+                    len(clip_tasks),
+                    args.max_workers,
+                )
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=args.max_workers
+                ) as executor:
+                    future_map = {}
+                    for task in clip_tasks:
+                        future = executor.submit(
+                            extract_advert_clip,
+                            task["video_input"],
+                            task["start_seconds"],
+                            task["duration_seconds"],
+                            task["output_path"],
+                        )
+                        future_map[future] = task["index"]
+                    for future in concurrent.futures.as_completed(future_map):
+                        idx = future_map[future]
+                        try:
+                            future.result()
+                        except Exception as e:
+                            logger.error("Advert %d clip extraction failed: %s", idx, e)
 
             logger.info("Done")
             return 0

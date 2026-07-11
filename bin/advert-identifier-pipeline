@@ -153,6 +153,12 @@ def create_parser() -> argparse.ArgumentParser:
         "as anchor when confidence falls below this value (0.0 disables, "
         "default: 0.6)",
     )
+    parser.add_argument(
+        "--max-workers",
+        type=int,
+        default=10,
+        help="Maximum parallel clip extractions (default: 10)",
+    )
     return parser
 
 
@@ -482,6 +488,7 @@ def run_single_advert_clipper(
     logger: logging.Logger,
     state_file_path: Path | None = None,
     log_level: str = "INFO",
+    max_workers: int = 10,
 ) -> Tuple[bool, int]:
     """Run advert-identifier-single-advert-clip to extract advert clips.
 
@@ -537,6 +544,9 @@ def run_single_advert_clipper(
     if state_file_path:
         cmd.extend(["--state-file", str(state_file_path)])
         logger.info(f"Using pipeline state file: {state_file_path}")
+
+    if max_workers != 10:
+        cmd.extend(["--max-workers", str(max_workers)])
 
     if log_level and log_level != "INFO":
         cmd.extend(["--log-level", log_level])
@@ -898,6 +908,7 @@ def main() -> int:
                     logger=logger,
                     state_file_path=state_file_path,
                     log_level=args.log_level,
+                    max_workers=args.max_workers,
                 )
 
                 ad_break_results.append(
