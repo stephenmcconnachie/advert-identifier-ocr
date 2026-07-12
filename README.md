@@ -111,11 +111,12 @@ python3 bin/advert-identifier-metadata-extract --help
 
 | Command | Purpose | Key Options |
 |---------|---------|-------------|
-| `advert-identifier` | OCR detection (5 FPS + PaddleOCR-VL) | `--video-url` (local path or URL), `--metadata-file`, `--ad-break-index`, `--before-secs`, `--after-secs`, `--fps`, `--ocr-endpoint`, `--ocr-model`, `--verbose`, `--dry-run` |
-| `advert-identifier-pipeline` | Full folder automation | `--input-folder`, `--csv-folder`, `--before-secs`, `--after-secs`, `--fps`, `--ocr-endpoint`, `--ocr-model` |
+| `advert-identifier` | OCR detection (5 FPS + PaddleOCR-VL) | `--video-url` (local path or URL), `--metadata-file`, `--ad-break-index`, `--before-secs`, `--after-secs`, `--fps`, `--ocr-endpoint`, `--ocr-model`, `--anchor-threshold`, `--clamp-majority-rule`, `--verbose`, `--dry-run` |
+| `advert-identifier-pipeline` | Full folder automation | `--input-folder`, `--csv-folder`, `--before-secs`, `--after-secs`, `--fps`, `--ocr-endpoint`, `--ocr-model`, `--anchor-threshold`, `--clamp-majority-rule`, `--max-workers`, `--min-break-confidence` |
 | `advert-identifier-metadata-extract` | CSV → JSON metadata | `--video`, `--csv-folder`, `--before-secs` |
-| `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--json-file`, `--index`, `--trim`, `--pad`, `--clip-offset`, `--ad-break-index`, `--state-file` |
+| `advert-identifier-single-advert-clip` | Extract lossless advert clips from XML | `--xml-file`, `--video-url`, `--json-file`, `--index`, `--trim`, `--pad`, `--clip-offset`, `--ad-break-index`, `--state-file`, `--max-workers` |
 | `advert-identifier-reference` | Generate reference HTML grid from clipped videos | `--clips-dir`, `--output-dir`, `--video-stem` |
+| `advert-identifier-analysis` | Post-run analysis HTML report | `--video-dir`, `--pipeline-log`, `--output` |
 
 See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) for complete documentation.
 
@@ -127,11 +128,13 @@ See [docs/CLI_REFERENCE.md](docs/CLI_REFERENCE.md) for complete documentation.
    - **Tier 1 (exact)**: Word-boundary regex (`\bgalaxy\b`) for precise matches
    - **Tier 2 (substring)**: Unbounded regex (`galaxy`) as fallback for concatenated forms like `galaxychocolate.com`
 4. **Ordering Enforcement**: Each advert's last matching frame must be after the previous advert's last matching frame
-5. **Clamp/Cage Correction**: Detects pattern anomalies in detected end frames by comparing each advert's `sec_digit.mmm` pattern against the majority across the break. Snaps anomalous matches to the nearest frame matching the majority pattern using scheduled durations.
-6. **25fps End-Frame Refinement**: After clamp correction, extracts 5 source-rate frames (25 FPS) starting at each advert's detected 5fps match frame. Uses **boundary detection** — compares each refinement frame's OCR text to the current and next 5fps frame's text — to find the exact advert boundary at sub-frame precision (up to 4 source frames = 0.16s). This works even when brand text is not visible at the match position (e.g. sponsorship endcards).
-7. **Advert Clip Extraction**: Extracts individual advert clips using refined timecodes and durations
-8. **Reference HTML Grid**: Post-run tool that scans clipped advert videos, extracts the first frame of each, and generates a themed responsive HTML grid with unique ID, category, and brand labels
-9. **Pipeline State Tracking**: A persistent state file (`_pipeline_state.json`) tracks every advert through all stages
+5. **Anchor Re-estimation** (optional): For low-confidence breaks, selects the strongest OCR match as an anchor, then computes all other advert positions from known durations. Matched adverts are preserved at their raw OCR positions; unmatched adverts get schedule-based estimates.
+6. **25fps End-Frame Refinement**: Extracts 5 source-rate frames (25 FPS) starting at each advert's detected 5fps match frame. Uses **boundary detection** — compares each refinement frame's OCR text to the current and next 5fps frame's text — to find the exact advert boundary at sub-frame precision (up to 4 source frames = 0.16s). This works even when brand text is not visible at the match position (e.g. sponsorship endcards).
+7. **Clamp/Cage Correction** (after refinement): Detects pattern anomalies in refined 25fps end positions by comparing each advert's `sec_digit.mmm` pattern against the majority across the break. Snaps anomalous matches to the nearest frame matching the majority sec_digit pattern using scheduled durations. Running after refinement gives 25x more pattern precision, making coincidental matches far less likely.
+8. **Advert Clip Extraction**: Extracts individual advert clips using refined timecodes and durations (parallel with `--max-workers`)
+9. **Post-Run Analysis**: Generates a themed HTML report with per-break success metrics, unmatched/weak advert details, clamp activity, anchor events, and confidence scores
+10. **Reference HTML Grid**: Post-run tool that scans clipped advert videos, extracts the first frame of each, and generates a themed responsive HTML grid with unique ID, category, and brand labels
+11. **Pipeline State Tracking**: A persistent state file (`_pipeline_state.json`) tracks every advert through all stages
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed breakdown.
 

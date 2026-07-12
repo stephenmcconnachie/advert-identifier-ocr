@@ -171,47 +171,56 @@ _BRAND_STOP_WORDS: frozenset = frozenset(
         # caused false-positive matches in programme content.
         # Each brand still matches via its other distinctive words or
         # full-phrase patterns.
-        "blade",       # Vax cordless blade vacuum
-        "cancer",      # CCS NHS Cancer, Cancer Research Race For Life
-        "careers",     # CCS childcare careers
-        "cash",        # Fast cash property (also subword: fastcashproperty)
-        "chairs",      # HSL chairs
-        "delivery",    # Deliveroo takeaway delivery (also: deliveroo)
-        "easter",      # Tesco/Lidl/Disneyland Easter
-        "experts",     # Trailfinders travel experts (also: trailfinders)
-        "farm",        # Childs farm (also: childs)
-        "fast",        # Fast cash property (also subword: fastcashproperty)
-        "great",       # Great ormond street / First great western
-        "insurance",   # Aviva insurance, Liverpool Victoria
-        "lottery",     # Age UK / Postcode lottery
-        "noodle",      # Pot noodle
-        "noodles",     # Batchelors super noodles (also: super, batchelors)
-        "over",        # AXA sun life over 50 ins plan
-        "pain",        # Voltarol pain relief (also: voltarol)
-        "paris",       # Disneyland paris, Loreal paris
-        "pass",        # Merlin annual pass (also: merlin, annual)
-        "phone",       # Google pixel 8 phone (also: pixel, google)
-        "plan",        # AXA sun life plan
-        "plenty",      # Essity plenty kitchen towel
-        "power",       # Domestos power foam, E.ON (also: foam, domentos)
-        "relief",      # Voltarol pain relief (also: voltarol)
-        "research",    # Cancer research race for life (also: race, life)
-        "reveal",      # Loreal bright reveal serum (also: bright, serum)
-        "richmond",    # Pilgrims richmond sausages (also: sausages)
-        "sausages",    # Pilgrims richmond sausages (also: richmond)
-        "serum",       # Boots/Clarins/Nivea serum (also: boots, clarins, nivea)
-        "shampoo",     # Herbal essences shampoo (also: herbal, essences)
-        "sips",        # McDonalds winning sips (also: winning, mcdonalds)
-        "smoking",     # CCS phe stop smoking
-        "stain",       # Vanish oxi action stain remover (also: vanish)
-        "stores",      # Poundland stores (also: poundland)
-        "tail",        # Yellow tail shiraz wine (also: yellow, shiraz)
-        "western",     # First great western (also: great)
-        "winning",     # McDonalds winning sips (also: sips, mcdonalds)
-        "wrinkle",     # Nivea wrinkle filler serum (also: filler, serum)
-        "yellow",      # Yellow tail shiraz wine (also: tail, shiraz)
+        "blade",  # Vax cordless blade vacuum
+        "cancer",  # CCS NHS Cancer, Cancer Research Race For Life
+        "careers",  # CCS childcare careers
+        "cash",  # Fast cash property (also subword: fastcashproperty)
+        "chairs",  # HSL chairs
+        "delivery",  # Deliveroo takeaway delivery (also: deliveroo)
+        "easter",  # Tesco/Lidl/Disneyland Easter
+        "experts",  # Trailfinders travel experts (also: trailfinders)
+        "farm",  # Childs farm (also: childs)
+        "fast",  # Fast cash property (also subword: fastcashproperty)
+        "great",  # Great ormond street / First great western
+        "insurance",  # Aviva insurance, Liverpool Victoria
+        "lottery",  # Age UK / Postcode lottery
+        "noodle",  # Pot noodle
+        "noodles",  # Batchelors super noodles (also: super, batchelors)
+        "over",  # AXA sun life over 50 ins plan
+        "pain",  # Voltarol pain relief (also: voltarol)
+        "paris",  # Disneyland paris, Loreal paris
+        "pass",  # Merlin annual pass (also: merlin, annual)
+        "phone",  # Google pixel 8 phone (also: pixel, google)
+        "plan",  # AXA sun life plan
+        "plenty",  # Essity plenty kitchen towel
+        "power",  # Domestos power foam, E.ON (also: foam, domentos)
+        "relief",  # Voltarol pain relief (also: voltarol)
+        "research",  # Cancer research race for life (also: race, life)
+        "reveal",  # Loreal bright reveal serum (also: bright, serum)
+        "richmond",  # Pilgrims richmond sausages (also: sausages)
+        "sausages",  # Pilgrims richmond sausages (also: richmond)
+        "serum",  # Boots/Clarins/Nivea serum (also: boots, clarins, nivea)
+        "shampoo",  # Herbal essences shampoo (also: herbal, essences)
+        "sips",  # McDonalds winning sips (also: winning, mcdonalds)
+        "smoking",  # CCS phe stop smoking
+        "stain",  # Vanish oxi action stain remover (also: vanish)
+        "stores",  # Poundland stores (also: poundland)
+        "tail",  # Yellow tail shiraz wine (also: yellow, shiraz)
+        "western",  # First great western (also: great)
+        "winning",  # McDonalds winning sips (also: sips, mcdonalds)
+        "wrinkle",  # Nivea wrinkle filler serum (also: filler, serum)
+        "yellow",  # Yellow tail shiraz wine (also: tail, shiraz)
     }
 )
+
+
+# Brand-specific pattern overrides for cases where the auto-generated
+# variants don't cover the OCR text seen in practice.  Each entry maps
+# a brand name to extra patterns to try (as raw strings, case-insensitive).
+# These are added to both exact (word-boundary) and substring pattern sets.
+_BRAND_PATTERN_OVERRIDES: dict[str, list[str]] = {
+    "Disneyland paris": ["Disney"],
+}
 
 
 def build_exact_patterns(
@@ -262,6 +271,15 @@ def build_exact_patterns(
         seen.add(simplified)
         patterns.append(re.compile(rf"\b{re.escape(simplified)}\b", re.IGNORECASE))
 
+    # Brand-specific overrides
+    if not skip_words and term in _BRAND_PATTERN_OVERRIDES:
+        for override in _BRAND_PATTERN_OVERRIDES[term]:
+            if override not in seen:
+                seen.add(override)
+                patterns.append(
+                    re.compile(rf"\b{re.escape(override)}\b", re.IGNORECASE)
+                )
+
     return patterns
 
 
@@ -309,6 +327,13 @@ def build_substring_patterns(
     if simplified != term and simplified not in seen:
         seen.add(simplified)
         patterns.append(re.compile(re.escape(simplified), re.IGNORECASE))
+
+    # Brand-specific overrides
+    if not skip_words and term in _BRAND_PATTERN_OVERRIDES:
+        for override in _BRAND_PATTERN_OVERRIDES[term]:
+            if override not in seen:
+                seen.add(override)
+                patterns.append(re.compile(re.escape(override), re.IGNORECASE))
 
     return patterns
 
@@ -913,46 +938,65 @@ def search_with_ordering(
 # ── Clamp/cage: pattern-based anomaly detection and correction ────────
 
 
-def _pattern_key(last_match_seconds: float) -> str:
+def _effective_seconds(r: BrandSearchResult) -> float | None:
+    """Return the best available position for clamp pattern analysis.
+
+    Uses refined 25fps position when available (more precise), otherwise
+    falls back to the raw 5fps match position.
+    """
+    if r.refined_end_seconds is not None:
+        return r.refined_end_seconds
+    return r.last_match_seconds
+
+
+def _pattern_key(seconds: float) -> str:
     """Return the ``sec_digit.mmm`` pattern key for a timecode.
 
-    At 5 FPS, every frame lands on .000, .200, .400, .600, .800.
-    Adverts have durations that are multiples of 10s, so every correct
-    match within a break shares the same ``sec_digit.mmm`` value.
+    At 5 FPS, every frame lands on .000, .200, .400, .600, .800.  After
+    25fps refinement, positions have 25fps precision (.040, .080, .120,
+    etc.).  The ``sec_digit`` (units digit of seconds) is the meaningful
+    part — adverts with durations that are multiples of 10s all share the
+    same sec_digit regardless of millis precision.
     """
-    total_sec = int(last_match_seconds)
+    total_sec = int(seconds)
     sec_digit = total_sec % 10
-    millis = int(round((last_match_seconds - total_sec) * 1000))
+    millis = int(round((seconds - total_sec) * 1000))
     return f"{sec_digit}.{millis:03d}"
 
 
 # Minimum number of matched adverts that must share the majority
 # ``sec_digit.mmm`` pattern for clamp correction to be applied.
-# With fewer than 3, the "majority" is likely coincidental and
-# snapping to it shifts valid OCR matches to wrong positions.
-_CLAMP_MIN_MAJORITY_COUNT = 3
+# At 5fps the 5 possible millis values made 2-match coincidences
+# common (needed ≥3).  After 25fps refinement (25 millis values),
+# 2 matches is a meaningful signal, so the threshold is lowered to 2.
+_CLAMP_MIN_MAJORITY_COUNT = 2
 
 
 def clamp_check(
     scan_results: list[BrandSearchResult],
+    majority_rule: bool = True,
 ) -> list[bool]:
     """Identify suspect matches by comparing their ``sec_digit.mmm``
     pattern against the majority across the break.
 
-    Returns a list of booleans, one per advert: ``True`` means anomaly.
+    Uses refined 25fps positions when available (more precise), falling
+    back to 5fps positions otherwise.
 
-    The check is skipped (all ``False``) when the majority pattern is
-    shared by fewer than ``_CLAMP_MIN_MAJORITY_COUNT`` matched adverts
-    *or* by fewer than half of all matched adverts.  A "majority" of 1
-    or 2 out of 6+ is not statistically meaningful and the resulting
-    corrections shift valid OCR matches to wrong positions.
+    Args:
+        scan_results: Brand search results.
+        majority_rule: When True (default), require the majority pattern
+            to be shared by at least half of all matched adverts.  When
+            False, only the min count threshold applies.
+
+    Returns a list of booleans, one per advert: ``True`` means anomaly.
     """
     from collections import Counter
 
     counts: Counter[str] = Counter()
     for r in scan_results:
-        if r.matched and r.last_match_seconds is not None:
-            counts[_pattern_key(r.last_match_seconds)] += 1
+        secs = _effective_seconds(r)
+        if r.matched and secs is not None:
+            counts[_pattern_key(secs)] += 1
 
     if not counts:
         return [False] * len(scan_results)
@@ -968,27 +1012,36 @@ def clamp_check(
         total_matched,
     )
 
-    # Gate: require minimum 3 adverts sharing the pattern AND at least
-    # 50% of matched adverts.  Below this, the pattern is likely
-    # coincidental and corrections do more harm than good.
-    if (
-        majority_count < _CLAMP_MIN_MAJORITY_COUNT
-        or majority_count < (total_matched + 1) // 2
-    ):
+    # Gate: minimum count threshold
+    if majority_count < _CLAMP_MIN_MAJORITY_COUNT:
         logger.info(
             "Clamp skipped: majority pattern %s has only %d/%d matches "
-            "(need ≥%d and ≥50%%) — insufficient support for correction",
+            "(need ≥%d)%s — insufficient support for correction",
             majority,
             majority_count,
             total_matched,
             _CLAMP_MIN_MAJORITY_COUNT,
+            " and ≥50%" if majority_rule else "",
+        )
+        return [False] * len(scan_results)
+
+    # Optional second gate: 50% majority rule
+    if majority_rule and majority_count < (total_matched + 1) // 2:
+        logger.info(
+            "Clamp skipped: majority pattern %s has only %d/%d matches "
+            "— fails 50%% rule (need ≥%d) — insufficient support for correction",
+            majority,
+            majority_count,
+            total_matched,
+            (total_matched + 1) // 2,
         )
         return [False] * len(scan_results)
 
     anomalies: list[bool] = []
     for r in scan_results:
-        if r.matched and r.last_match_seconds is not None:
-            anomalies.append(_pattern_key(r.last_match_seconds) != majority)
+        secs = _effective_seconds(r)
+        if r.matched and secs is not None:
+            anomalies.append(_pattern_key(secs) != majority)
         else:
             anomalies.append(False)
     return anomalies
@@ -998,13 +1051,18 @@ def clamp_correct(
     scan_results: list[BrandSearchResult],
     adverts: list[AdvertMetadata],
     fps: float,
+    majority_rule: bool = True,
 ) -> list[BrandSearchResult]:
     """Apply duration-based correction to anomalies flagged by clamp_check.
+
+    Uses refined 25fps positions when available, falling back to 5fps.
+    Snapping matches on ``sec_digit`` only (units digit of seconds),
+    ignoring millis which varies with precision.
 
     Two strategies:
     - **Duration available**: compute expected frame from nearest trusted
       neighbours, then snap to the nearest frame matching the majority
-      ``sec_digit.mmm`` pattern.
+      ``sec_digit`` pattern.
     - **No duration** (last advert): snap the original match to the nearest
       frame matching the majority pattern.
     """
@@ -1013,20 +1071,27 @@ def clamp_correct(
     # 1. Identify trusted indices and majority pattern
     counts: Counter[str] = Counter()
     for r in scan_results:
-        if r.matched and r.last_match_seconds is not None:
-            counts[_pattern_key(r.last_match_seconds)] += 1
+        secs = _effective_seconds(r)
+        if r.matched and secs is not None:
+            counts[_pattern_key(secs)] += 1
     if not counts:
         return scan_results
     majority = counts.most_common(1)[0][0]
     majority_count = counts[majority]
     total_matched = sum(counts.values())
 
-    # Gate: same minimum-support check as clamp_check.  If called
-    # directly (e.g. from tests), don't correct on a weak majority.
-    if (
-        majority_count < _CLAMP_MIN_MAJORITY_COUNT
-        or majority_count < (total_matched + 1) // 2
-    ):
+    # Gate: same minimum-support checks as clamp_check.
+    if majority_count < _CLAMP_MIN_MAJORITY_COUNT:
+        logger.info(
+            "Clamp corrector skipped: majority pattern %s has only "
+            "%d/%d matches (need ≥%d)",
+            majority,
+            majority_count,
+            total_matched,
+            _CLAMP_MIN_MAJORITY_COUNT,
+        )
+        return scan_results
+    if majority_rule and majority_count < (total_matched + 1) // 2:
         logger.info(
             "Clamp corrector skipped: majority pattern %s has only "
             "%d/%d matches (need ≥%d and ≥50%%)",
@@ -1039,29 +1104,25 @@ def clamp_correct(
 
     trusted: set[int] = set()
     for i, r in enumerate(scan_results):
-        if r.matched and r.last_match_seconds is not None:
-            if _pattern_key(r.last_match_seconds) == majority:
+        secs = _effective_seconds(r)
+        if r.matched and secs is not None:
+            if _pattern_key(secs) == majority:
                 trusted.add(i)
 
-    snap_fps = fps  # frames per second for snapping
+    snap_fps = fps
+    k_sec_digit = int(majority.split(".")[0])
 
     def _snap(frame: int) -> int:
-        """Snap *frame* to the nearest frame whose timecode matches the
-        majority ``sec_digit.mmm`` pattern."""
-        k_sec_digit, k_millis = majority.split(".")
-        k_sec_digit = int(k_sec_digit)
-        k_millis = int(k_millis)
+        """Snap *frame* to the nearest frame whose sec_digit matches the
+        majority pattern.  Millis is not meaningful across different
+        precision levels (5fps vs 25fps), so only sec_digit is used."""
         best = frame
         best_dist = abs(int(frame / fps * 1000) - (frame * 1000))
-        # Search ±5 seconds (25 frames @5fps)
         for candidate in range(frame - 5 * int(fps), frame + 5 * int(fps) + 1):
             if candidate < 0:
                 continue
-            ts = candidate / fps
-            total_sec = int(ts)
-            sec_digit = total_sec % 10
-            millis = int(round((ts - total_sec) * 1000))
-            if sec_digit == k_sec_digit and millis == k_millis:
+            sec_digit = int(candidate / fps) % 10
+            if sec_digit == k_sec_digit:
                 dist = abs(candidate - frame)
                 if dist < best_dist:
                     best = candidate
@@ -1074,16 +1135,13 @@ def clamp_correct(
         if not r.matched or r.last_match_seconds is None:
             continue
         if i in trusted:
-            continue  # already trusted
+            continue
 
-        # Find nearest trusted neighbours
         prev_trusted = max((j for j in trusted if j < i), default=None)
         next_trusted = min((j for j in trusted if j > i), default=None)
         dur = adverts[i].duration_seconds
 
         if dur is not None and prev_trusted is not None and next_trusted is not None:
-            # Both neighbours — compute forward AND backward estimates.
-            # Only correct if they agree within ±1 frame.
             fwd = results[prev_trusted].last_match_frame
             for j in range(prev_trusted + 1, i + 1):
                 if adverts[j].duration_seconds is not None:
@@ -1095,7 +1153,6 @@ def clamp_correct(
             if abs(fwd - bwd) <= 1:
                 snapped = _snap(fwd)
             elif abs(prev_trusted - i) <= 1 or abs(next_trusted - i) <= 1:
-                # One neighbour is adjacent — trust the adjacent estimate
                 if abs(prev_trusted - i) <= 1:
                     snapped = _snap(fwd)
                     logger.info(
@@ -1121,28 +1178,23 @@ def clamp_correct(
                 )
                 continue
         elif dur is not None and prev_trusted is not None:
-            # Only forward estimate available
             expected = results[prev_trusted].last_match_frame
             for j in range(prev_trusted + 1, i + 1):
                 if adverts[j].duration_seconds is not None:
                     expected += int(adverts[j].duration_seconds * fps)
             snapped = _snap(expected)
         elif dur is not None and next_trusted is not None:
-            # Only backward estimate available
             expected = results[next_trusted].last_match_frame
             for j in range(next_trusted, i, -1):
                 if adverts[j].duration_seconds is not None:
                     expected -= int(adverts[j].duration_seconds * fps)
             snapped = _snap(expected)
         else:
-            # Strategy B — last advert with no duration: snap to nearest aligned
             snapped = _snap(r.last_match_frame)
 
         if snapped != r.last_match_frame:
             dist = abs(snapped - r.last_match_frame)
             if dist <= 2:
-                # Original is within 2 frames of the snap — this is
-                # within OCR noise, keep the original.
                 continue
             new_ts = snapped / fps
             results[i] = BrandSearchResult(
@@ -2401,6 +2453,7 @@ def run_detection(
     dry_run: bool = False,
     video_stem: str | None = None,
     anchor_threshold: float = 0.6,
+    clamp_majority_rule: bool = True,
 ) -> tuple[str, list[BrandSearchResult]]:
     """Run the full OCR detection pipeline.
 
@@ -2527,17 +2580,9 @@ def run_detection(
             )
             anchor_invoked = True
 
-    # 7. Clamp/cage: detect and correct pattern anomalies
-    # Skip when anchor has already re-estimated all positions.
-    if not anchor_invoked:
-        anomalies = clamp_check(scan_results)
-        if any(anomalies):
-            logger.info("Clamp detected %d anomaly(ies), correcting...", sum(anomalies))
-            scan_results = clamp_correct(scan_results, metadata.adverts, fps)
-        else:
-            logger.info("Clamp: no anomalies detected")
-
-    # 8. 25fps end-frame refinement (if not dry run)
+    # 7. 25fps end-frame refinement (if not dry run)
+    # Run BEFORE clamp so the clamp operates on refined 25fps positions
+    # (25 possible millis values) instead of raw 5fps positions (only 5).
     if not dry_run and video_path:
         scan_results = _refine_advert_end_frames(
             scan_results=scan_results,
@@ -2551,6 +2596,19 @@ def run_detection(
             output_dir=output_dir,
             verbose=verbose,
         )
+
+    # 8. Clamp/cage: detect and correct pattern anomalies (after refinement,
+    # so positions have 25fps precision for better pattern discrimination).
+    # Skip when anchor has already re-estimated all positions.
+    if not anchor_invoked:
+        anomalies = clamp_check(scan_results, majority_rule=clamp_majority_rule)
+        if any(anomalies):
+            logger.info("Clamp detected %d anomaly(ies), correcting...", sum(anomalies))
+            scan_results = clamp_correct(
+                scan_results, metadata.adverts, fps, majority_rule=clamp_majority_rule
+            )
+        else:
+            logger.info("Clamp: no anomalies detected")
 
     # 9. Format XML
     xml_output = format_xml(metadata, scan_results, fps)
@@ -2574,7 +2632,7 @@ def run_detection(
         qc_path.write_text(qc_html, encoding="utf-8")
         _log("QC HTML written to: %s", qc_path)
 
-    # 8. Update pipeline state
+    # 11. Update pipeline state
     if metadata_file and not dry_run:
         update_pipeline_state(
             metadata_file=metadata_file,
@@ -2585,7 +2643,7 @@ def run_detection(
             after_secs=after_secs,
         )
 
-    # 9. Clean up frames (keep OCR JSON)
+    # 12. Clean up frames (keep OCR JSON)
     if not output_dir:
         for f in frames_dir.glob("*.png"):
             f.unlink()
@@ -2697,6 +2755,13 @@ def create_parser() -> argparse.ArgumentParser:
         help="Re-estimate low-confidence breaks using strongest OCR match "
         "as anchor when confidence falls below this value (0.0 disables, "
         "default: 0.6)",
+    )
+    parser.add_argument(
+        "--clamp-majority-rule",
+        action="store_true",
+        default=False,
+        help="Apply 50%% majority rule to clamp corrections (default: off — "
+        "only min count threshold applies)",
     )
     return parser
 
@@ -2810,6 +2875,7 @@ def main(args: list[str] | None = None) -> int:
             dry_run=parsed.dry_run,
             video_stem=video_stem,
             anchor_threshold=parsed.anchor_threshold,
+            clamp_majority_rule=parsed.clamp_majority_rule,
         )
 
         # Write XML output
@@ -2817,7 +2883,7 @@ def main(args: list[str] | None = None) -> int:
             xml_path = parsed.output
         elif parsed.metadata_file:
             base = Path(parsed.metadata_file).parent
-            xml_path = str(base / f"{video_stem}.xml")
+            xml_path = str(base / f"{video_stem}_break{ad_break_index}.xml")
         else:
             xml_path = "detect_output.xml"
 

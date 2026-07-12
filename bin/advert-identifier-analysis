@@ -1,0 +1,825 @@
+#!/usr/bin/env python3
+"""Post-run analysis report for advert identifier pipeline.
+
+Parses pipeline state JSON files and the pipeline log to generate a
+self-contained HTML report with per-break success metrics, unmatched
+advert details, weak matches, confidence scores, and anomaly events.
+
+Usage:
+    python3 bin/advert-identifier-analysis \\
+        --video-dir video/ \\
+        --pipeline-log video/pipeline_20260710_163438.log \\
+        --output video/pipeline_analysis.html
+"""
+
+import argparse
+import html
+import json
+import logging
+import os
+import re
+import sys
+from collections import Counter
+from datetime import datetime
+from pathlib import Path
+from xml.etree import ElementTree
+
+
+def _sanitize_filename(text: str) -> str:
+    text = text.replace(" ", "-")
+    text = re.sub(r'[\\/:*?"<>|]', "", text)
+    return text
+
+
+logger = logging.getLogger(__name__)
+
+# ── Constants ────────────────────────────────────────────────────────────────
+
+WEAK_TIERS = {"fallback", "advertiser", "estimated", "none", ""}
+CLIP_RE = re.compile(r"clips? extracted|Extracted (\d+) advert clip")
+NO_MATCH_RE = re.compile(r"NO MATCH.*?\(fallback\)")
+ANCHOR_RE = re.compile(r"confidence (\d+\.\d+) < anchor threshold.*running anchor")
+ANCHOR_RESULT_RE = re.compile(
+    r"confidence after anchor re-estimation: (\d+\.\d+) \(was (\d+\.\d+)\)"
+)
+CONFIDENCE_RE = re.compile(r"Break (\d+) confidence ([\d.]+)(?: — (.+))?")
+CLAMP_RE = re.compile(r"corrected:.*frame (\d+) → (\d+)")
+CLAMP_SKIP_RE = re.compile(r"Clamp skipped")
+WARNING_RE = re.compile(r"WARNING")
+UNMATCHED_LOG_RE = re.compile(r"Unmatched advert (\S+) / (.+?) — logged")
+
+
+# ── HTML Template ───────────────────────────────────────────────────────────
+
+HTML_TEMPLATE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipeline Analysis Report</title>
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; padding: 20px; }}
+  html {{ transition: background 0.3s, color 0.3s; }}
+
+  /* ---- Nord Dark (default) ---- */
+  :root {{
+    --bg: #2e3440; --bg-card: #3b4252; --bg-code: #242933;
+    --fg: #eceff4; --fg-muted: #81a1c1; --fg-label: #88c0d0;
+    --border: #4c566a; --accent: #88c0d0;
+    --pass-bg: #2e3a3a; --pass-fg: #a3be8c; --pass-border: #a3be8c;
+    --fail-bg: #3a2e34; --fail-fg: #bf616a; --fail-border: #bf616a;
+    --diff-bg: #3a3a2e; --diff-fg: #d08770; --diff-border: #d08770;
+    --low-bg: #3a3434; --low-fg: #d08770; --low-border: #d08770;
+    --link: #88c0d0; --summary-hover: #434c5e;
+  }}
+  /* ---- Nord Light ---- */
+  [data-theme="light"] {{
+    --bg: #eceff4; --bg-card: #ffffff; --bg-code: #e5e9f0;
+    --fg: #2e3440; --fg-muted: #5e81ac; --fg-label: #4c566a;
+    --border: #d8dee9; --accent: #5e81ac;
+    --pass-bg: #e8f0e8; --pass-fg: #4a7a4a; --pass-border: #a3be8c;
+    --fail-bg: #f0e8e8; --fail-fg: #b84a4a; --fail-border: #bf616a;
+    --diff-bg: #f0ece0; --diff-fg: #b8704a; --diff-border: #d08770;
+    --low-bg: #f0ece0; --low-fg: #b8704a; --low-border: #d08770;
+    --link: #5e81ac; --summary-hover: #d8dee9;
+  }}
+  /* ---- Gruvbox ---- */
+  [data-theme="gruvbox"] {{
+    --bg: #1d2021; --bg-card: #282828; --bg-code: #0d0d0d;
+    --fg: #fbf1c7; --fg-muted: #a89984; --fg-label: #d5c4a1;
+    --border: #665c54; --accent: #fabd2f;
+    --pass-bg: #1d221d; --pass-fg: #b8bb26; --pass-border: #b8bb26;
+    --fail-bg: #221d1d; --fail-fg: #fb4934; --fail-border: #fb4934;
+    --diff-bg: #22201d; --diff-fg: #fe8019; --diff-border: #fe8019;
+    --low-bg: #22201d; --low-fg: #fe8019; --low-border: #fe8019;
+    --link: #8ec07c; --summary-hover: #3c3836;
+  }}
+
+  @media (prefers-color-scheme: light) {{
+    :root:not([data-theme="gruvbox"]) {{
+      --bg: #eceff4; --bg-card: #ffffff; --bg-code: #e5e9f0;
+      --fg: #2e3440; --fg-muted: #5e81ac; --fg-label: #4c566a;
+      --border: #d8dee9; --accent: #5e81ac;
+      --pass-bg: #e8f0e8; --pass-fg: #4a7a4a; --pass-border: #a3be8c;
+      --fail-bg: #f0e8e8; --fail-fg: #b84a4a; --fail-border: #bf616a;
+      --diff-bg: #f0ece0; --diff-fg: #b8704a; --diff-border: #d08770;
+      --low-bg: #f0ece0; --low-fg: #b8704a; --low-border: #d08770;
+      --link: #5e81ac; --summary-hover: #d8dee9;
+    }}
+  }}
+
+  h1 {{ font-size: 1.8em; margin-bottom: 4px; }}
+  h2 {{ font-size: 1.3em; margin: 24px 0 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }}
+  h3 {{ font-size: 1.1em; margin: 16px 0 8px; }}
+  .subtitle {{ color: var(--fg-muted); font-size: 0.9em; margin-bottom: 16px; }}
+  .theme-nav {{ display: flex; gap: 8px; margin-bottom: 20px; }}
+  .theme-btn {{ background: var(--bg-card); color: var(--fg); border: 1px solid var(--border); padding: 4px 14px; border-radius: 4px; cursor: pointer; font-size: 0.85em; }}
+  .theme-btn.active {{ background: var(--accent); color: var(--bg); border-color: var(--accent); }}
+
+  .summary-cards {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px; }}
+  .card {{ background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 14px; text-align: center; }}
+  .card .value {{ font-size: 1.6em; font-weight: bold; }}
+  .card .label {{ font-size: 0.75em; color: var(--fg-muted); text-transform: uppercase; letter-spacing: 0.5px; }}
+
+  table {{ width: 100%; border-collapse: collapse; margin-bottom: 16px; }}
+  th, td {{ padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.85em; }}
+  th {{ background: var(--bg-card); color: var(--fg-label); font-weight: 600; position: sticky; top: 0; }}
+  tr:hover {{ background: var(--summary-hover); }}
+  .row-pass {{ border-left: 3px solid var(--pass-border); }}
+  .row-diff {{ border-left: 3px solid var(--diff-border); }}
+  .row-fail {{ border-left: 3px solid var(--fail-border); }}
+
+  .status-pass {{ color: var(--pass-fg); }}
+  .status-fail {{ color: var(--fail-fg); }}
+  .status-diff {{ color: var(--diff-fg); }}
+
+  details {{ background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; }}
+  summary {{ padding: 10px 14px; cursor: pointer; font-weight: 600; font-size: 0.9em; border-radius: 6px; }}
+  summary:hover {{ background: var(--summary-hover); }}
+  .detail-body {{ padding: 10px 14px 14px; }}
+  .detail-body p, .detail-body ul {{ margin: 4px 0; }}
+  .detail-body ul {{ padding-left: 20px; }}
+  .detail-body li {{ margin: 2px 0; font-size: 0.85em; }}
+
+  pre {{ background: var(--bg-code); padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 0.8em; }}
+  code {{ font-family: "SF Mono", "Fira Code", "Fira Mono", monospace; }}
+
+  .advert-entry {{ padding: 6px 0; border-bottom: 1px solid var(--border); }}
+  .advert-entry:last-child {{ border-bottom: none; }}
+  .brand-name {{ font-weight: 600; }}
+  .meta {{ color: var(--fg-muted); font-size: 0.85em; }}
+
+  .footer {{ margin-top: 30px; padding-top: 12px; border-top: 1px solid var(--border); color: var(--fg-muted); font-size: 0.8em; text-align: center; }}
+</style>
+</head>
+<body>
+
+<h1>Pipeline Analysis Report</h1>
+<div class="subtitle">Generated: {generated} &mdash; Pipeline log: {log_name}</div>
+
+<div class="theme-nav">
+  <button class="theme-btn" data-theme="light">Light</button>
+  <button class="theme-btn" data-theme="dark">Dark</button>
+  <button class="theme-btn" data-theme="gruvbox">Gruvbox</button>
+</div>
+
+<!-- Summary Cards -->
+<div class="summary-cards">
+  <div class="card"><div class="value">{total_videos}</div><div class="label">Videos</div></div>
+  <div class="card"><div class="value">{total_breaks}</div><div class="label">Breaks</div></div>
+  <div class="card"><div class="value">{total_adverts}</div><div class="label">Adverts</div></div>
+  <div class="card"><div class="value status-pass">{matched_pct:.1f}%</div><div class="label">Matched</div></div>
+  <div class="card"><div class="value status-diff">{weak_pct:.1f}%</div><div class="label">Weak</div></div>
+  <div class="card"><div class="value status-diff">{estimated_pct:.1f}%</div><div class="label">Estimated</div></div>
+  <div class="card"><div class="value status-fail">{unmatched_pct:.1f}%</div><div class="label">Unmatched</div></div>
+  <div class="card"><div class="value">{total_clips}</div><div class="label">Clips</div></div>
+  <div class="card"><div class="value status-fail">{not_clipped}</div><div class="label">Not Clipped</div></div>
+  <div class="card"><div class="value status-fail">{not_found}</div><div class="label">Not Matched</div></div>
+  <div class="card"><div class="value">{mean_conf:.3f}</div><div class="label">Mean Confidence</div></div>
+</div>
+
+<!-- Per-Break Table -->
+<h2>Per-Break Results</h2>
+<table>
+  <thead>
+    <tr><th>Video</th><th>Break</th><th>Adverts</th><th>Matched</th><th>Weak</th><th>Estimated</th><th>Unmatched</th><th>Clips</th><th>Confidence</th><th>Issues</th></tr>
+    <tr style="font-size:0.8em;color:var(--fg-muted)"><td colspan="10">Video names link to source file (file:// URL). Click to open in browser.</td></tr>
+  </thead>
+  <tbody>
+    {break_rows}
+  </tbody>
+</table>
+
+<!-- Unmatched + Weak Adverts -->
+<details>
+  <summary>Unmatched &amp; Weak Adverts ({total_unmatched_weak})</summary>
+  <div class="detail-body">
+    <p>Adverts with no OCR match or only a weak match (fallback, advertiser, estimated).</p>
+    {unmatched_weak_list}
+  </div>
+</details>
+
+<!-- Low Confidence Breaks -->
+<details>
+  <summary>Low Confidence Breaks ({low_conf_count})</summary>
+  <div class="detail-body">
+    <p>Breaks with confidence &lt; 0.6.</p>
+    {low_conf_list}
+  </div>
+</details>
+
+<!-- Anchor Events -->
+<details>
+  <summary>Anchor Re-estimation Events ({anchor_count})</summary>
+  <div class="detail-body">
+    <p>Breaks where anchor re-estimation was triggered (confidence below threshold).</p>
+    {anchor_list}
+  </div>
+</details>
+
+<!-- Clamp Activity -->
+<details>
+  <summary>Clamp Activity ({clamp_count} corrections, {clamp_skipped} skipped)</summary>
+  <div class="detail-body">
+    <p>Clamp corrector attempts to snap anomalous positions to the majority frame pattern.</p>
+    {clamp_list}
+  </div>
+</details>
+
+<!-- Log Warnings -->
+<details>
+  <summary>Pipeline Log Warnings ({warning_count})</summary>
+  <div class="detail-body">
+    <p>All WARNING-level lines from the pipeline log.</p>
+    <pre>{warning_text}</pre>
+  </div>
+</details>
+
+<div class="footer">Report generated by advert-identifier-analysis</div>
+
+<script>
+(function() {{
+  const btns = document.querySelectorAll('.theme-btn');
+  const root = document.documentElement;
+  function setTheme(theme) {{
+    root.setAttribute('data-theme', theme);
+    btns.forEach(b => b.classList.toggle('active', b.dataset.theme === theme));
+    try {{ localStorage.setItem('report-theme', theme); }} catch(e) {{}}
+  }}
+  let initial = 'dark';
+  try {{
+    const saved = localStorage.getItem('report-theme');
+    if (saved) {{ initial = saved; }}
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {{ initial = 'light'; }}
+  }} catch(e) {{}}
+  setTheme(initial);
+  btns.forEach(b => b.addEventListener('click', () => setTheme(b.dataset.theme)));
+}})();
+</script>
+</body>
+</html>"""
+
+
+# ── Data parsing ────────────────────────────────────────────────────────────
+
+
+def _video_url_from_state(data: dict) -> str:
+    """Build a file:// URL from the state's video_info.filepath."""
+    fp = data.get("video_info", {}).get("filepath", "")
+    if fp:
+        resolved = Path(fp).resolve()
+        return resolved.as_uri()
+    return ""
+
+
+def _ocr_json_url(video_dir: Path, stem: str, break_idx: int) -> str:
+    ocr_path = video_dir / f"{stem}_break{break_idx}_ocr.json"
+    resolved = ocr_path.resolve()
+    if resolved.is_file():
+        return resolved.as_uri()
+    return ""
+
+
+def parse_state_files(video_dir: Path) -> list[dict]:
+    """Parse all pipeline state JSON files in *video_dir* (top-level only)."""
+    results: list[dict] = []
+    for sf in sorted(video_dir.glob("*_pipeline_state.json")):
+        if not sf.is_file():
+            continue
+        data = json.loads(sf.read_text())
+        stem = sf.stem.replace("_pipeline_state", "")
+        video_url = _video_url_from_state(data)
+        ad_breaks = data.get("ad_breaks", [])
+        for ab in ad_breaks:
+            bi = ab.get("index", 0)
+            adverts = ab.get("adverts", [])
+            clip_count = ab.get("clip_count", 0)
+            confidence = ab.get("confidence", {})
+            conf_score = (
+                confidence.get("score") if isinstance(confidence, dict) else None
+            )
+            conf_reasons = (
+                confidence.get("reasons", []) if isinstance(confidence, dict) else []
+            )
+
+            matched = 0
+            weak = 0
+            estimated = 0
+            unmatched = 0
+            advert_details: list[dict] = []
+
+            for a in adverts:
+                det = a.get("detection") or {}
+                tier = det.get("match_tier", "")
+
+                detail = {
+                    "unique_id": a.get("unique_id", ""),
+                    "brand": a.get("brand", ""),
+                    "category": a.get("category", ""),
+                    "advertiser": a.get("advertiser", ""),
+                    "duration": a.get("scheduled_duration_seconds"),
+                    "tier": tier,
+                    "matched_terms": det.get("matched_terms", []),
+                    "last_seconds": det.get("last_seconds_clip"),
+                }
+
+                if tier in ("fallback", "advertiser", "none", "advertiser", ""):
+                    weak += 1
+                elif tier == "estimated":
+                    estimated += 1
+                elif tier:
+                    matched += 1
+                else:
+                    unmatched += 1
+
+                advert_details.append(detail)
+
+            ocr_json_url = _ocr_json_url(video_dir, stem, bi)
+            results.append(
+                {
+                    "stem": stem,
+                    "break_idx": bi,
+                    "ocr_json_url": ocr_json_url,
+                    "adverts": len(adverts),
+                    "matched": matched,
+                    "weak": weak,
+                    "estimated": estimated,
+                    "unmatched": unmatched,
+                    "clips": clip_count,
+                    "confidence": conf_score,
+                    "reasons": conf_reasons,
+                    "advert_details": advert_details,
+                    "state_file": sf.name,
+                    "video_url": video_url,
+                }
+            )
+    return results
+
+
+def parse_log(log_path: Path) -> dict:
+    """Parse the pipeline log for key events."""
+    text = log_path.read_text()
+    lines = text.splitlines()
+
+    events: dict = {
+        "warnings": [],
+        "no_match_events": [],
+        "anchor_events": [],
+        "clamp_corrected": [],
+        "clamp_skipped": [],
+        "confidence_events": [],
+        "unmatched_logs": [],
+    }
+
+    anchor_groups: list[dict] = []
+    current_anchor: dict | None = None
+    current_video: str = ""
+
+    for line in lines:
+        processing_m = re.search(r"Processing: (.+?)\.mp4", line)
+        if processing_m:
+            current_video = processing_m.group(1)
+        if "WARNING" in line and "advert-identifier" not in line:
+            events["warnings"].append(line)
+        if "NO MATCH" in line:
+            events["no_match_events"].append(line)
+
+        if "running anchor re-estimation" in line:
+            current_anchor = {
+                "trigger": line,
+                "video": current_video,
+                "anchor_advert": None,
+                "adverts": [],
+                "result": None,
+            }
+            anchor_groups.append(current_anchor)
+
+        if "confidence after anchor" in line and current_anchor is not None:
+            current_anchor["result"] = line
+            current_anchor = None
+
+        if current_anchor is not None and "Anchor re-estimation: using advert" in line:
+            current_anchor["anchor_advert"] = line
+
+        if current_anchor is not None and "Anchor re-estimation: no matched" in line:
+            current_anchor["anchor_advert"] = line
+
+        if current_anchor is not None and "Anchor: advert" in line:
+            current_anchor["adverts"].append(line)
+
+        if "corrected:" in line:
+            events["clamp_corrected"].append(line)
+        if "Clamp skipped" in line:
+            events["clamp_skipped"].append(line)
+        if "Unmatched advert" in line:
+            events["unmatched_logs"].append(line)
+
+    events["anchor_groups"] = anchor_groups
+    return events
+
+
+# ── HTML generation ─────────────────────────────────────────────────────────
+
+
+def _escape(text: str) -> str:
+    return html.escape(text or "")
+
+
+def _short_stem(stem: str) -> str:
+    """Shorten video stem to just date+time for display."""
+    parts = stem.split("_")
+    if len(parts) >= 3:
+        return "_".join(parts[-2:])
+    return stem
+
+
+def _row_class(conf: float | None) -> str:
+    if conf is None:
+        return "row-fail"
+    if conf >= 0.8:
+        return "row-pass"
+    if conf >= 0.6:
+        return "row-diff"
+    return "row-fail"
+
+
+def _conf_class(conf: float | None) -> str:
+    if conf is None:
+        return "status-fail"
+    if conf >= 0.8:
+        return "status-pass"
+    if conf >= 0.6:
+        return "status-diff"
+    return "status-fail"
+
+
+def generate_break_rows(break_data: list[dict]) -> str:
+    rows = []
+    for bd in break_data:
+        rc = _row_class(bd["confidence"])
+        cc = _conf_class(bd["confidence"])
+        conf_str = f"{bd['confidence']:.3f}" if bd["confidence"] is not None else "N/A"
+        issues = "; ".join(bd["reasons"]) if bd["reasons"] else ""
+        vid_link = (
+            f'<a href="{_escape(bd["video_url"])}" target="_blank" style="color:var(--link)">'
+            f'{_escape(_short_stem(bd["stem"]))}</a>'
+        )
+        rows.append(
+            f'<tr class="{rc}">'
+            f"<td>{vid_link}</td>"
+            f'<td>B{bd["break_idx"]}</td>'
+            f'<td>{bd["adverts"]}</td>'
+            f'<td class="status-pass">{bd["matched"]}</td>'
+            f'<td class="status-diff">{bd["weak"]}</td>'
+            f'<td class="status-diff">{bd["estimated"]}</td>'
+            f'<td class="status-fail">{bd["unmatched"]}</td>'
+            f'<td>{bd["clips"]}</td>'
+            f'<td class="{cc}">{conf_str}</td>'
+            f'<td style="font-size:0.8em;color:var(--fg-muted)">{_escape(issues)}</td>'
+            f"</tr>"
+        )
+    return "\n".join(rows)
+
+
+def _clip_url(video_dir: Path, unique_id: str, category: str, brand: str) -> str:
+    """Build a file:// URL to the advert clip MP4 if it exists."""
+    cat = _sanitize_filename(category or "unknown")
+    brd = _sanitize_filename(brand or "unknown")
+    clip_path = video_dir / f"{unique_id}_{cat}_{brd}.mp4"
+    resolved = clip_path.resolve()
+    if resolved.is_file():
+        return resolved.as_uri()
+    return ""
+
+
+def generate_unmatched_weak_list(break_data: list[dict], video_dir: Path) -> str:
+    parts: list[str] = []
+    count = 0
+    for bd in break_data:
+        weak_adverts = [
+            a
+            for a in bd["advert_details"]
+            if a["tier"] in WEAK_TIERS or a["tier"] == "estimated"
+        ]
+        if not weak_adverts:
+            continue
+        for a in weak_adverts:
+            count += 1
+            tier = a["tier"] or "none"
+            terms = ", ".join(a["matched_terms"]) if a["matched_terms"] else "—"
+            dur = f"{a['duration']}s" if a["duration"] else "?"
+            cat = _escape(a["category"] or "?")
+            uid = _escape(a["unique_id"] or "?")
+            brand = _escape(a["brand"] or "?")
+            vid = _escape(bd["stem"])
+            bi = bd["break_idx"]
+
+            clip_url = _clip_url(video_dir, a["unique_id"], a["category"], a["brand"])
+            state_info = ""
+            if bd.get("state_file"):
+                state_info = f" &mdash; {_escape(bd['state_file'])}"
+            clip_link = ""
+            if clip_url:
+                clip_link = f' &mdash; <a href="{_escape(clip_url)}" target="_blank" style="color:var(--link)">clip</a>'
+            ocr_link = ""
+            if bd.get("ocr_json_url"):
+                ocr_link = f' &mdash; <a href="{_escape(bd["ocr_json_url"])}" target="_blank" style="color:var(--link)">OCR JSON</a>'
+            parts.append(
+                f'<div class="advert-entry">'
+                f'<span class="brand-name">{brand}</span> '
+                f'<span class="meta">({uid})</span><br>'
+                f'<span class="meta">Tier: <strong>{_escape(tier)}</strong>'
+                f" | Terms: {_escape(terms)}"
+                f" | Duration: {dur}"
+                f" | Category: {cat}</span><br>"
+                f'<span class="meta" style="color:var(--fg-muted)">'
+                f"{_escape(vid)} B{bi}{state_info}{clip_link}{ocr_link}</span>"
+                f"</div>"
+            )
+
+    if not parts:
+        return "<p>No unmatched or weak adverts.</p>"
+    return "\n".join(parts)
+
+
+def generate_low_conf_list(break_data: list[dict]) -> str:
+    parts: list[str] = []
+    count = 0
+    for bd in break_data:
+        if bd["confidence"] is not None and bd["confidence"] < 0.6:
+            count += 1
+            conf_str = f"{bd['confidence']:.3f}"
+            reasons = (
+                "; ".join(bd["reasons"]) if bd["reasons"] else "No specific reasons"
+            )
+            vid_link = (
+                f'<a href="{_escape(bd["video_url"])}" target="_blank" style="color:var(--link)">'
+                f'{_escape(_short_stem(bd["stem"]))}</a>'
+            )
+            parts.append(
+                f'<div class="advert-entry">'
+                f'<span class="brand-name">{vid_link} B{bd["break_idx"]}</span>'
+                f' &mdash; Confidence: <strong class="status-fail">{conf_str}</strong><br>'
+                f'<span class="meta">{_escape(reasons)}</span>'
+                f'<br><span class="meta" style="color:var(--fg-muted)">{bd["adverts"]} adverts, '
+                f'{bd["matched"]} matched, {bd["clips"]} clips</span>'
+                f"</div>"
+            )
+    if not parts:
+        return "<p>No low-confidence breaks.</p>"
+    return "\n".join(parts)
+
+
+def _video_url_for_stem(break_data: list[dict], stem: str) -> str:
+    for bd in break_data:
+        if bd["stem"] == stem:
+            return bd.get("video_url", "")
+    return ""
+
+
+def generate_anchor_list(events: dict, break_data: list[dict]) -> str:
+    groups = events.get("anchor_groups", [])
+    parts: list[str] = []
+    for g in groups:
+        trigger = g.get("trigger", "")
+        video_stem = g.get("video", "")
+        anchor_advert = g.get("anchor_advert", "No matched adverts")
+        result = g.get("result")
+        adverts = g.get("adverts", [])
+        video_url = _video_url_for_stem(break_data, video_stem)
+
+        m = re.search(r"Break (\d+) confidence ([\d.]+)", trigger)
+        bi = m.group(1) if m else "?"
+        before = m.group(2) if m else "?"
+
+        after = "?"
+        if result:
+            rm = re.search(r"([\d.]+) \(was ([\d.]+)\)", result)
+            if rm:
+                after = rm.group(1)
+
+        vid_label = _escape(_short_stem(video_stem)) if video_stem else "?"
+        vid_link = (
+            f'<a href="{_escape(video_url)}" target="_blank" style="color:var(--link)">{vid_label}</a>'
+            if video_url
+            else vid_label
+        )
+        parts.append(
+            f'<div class="advert-entry" style="margin-bottom:8px">'
+            f'<span class="brand-name">{vid_link} B{bi}</span>'
+            f' &mdash; <span class="status-diff">{before}</span>'
+            f' &rarr; <span class="status-pass">{after}</span><br>'
+        )
+
+        if anchor_advert and "no matched" not in anchor_advert:
+            am = re.search(r"using advert \d+ \((.+?)\) as anchor", anchor_advert)
+            anchor_info = am.group(1) if am else anchor_advert
+            parts.append(
+                f'<span class="meta">Anchor advert: <strong>{_escape(anchor_info)}</strong></span><br>'
+            )
+        else:
+            parts.append(
+                f'<span class="meta status-fail">No matched adverts, cannot anchor</span><br>'
+            )
+
+        if adverts:
+            parts.append(
+                f'<span class="meta" style="font-size:0.8em">Per-advert results:</span><br>'
+            )
+            for adv_line in adverts:
+                am2 = re.search(
+                    r"Anchor: advert (\d+) \((.+?)\) (estimated|verified|preserved)",
+                    adv_line,
+                )
+                if am2:
+                    ai = am2.group(1)
+                    brand = am2.group(2)
+                    outcome = am2.group(3)
+                    extra = ""
+                    if "estimated" in outcome:
+                        extra = ""
+                        tm = re.search(r"estimated at ([\d.]+s)", adv_line)
+                        if tm:
+                            extra = f" at {tm.group(1)}"
+                        if "outside OCR window" in adv_line:
+                            extra += " (outside OCR window)"
+                    elif "verified" in outcome:
+                        tm = re.search(r"verified at frame \d+ \(([\d.]+s)\)", adv_line)
+                        if tm:
+                            extra = f" at {tm.group(1)}"
+                    elif "preserved" in outcome:
+                        extra = " (preserved from Pass 1)"
+                    outcome_class = (
+                        "status-pass"
+                        if "verified" in outcome or "preserved" in outcome
+                        else "status-diff"
+                    )
+                    parts.append(
+                        f'<span class="meta" style="font-size:0.8em;padding-left:16px">'
+                        f'Advert {ai}: <span class="{outcome_class}">{_escape(outcome)}</span>'
+                        f"{_escape(extra)} &mdash; {_escape(brand)}</span><br>"
+                    )
+
+        parts.append("</div>")
+
+    if not parts:
+        return "<p>No anchor re-estimation events.</p>"
+    return "\n".join(parts)
+
+
+def generate_clamp_section(events: dict) -> str:
+    corrected = events.get("clamp_corrected", [])
+    skipped = events.get("clamp_skipped", [])
+    parts: list[str] = []
+    if corrected:
+        parts.append("<p><strong>Corrections applied:</strong></p>")
+        for line in corrected:
+            parts.append(
+                f'<div class="advert-entry"><code>{_escape(line)}</code></div>'
+            )
+    if skipped:
+        parts.append("<p><strong>Skipped (insufficient majority support):</strong></p>")
+        for line in skipped:
+            parts.append(
+                f'<div class="advert-entry"><code>{_escape(line)}</code></div>'
+            )
+    if not parts:
+        return "<p>No clamp events.</p>"
+    return "\n".join(parts)
+
+
+def generate_warning_text(events: dict) -> str:
+    warnings = events.get("warnings", [])
+    if not warnings:
+        return "No warnings."
+    return "\n".join(_escape(w) for w in warnings)
+
+
+# ── Main ────────────────────────────────────────────────────────────────────
+
+
+def create_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Generate post-run analysis HTML report for the advert identifier pipeline"
+    )
+    parser.add_argument(
+        "--video-dir",
+        type=str,
+        default="video",
+        help="Directory containing pipeline state JSON files (default: video/)",
+    )
+    parser.add_argument(
+        "--pipeline-log",
+        type=str,
+        required=True,
+        help="Path to the pipeline log file",
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="video/pipeline_analysis.html",
+        help="Output HTML path (default: video/pipeline_analysis.html)",
+    )
+    return parser
+
+
+def main() -> int:
+    parser = create_parser()
+    args = parser.parse_args()
+
+    video_dir = Path(args.video_dir)
+    log_path = Path(args.pipeline_log)
+    output_path = Path(args.output)
+
+    if not video_dir.is_dir():
+        print(f"Error: video directory not found: {video_dir}", file=sys.stderr)
+        return 1
+    if not log_path.is_file():
+        print(f"Error: pipeline log not found: {log_path}", file=sys.stderr)
+        return 1
+
+    # Parse data
+    break_data = parse_state_files(video_dir)
+    log_events = parse_log(log_path)
+
+    if not break_data:
+        print("Error: no pipeline state files found in", video_dir, file=sys.stderr)
+        return 1
+
+    # Compute aggregates
+    total_videos = len({bd["stem"] for bd in break_data})
+    total_breaks = len(break_data)
+    total_adverts = sum(bd["adverts"] for bd in break_data)
+    total_matched = sum(bd["matched"] for bd in break_data)
+    total_weak = sum(bd["weak"] for bd in break_data)
+    total_estimated = sum(bd["estimated"] for bd in break_data)
+    total_unmatched = sum(bd["unmatched"] for bd in break_data)
+    total_clips = sum(bd["clips"] for bd in break_data)
+
+    confs = [bd["confidence"] for bd in break_data if bd["confidence"] is not None]
+    mean_conf = sum(confs) / len(confs) if confs else 0.0
+
+    matched_pct = total_matched / total_adverts * 100 if total_adverts else 0
+    weak_pct = total_weak / total_adverts * 100 if total_adverts else 0
+    estimated_pct = total_estimated / total_adverts * 100 if total_adverts else 0
+    unmatched_pct = total_unmatched / total_adverts * 100 if total_adverts else 0
+
+    total_unmatched_weak = total_weak + total_estimated + total_unmatched
+    not_clipped = total_adverts - total_clips
+    not_found = total_unmatched + total_weak
+    low_conf_count = sum(
+        1
+        for bd in break_data
+        if bd["confidence"] is not None and bd["confidence"] < 0.6
+    )
+    anchor_count = len(log_events.get("anchor_groups", []))
+    clamp_count = len(log_events.get("clamp_corrected", []))
+    clamp_skipped = len(log_events.get("clamp_skipped", []))
+    warning_count = len(log_events.get("warnings", []))
+
+    # Generate sections
+    break_rows = generate_break_rows(break_data)
+    unmatched_weak_list = generate_unmatched_weak_list(break_data, video_dir)
+    low_conf_list = generate_low_conf_list(break_data)
+    anchor_list = generate_anchor_list(log_events, break_data)
+    clamp_list = generate_clamp_section(log_events)
+    warning_text = generate_warning_text(log_events)
+
+    # Render HTML
+    html_out = HTML_TEMPLATE.format(
+        generated=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        log_name=_escape(log_path.name),
+        total_videos=total_videos,
+        total_breaks=total_breaks,
+        total_adverts=total_adverts,
+        matched_pct=matched_pct,
+        weak_pct=weak_pct,
+        estimated_pct=estimated_pct,
+        unmatched_pct=unmatched_pct,
+        total_clips=total_clips,
+        not_clipped=not_clipped,
+        not_found=not_found,
+        mean_conf=mean_conf,
+        total_unmatched_weak=total_unmatched_weak,
+        low_conf_count=low_conf_count,
+        anchor_count=anchor_count,
+        clamp_count=clamp_count,
+        clamp_skipped=clamp_skipped,
+        warning_count=warning_count,
+        break_rows=break_rows,
+        unmatched_weak_list=unmatched_weak_list,
+        low_conf_list=low_conf_list,
+        anchor_list=anchor_list,
+        clamp_list=clamp_list,
+        warning_text=warning_text,
+    )
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(html_out)
+    print(f"Analysis report written to: {output_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

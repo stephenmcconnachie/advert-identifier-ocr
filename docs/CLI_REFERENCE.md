@@ -31,6 +31,8 @@ advert-identifier -v URL --metadata-file PATH [OPTIONS]
 | `--ocr-model` | | No | `PaddlePaddle/PaddleOCR-VL` | OCR model name |
 | `--output-dir` | | No | - | Directory for frame images and OCR results JSON |
 | `--output` | `-o` | No | auto | Output XML path (default: beside metadata file) |
+| `--anchor-threshold` | | No | 0.6 | Re-estimate low-confidence breaks using strongest OCR match as anchor (0.0 disables) |
+| `--clamp-majority-rule` | | No | False | Apply 50%% majority rule to clamp corrections (default: off — only min count threshold of 2 applies) |
 | `--verbose` | | No | False | Show detailed progress |
 | `--dry-run` | | No | False | Skip OCR API calls (test frame extraction only) |
 
@@ -109,6 +111,10 @@ advert-identifier-pipeline --input-folder PATH --csv-folder PATH [OPTIONS]
 | `--dry-run` | No | False | Preview what would be processed |
 | `--log-level` | No | INFO | DEBUG, INFO, WARNING, ERROR |
 | `--verbose` | No | False | Show detailed progress |
+| `--anchor-threshold` | No | 0.6 | Re-estimate low-confidence breaks using strongest OCR match as anchor |
+| `--clamp-majority-rule` | No | False | Apply 50%% majority rule to clamp corrections (default: off) |
+| `--max-workers` | No | 10 | Maximum parallel clip extractions |
+| `--min-break-confidence` | No | 0.0 | Skip clip extraction for breaks below this confidence threshold |
 
 ### Pipeline Workflow
 
@@ -214,6 +220,7 @@ advert-identifier-single-advert-clip --xml-file PATH --video-url URL --json-file
 | `--pad` | No | 0.0 | Seconds to add to start and end of each clip |
 | `--clip-offset` | No | 0.0 | Seconds from broadcast start to clip start |
 | `--state-file` | No | - | Path to pipeline state file. Reads `adjusted_start_broadcast` directly |
+| `--max-workers` | No | 10 | Maximum parallel clip extractions |
 | `--log-level` | No | INFO | DEBUG, INFO, WARNING, ERROR |
 
 ### Timecode Resolution

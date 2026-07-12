@@ -159,6 +159,12 @@ def create_parser() -> argparse.ArgumentParser:
         default=10,
         help="Maximum parallel clip extractions (default: 10)",
     )
+    parser.add_argument(
+        "--clamp-majority-rule",
+        action="store_true",
+        default=False,
+        help="Apply 50%% majority rule to clamp corrections (default: off)",
+    )
     return parser
 
 
@@ -184,6 +190,46 @@ def get_video_duration(video_path: Path) -> float:
     except (subprocess.CalledProcessError, ValueError) as e:
         logging.warning(f"Could not determine duration for {video_path}: {e}")
         return 0.0
+
+
+def run_post_run_analysis(
+    video_dir: Path,
+    pipeline_log: Path,
+    logger: logging.Logger,
+    output_path: str | None = None,
+) -> bool:
+    """Run post-run analysis report generation.
+
+    Args:
+        video_dir: Directory containing pipeline state JSON files.
+        pipeline_log: Path to the pipeline log file.
+        logger: Logger instance.
+        output_path: Output HTML path (default: video_dir/pipeline_analysis.html).
+
+    Returns:
+        True if successful.
+    """
+    bin_dir = Path(__file__).parent
+    cmd = [
+        sys.executable,
+        str(bin_dir / "advert-identifier-analysis"),
+        "--video-dir",
+        str(video_dir),
+        "--pipeline-log",
+        str(pipeline_log),
+    ]
+    if output_path:
+        cmd.extend(["--output", output_path])
+
+    logger.info("Running post-run analysis...")
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        if result.stdout:
+            logger.info(result.stdout.strip())
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.warning(f"Post-run analysis failed: {e.stderr}")
+        return False
 
 
 def run_metadata_extractor(
@@ -392,6 +438,7 @@ def run_advert_identifier(
     logger: logging.Logger,
     verbose: bool = False,
     anchor_threshold: float = 0.6,
+    clamp_majority_rule: bool = False,
 ) -> Tuple[bool, Optional[Path], int]:
     """Run advert-identifier (OCR detection) on the original video.
 
@@ -439,6 +486,9 @@ def run_advert_identifier(
         cmd.extend(["--output-dir", output_dir])
     cmd.extend(["--anchor-threshold", str(anchor_threshold)])
 
+    if clamp_majority_rule:
+        cmd.append("--clamp-majority-rule")
+
     logger.info(
         f"Running OCR detection for ad break {ad_break_index + 1}: {' '.join(cmd)}"
     )
@@ -457,7 +507,7 @@ def run_advert_identifier(
         # XML is written to same directory as metadata file
         # The detect module uses video stem for the XML filename
         video_stem = Path(video_url.split("?")[0]).stem
-        xml_path = json_path.parent / f"{video_stem}.xml"
+        xml_path = json_path.parent / f"{video_stem}_break{ad_break_index + 1}.xml"
         advert_count = 0
 
         if xml_path.exists():
@@ -859,6 +909,7 @@ def main() -> int:
                 logger=logger,
                 verbose=args.verbose,
                 anchor_threshold=args.anchor_threshold,
+                clamp_majority_rule=args.clamp_majority_rule,
             )
 
             if success:
@@ -910,6 +961,27 @@ def main() -> int:
                     log_level=args.log_level,
                     max_workers=args.max_workers,
                 )
+
+                # Write clip_count back to pipeline state file
+                if state_file_path and clips_success and clip_count > 0:
+                    try:
+                        from ad_break_identifier.pipeline_state import (
+                            read_state,
+                            write_state,
+                        )
+
+                        state = read_state(str(state_file_path))
+                        state["ad_breaks"][ad_break_index]["clip_count"] = clip_count
+                        write_state(str(state_file_path), state)
+                        logger.info(
+                            "Pipeline state updated with %d clips for break %d",
+                            clip_count,
+                            ad_break_index + 1,
+                        )
+                    except Exception as e:
+                        logger.warning(
+                            "Could not update pipeline state with clip count: %s", e
+                        )
 
                 ad_break_results.append(
                     {
@@ -978,6 +1050,15 @@ def main() -> int:
 
     summary_path = input_folder / "advert-identifier-pipeline-summary.txt"
     generate_summary(results, total_runtime, total_video_duration, summary_path, logger)
+
+    # Generate post-run analysis report
+    log_file_path = Path(log_file)
+    if log_file_path.is_file():
+        run_post_run_analysis(
+            video_dir=input_folder,
+            pipeline_log=log_file_path,
+            logger=logger,
+        )
 
     logger.info(f"\nPipeline completed. Processed {len(results)} files.")
 
