@@ -751,9 +751,10 @@ def search_with_ordering(
             frames: list[int] = []
             terms: set[str] = set()
             consecutive_misses = 0
-            MAX_MISSES = 10  # 10 frames = 2s at 5 FPS; stops scan after
-            # enough consecutive non-matches to avoid stealing frames from
-            # a later advert with the same brand.
+            MAX_MISSES = 50  # 50 frames = 10s at 5 FPS; allows brand text
+            # to reappear after long gaps within the same advert while
+            # still preventing theft from a later advert with the same
+            # brand name (e.g. "Vax spotwash" vs "Vax platinum").
             for ocr_res in ocr_results:
                 idx = ocr_res["frame_index"]
                 if idx <= prev_last_frame:
@@ -861,6 +862,30 @@ def search_with_ordering(
                     and best_result_g2.last_match_frame > best_result.last_match_frame
                 ):
                     best_result = best_result_g2
+
+        # Take the later end position across both groups.  G2 (substring)
+        # may find matches extending beyond G1 (full-phrase), and the
+        # later position is more accurate for clip start calculation even
+        # if G1 had a higher-quality match tier.
+        if (
+            best_result_g1 is not None
+            and best_result_g2 is not None
+            and best_result_g2.last_match_frame > best_result_g1.last_match_frame
+        ):
+            max_frame = max(
+                best_result_g1.last_match_frame,
+                best_result_g2.last_match_frame,
+            )
+            if max_frame > best_result.last_match_frame:
+                best_result = BrandSearchResult(
+                    True,
+                    max_frame,
+                    max_frame / fps,
+                    best_result.match_tier,
+                    best_result.match_count,
+                    best_result.all_matching_frames,
+                    best_result.matched_terms,
+                )
 
         if best_result is not None:
             # Re-scan with the winning group's patterns to ensure we use
