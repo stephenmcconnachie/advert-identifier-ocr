@@ -696,6 +696,407 @@ def generate_warning_text(events: dict) -> str:
     return "\n".join(_escape(w) for w in warnings)
 
 
+# ── Recommendations ──────────────────────────────────────────────────────────
+
+
+def _read_existing_overrides() -> dict[str, list[str]]:
+    """Read the current _BRAND_PATTERN_OVERRIDES dict from detect.py."""
+    import ast
+
+    detect_path = (
+        Path(__file__).parent.parent / "src" / "ad_break_identifier" / "detect.py"
+    )
+    if not detect_path.is_file():
+        return {}
+
+    tree = ast.parse(detect_path.read_text())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if (
+                    isinstance(target, ast.Name)
+                    and target.id == "_BRAND_PATTERN_OVERRIDES"
+                ):
+                    if isinstance(node.value, ast.Dict):
+                        result: dict[str, list[str]] = {}
+                        for k, v in zip(node.value.keys, node.value.values):
+                            if isinstance(k, ast.Constant) and isinstance(v, ast.List):
+                                key = k.value
+                                items = [
+                                    e.value
+                                    for e in v.elts
+                                    if isinstance(e, ast.Constant)
+                                ]
+                                result[key] = items
+                        return result
+    return {}
+
+
+def _suggest_override_domain(stripped: str, brand: str) -> str | None:
+    """Suggest an override word from a domain that relates to a brand."""
+    b_clean = (
+        brand.lower()
+        .replace(" ", "")
+        .replace(".", "")
+        .replace("-", "")
+        .replace("'", "")
+    )
+    if stripped in b_clean or b_clean in stripped:
+        return stripped
+    return None
+
+
+def _escape_md(text: str) -> str:
+    return text.replace("|", "\\|")
+
+
+def generate_recommendations(
+    break_data: list[dict],
+    video_dir: Path,
+    log_path: Path,
+    output_path: Path,
+) -> list[dict[str, str]]:
+    """Generate per-brand OCR diagnosis and write markdown recommendations.
+
+    Returns a list of new override candidates that were found.
+    """
+    from ad_break_identifier.detect import (
+        build_exact_patterns,
+        build_substring_patterns,
+        match_ocr_text,
+        _brand_variants,
+        _BRAND_PATTERN_OVERRIDES as KNOWN_OVERRIDES,
+    )
+
+    existing = _read_existing_overrides()
+
+    weak_brands: dict[str, list[dict]] = {}
+    for bd in break_data:
+        for a in bd["advert_details"]:
+            if a["tier"] in WEAK_TIERS:
+                key = a["brand"]
+                if key not in weak_brands:
+                    weak_brands[key] = []
+                weak_brands[key].append(
+                    {
+                        "stem": bd["stem"],
+                        "break_idx": bd["break_idx"],
+                        "tier": a["tier"],
+                        "category": a.get("category", ""),
+                    }
+                )
+
+    new_candidates: list[dict[str, str]] = []
+    override_candidates: list[dict[str, str]] = []
+    coverage_gaps: list[dict[str, str]] = []
+    metadata_issues: list[dict[str, str]] = []
+    already_overridden: list[dict[str, str]] = []
+
+    for brand, entries in sorted(weak_brands.items()):
+        stems = set(e["stem"] for e in entries)
+        bis = set(e["break_idx"] for e in entries)
+
+        # Skip Kate Garraway
+        if all("21:00" in s for s in stems):
+            metadata_issues.append(
+                {"brand": brand, "breaks": ", ".join(f"B{b}" for b in sorted(bis))}
+            )
+            continue
+
+        # Check if already overridden
+        if brand in existing or brand in KNOWN_OVERRIDES:
+            already_overridden.append(
+                {"brand": brand, "breaks": ", ".join(f"B{b}" for b in sorted(bis))}
+            )
+            continue
+
+        # Scan OCR
+        found_texts = []
+        for stem in list(stems)[:3]:
+            for bi in sorted(bis)[:3]:
+                ocr_path = video_dir / f"{stem}_break{bi}_ocr.json"
+                if not ocr_path.exists():
+                    continue
+                try:
+                    ocr = json.loads(ocr_path.read_text())
+                    frames = ocr.get("frames", [])
+                    sub = build_substring_patterns(brand)
+                    for f in frames[:500]:
+                        text = f.get("text", "").strip()
+                        if not text:
+                            continue
+                        lower = text.lower()
+                        m, terms = match_ocr_text(text, sub)
+                        words = brand.lower().split()
+                        for w in words:
+                            cw = w.strip(".,!?()")
+                            if len(cw) >= 4 and cw in lower:
+                                found_texts.append(
+                                    {
+                                        "frame": f["frame_index"],
+                                        "ts": f["timestamp_clip"],
+                                        "text": text[:120],
+                                        "word": cw,
+                                        "matched": m,
+                                    }
+                                )
+                                break
+                except Exception:
+                    pass
+
+        if found_texts:
+            any_match = any(ft["matched"] for ft in found_texts)
+            if not any_match:
+                # Suggest override based on first matching word
+                unique_words = sorted(set(ft["word"] for ft in found_texts))
+                suggestion = unique_words[0] if unique_words else ""
+                if suggestion and len(suggestion) >= 4:
+                    ov = suggestion.lower().replace(" ", "")
+                    override_candidates.append(
+                        {
+                            "brand": brand,
+                            "breaks": ", ".join(f"B{b}" for b in sorted(bis)),
+                            "ocr_text": found_texts[0]["text"][:80],
+                            "word": ov,
+                        }
+                    )
+                    continue
+            coverage_gaps.append(
+                {
+                    "brand": brand,
+                    "breaks": ", ".join(f"B{b}" for b in sorted(bis)),
+                    "note": "timing/ordering",
+                }
+            )
+        else:
+            coverage_gaps.append(
+                {
+                    "brand": brand,
+                    "breaks": ", ".join(f"B{b}" for b in sorted(bis)),
+                    "note": "no text",
+                }
+            )
+
+    # Also check domain-based candidates
+    domain_pat = re.compile(
+        r"\b([a-z][a-z0-9]{2,})(?:\.(?:com|co\.uk|org|net|uk))\b", re.IGNORECASE
+    )
+    for ocr_path in sorted(video_dir.glob("*_break*_ocr.json")):
+        try:
+            ocr = json.loads(ocr_path.read_text())
+            frames = ocr.get("frames", [])
+            for f in frames[:100]:
+                text = f.get("text", "").strip().lower()
+                for m in domain_pat.finditer(text):
+                    domain = m.group(0)
+                    stripped = m.group(1)
+                    if len(stripped) < 4:
+                        continue
+                    for brand, entries in sorted(weak_brands.items()):
+                        if brand in existing or brand in KNOWN_OVERRIDES:
+                            continue
+                        stripped_lower = stripped.lower()
+                        brand_clean = (
+                            brand.lower()
+                            .replace(" ", "")
+                            .replace(".", "")
+                            .replace("-", "")
+                            .replace("'", "")
+                            .replace("&", "and")
+                        )
+                        if (
+                            stripped_lower in brand_clean
+                            or brand_clean in stripped_lower
+                        ):
+                            cand = {
+                                "brand": brand,
+                                "breaks": "",
+                                "ocr_text": f"{domain}",
+                                "word": stripped_lower,
+                            }
+                            if cand not in override_candidates:
+                                override_candidates.append(cand)
+        except Exception:
+            pass
+
+    # Deduplicate override candidates by brand
+    seen_brands = set()
+    deduped = []
+    for c in override_candidates:
+        if c["brand"] not in seen_brands:
+            seen_brands.add(c["brand"])
+            deduped.append(c)
+
+    # Build markdown
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_name = log_path.name
+
+    section = f"""<!-- run: {log_name} -->
+## Run: {log_name} ({now})
+
+### Configuration
+Pipeline log: {log_name}
+
+### 🟢 New Override Candidates
+
+OCR text found but no pattern matches:
+
+| Brand | OCR text seen | Suggested override | Status |
+|-------|--------------|-------------------|--------|
+"""
+    if deduped:
+        for c in deduped:
+            section += f"| {_escape_md(c['brand'])} | `{_escape_md(c['ocr_text'][:60])}` | `{c['word']}` | `--apply` to add |\n"
+        new_candidates = deduped
+    else:
+        section += "| *(none)* | | | |\n"
+
+    section += f"""
+### ✅ Already Overridden
+
+| Brand | Breaks |
+|-------|--------|
+"""
+    for a in already_overridden:
+        section += f"| {_escape_md(a['brand'])} | {a['breaks']} |\n"
+
+    section += f"""
+### ⚪ Coverage Gaps (no brand text in OCR)
+
+| Brand | Breaks | Notes |
+|-------|--------|-------|
+"""
+    for c in coverage_gaps:
+        section += (
+            f"| {_escape_md(c['brand'])} | {c['breaks']} | {c.get('note', '')} |\n"
+        )
+
+    section += f"""
+### 🔵 Metadata Timing Issues (21:00 programme)
+
+| Brand | Breaks |
+|-------|--------|
+"""
+    for m in metadata_issues:
+        section += f"| {_escape_md(m['brand'])} | {m['breaks']} |\n"
+
+    section += "\n---\n"
+
+    # Prepend to existing file or create new
+    if output_path.exists():
+        existing_content = output_path.read_text()
+        # Find first run marker to insert after header
+        content = existing_content
+        first_run = content.find("<!-- run:")
+        if first_run != -1:
+            header = content[:first_run].rstrip()
+            rest = content[first_run:]
+            content = header + "\n\n" + section + "\n" + rest
+        else:
+            content = section + "\n" + content
+    else:
+        content = f"# Advert Identifier — Recommendations\n\nAccumulated override recommendations from pipeline runs.\n\n---\n\n{section}"
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(content)
+    print(f"Recommendations written to: {output_path}")
+    return new_candidates
+
+
+def apply_overrides(candidates: list[dict[str, str]]) -> int:
+    """Add new override candidates to _BRAND_PATTERN_OVERRIDES in detect.py.
+
+    Returns the number of overrides applied.
+    """
+    import ast
+    import shutil
+
+    detect_path = (
+        Path(__file__).parent.parent / "src" / "ad_break_identifier" / "detect.py"
+    )
+    if not detect_path.is_file():
+        print(f"Error: detect.py not found at {detect_path}", file=sys.stderr)
+        return 0
+
+    source = detect_path.read_text()
+    tree = ast.parse(source)
+
+    # Find the _BRAND_PATTERN_OVERRIDES dict
+    target_node = None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if (
+                    isinstance(target, ast.Name)
+                    and target.id == "_BRAND_PATTERN_OVERRIDES"
+                ):
+                    target_node = node
+                    break
+
+    if target_node is None or not isinstance(target_node.value, ast.Dict):
+        print(
+            "Error: could not find _BRAND_PATTERN_OVERRIDES dict in detect.py",
+            file=sys.stderr,
+        )
+        return 0
+
+    existing_dict = target_node.value
+    existing_keys = set()
+    for k in existing_dict.keys:
+        if isinstance(k, ast.Constant):
+            existing_keys.add(k.value)
+
+    applied = 0
+    for c in candidates:
+        brand = c["brand"]
+        word = c["word"]
+        if brand in existing_keys:
+            continue
+        # Add new key-value pair
+        existing_dict.keys.append(ast.Constant(value=brand))
+        existing_dict.values.append(
+            ast.List(elts=[ast.Constant(value=word)], ctx=ast.Load())
+        )
+        existing_keys.add(brand)
+        applied += 1
+        print(f"  Added: {brand} -> [{word}]")
+
+    if applied == 0:
+        print("No new overrides to apply.")
+        return 0
+
+    # Unparse back to source
+    try:
+        new_source = ast.unparse(tree)
+    except Exception as e:
+        print(f"Error unparsing AST: {e}", file=sys.stderr)
+        return 0
+
+    # Create backup
+    backup = detect_path.with_suffix(".py.bak")
+    shutil.copy2(detect_path, backup)
+    print(f"Backup written to: {backup}")
+
+    # Write new source
+    detect_path.write_text(new_source + "\n")
+
+    # Run black
+    import subprocess
+
+    result = subprocess.run(
+        [sys.executable, "-m", "black", "--target-version", "py311", str(detect_path)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        print(f"  Formatted with black")
+    else:
+        print(f"  Warning: black formatting failed: {result.stderr}")
+
+    print(f"Applied {applied} override(s) to {detect_path}")
+    return applied
+
+
 # ── Main ────────────────────────────────────────────────────────────────────
 
 
@@ -720,6 +1121,24 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         default="video/pipeline_analysis.html",
         help="Output HTML path (default: video/pipeline_analysis.html)",
+    )
+    parser.add_argument(
+        "--recommend",
+        action="store_true",
+        default=False,
+        help="Generate pipeline_recommendations.md with per-brand OCR diagnosis",
+    )
+    parser.add_argument(
+        "--output-recommend",
+        type=str,
+        default="video/pipeline_recommendations.md",
+        help="Output path for recommendations markdown (default: video/pipeline_recommendations.md)",
+    )
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        default=False,
+        help="Auto-add new override candidates to _BRAND_PATTERN_OVERRIDES in detect.py",
     )
     return parser
 
@@ -818,6 +1237,22 @@ def main() -> int:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(html_out)
     print(f"Analysis report written to: {output_path}")
+
+    # Generate recommendations if requested
+    new_candidates = []
+    if args.recommend:
+        rec_path = Path(args.output_recommend)
+        new_candidates = generate_recommendations(
+            break_data,
+            video_dir,
+            log_path,
+            rec_path,
+        )
+
+    # Apply overrides if requested
+    if args.apply and new_candidates:
+        apply_overrides(new_candidates)
+
     return 0
 
 

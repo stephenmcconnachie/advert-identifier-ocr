@@ -220,6 +220,13 @@ _BRAND_STOP_WORDS: frozenset = frozenset(
 # These are added to both exact (word-boundary) and substring pattern sets.
 _BRAND_PATTERN_OVERRIDES: dict[str, list[str]] = {
     "Disneyland paris": ["Disney"],
+    "Media 10 ideal home show": ["idealhomeshow"],
+    "Edf energy": ["edfenergy"],
+    "Cancer research race for life": ["raceforlife"],
+    "Axa sun life over 50 ins plan": ["sunlife"],
+    "Postcode lottery": ["postcodelottery"],
+    "Motorway.co.uk": ["motorway"],
+    "First great western": ["greatwestern"],
 }
 
 

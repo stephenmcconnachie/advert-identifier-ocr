@@ -217,6 +217,7 @@ def run_post_run_analysis(
         str(video_dir),
         "--pipeline-log",
         str(pipeline_log),
+        "--recommend",
     ]
     if output_path:
         cmd.extend(["--output", output_path])
