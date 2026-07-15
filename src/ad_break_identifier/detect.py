@@ -353,10 +353,14 @@ def match_ocr_text(
 
     Returns (matched, matched_terms).
 
-    If no match is found against the original text, a dot-stripped
-    version is tried as a fallback.  This catches on-screen text
-    like "GO.COMPARE" where dots act as visual word separators
-    but the brand is a single token like "Gocompare.com".
+    The text is tested in three passes:
+    1. Original text
+    2. Dot-stripped text — catches on-screen text like "GO.COMPARE"
+       where dots act as visual word separators but the brand is a
+       single token like "Gocompare.com".
+    3. Newline-to-space flattened text — catches multi-line OCR like
+       "POT\\nnoodle" that the brand phrase "Pot noodle" can't match
+       across a newline.
     """
     if not ocr_text or not ocr_text.strip():
         return False, []
@@ -384,7 +388,13 @@ def match_ocr_text(
 
     dotless = ocr_text.replace(".", "")
     if dotless != ocr_text:
-        return _check(dotless)
+        matched, terms = _check(dotless)
+        if matched:
+            return matched, terms
+
+    flat = ocr_text.replace("\n", " ").replace("\r", " ")
+    if flat != ocr_text and flat != dotless:
+        return _check(flat)
 
     return False, []
 
