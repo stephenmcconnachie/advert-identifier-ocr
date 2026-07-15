@@ -415,6 +415,13 @@ def create_parser() -> argparse.ArgumentParser:
         help="Maximum parallel clip extractions (default: 10)",
     )
     parser.add_argument(
+        "--start-offset-frames",
+        type=int,
+        default=0,
+        help="Shift clip start N frames later (25fps), keep end frame "
+        "unchanged. Appends _{N}frameslater to filename (default: 0)",
+    )
+    parser.add_argument(
         "--log-level",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
         default="INFO",
@@ -546,6 +553,15 @@ def main() -> int:
                         f"Advert {advert['index']}: pad={pad}s, adjusted start={start_secs:.3f}s, duration={duration:.3f}s"
                     )
 
+                if args.start_offset_frames > 0:
+                    offset = args.start_offset_frames / SOURCE_FPS
+                    start_secs += offset
+                    duration -= offset
+                    logger.info(
+                        f"Advert {advert['index']}: start offset {args.start_offset_frames}frames "
+                        f"({offset:.3f}s), adjusted start={start_secs:.3f}s, duration={duration:.3f}s"
+                    )
+
                 if start_secs < 0:
                     logger.warning(
                         f"Advert {advert['index']}: start time {start_secs}s is negative, "
@@ -560,6 +576,8 @@ def main() -> int:
                     continue
 
                 safe_brand = sanitize_filename(advert["brand"])
+                if args.start_offset_frames > 0:
+                    safe_brand += f"_{args.start_offset_frames}frameslater"
                 category = get_category_for_advert(
                     args.json_file, ad_break_index, advert["unique_id"]
                 )
