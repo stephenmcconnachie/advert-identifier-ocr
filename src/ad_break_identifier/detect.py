@@ -1711,6 +1711,12 @@ def format_xml(
 
             if duration_scheduled is not None:
                 start_seconds = effective_end - duration_scheduled + (3.0 / SOURCE_FPS)
+                # Prevent overlap with the previous advert's effective end
+                if (
+                    prev_effective_end is not None
+                    and start_seconds < prev_effective_end
+                ):
+                    start_seconds = prev_effective_end + (1.0 / SOURCE_FPS)
                 dur_to_write = duration_scheduled
             elif prev_effective_end is not None:
                 start_seconds = prev_effective_end + (3.0 / SOURCE_FPS)

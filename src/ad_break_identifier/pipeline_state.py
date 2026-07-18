@@ -26,8 +26,8 @@ PIPELINE_VERSION = 2
 
 # ── Status lifecycle ──────────────────────────────────────────────────────
 STATUS_METADATA_EXTRACTED = "metadata_extracted"
-STATUS_DETECTED = "detected"              # after OCR detection (5 FPS)
-STATUS_CLIPPED = "clipped"                # after final advert clip extraction
+STATUS_DETECTED = "detected"  # after OCR detection (5 FPS)
+STATUS_CLIPPED = "clipped"  # after final advert clip extraction
 
 
 # ── Public API ────────────────────────────────────────────────────────────
@@ -85,22 +85,26 @@ def create_initial_state(
 
         adverts_out: list[dict[str, Any]] = []
         for adv in break_data.get("adverts", []):
-            adverts_out.append({
-                "unique_id": adv.get("unique_id", ""),
-                "brand": adv.get("brand", ""),
-                "advertiser": adv.get("advertiser", ""),
-                "category": adv.get("category", ""),
-                "scheduled_duration_seconds": adv.get("duration_seconds"),
-                "status": STATUS_METADATA_EXTRACTED,
-                "detection": None,
-            })
+            adverts_out.append(
+                {
+                    "unique_id": adv.get("unique_id", ""),
+                    "brand": adv.get("brand", ""),
+                    "advertiser": adv.get("advertiser", ""),
+                    "category": adv.get("category", ""),
+                    "scheduled_duration_seconds": adv.get("duration_seconds"),
+                    "status": STATUS_METADATA_EXTRACTED,
+                    "detection": None,
+                }
+            )
 
-        ad_breaks.append({
-            "index": break_data.get("index", len(ad_breaks) + 1),
-            "start_time": break_start_tod,
-            "clip_offset": round(clip_offset, 3),
-            "adverts": adverts_out,
-        })
+        ad_breaks.append(
+            {
+                "index": break_data.get("index", len(ad_breaks) + 1),
+                "start_time": break_start_tod,
+                "clip_offset": round(clip_offset, 3),
+                "adverts": adverts_out,
+            }
+        )
 
     state: dict[str, Any] = {
         "pipeline_version": PIPELINE_VERSION,
@@ -254,14 +258,11 @@ def update_break_adverts(
                     advert["detection"] = detection
                 detection["last_seconds_clip"] = estimated_end
                 detection["start_seconds_clip"] = round(start_seconds_clip, 3)
-                detection["adjusted_start_broadcast"] = round(
-                    start_broadcast, 3
-                )
+                detection["adjusted_start_broadcast"] = round(start_broadcast, 3)
                 detection["match_tier"] = "estimated"
                 prev_effective_end = estimated_end
                 logger.info(
-                    "  %s: estimated end at %.3fs from previous advert "
-                    "(unmatched)",
+                    "  %s: estimated end at %.3fs from previous advert " "(unmatched)",
                     advert.get("brand", "unknown"),
                     estimated_end,
                 )
@@ -274,8 +275,23 @@ def update_break_adverts(
 
         if duration is not None:
             start_seconds_clip = effective_end - duration + (3.0 / 25.0)
+            # Prevent overlap with the previous advert's effective end
+            if (
+                prev_effective_end is not None
+                and start_seconds_clip < prev_effective_end
+            ):
+                logger.info(
+                    "  %s: start %.3fs adjusted to %.3fs (overlapped previous end %.3fs)",
+                    advert.get("brand", "unknown"),
+                    start_seconds_clip,
+                    prev_effective_end + (1.0 / 25.0),
+                    prev_effective_end,
+                )
+                start_seconds_clip = prev_effective_end + (1.0 / 25.0)
         elif prev_effective_end is not None:
-            start_seconds_clip = prev_effective_end + (3.0 / 25.0)  # three source frames
+            start_seconds_clip = prev_effective_end + (
+                3.0 / 25.0
+            )  # three source frames
             detected_duration = effective_end - start_seconds_clip
             detection["detected_duration_seconds"] = round(detected_duration, 1)
         else:
@@ -294,12 +310,15 @@ def update_break_adverts(
                     )
                 logger.warning(
                     "Single-advert break: %s / %s — logged to %s",
-                    unique_id, brand, log_path,
+                    unique_id,
+                    brand,
+                    log_path,
                 )
             except OSError:
                 logger.warning(
                     "Single-advert break: %s / %s (could not write log)",
-                    unique_id, brand,
+                    unique_id,
+                    brand,
                 )
             prev_effective_end = None
             continue
@@ -380,12 +399,15 @@ def _log_unmatched(
             )
         logger.info(
             "Unmatched advert %s / %s — logged to %s",
-            unique_id, brand, log_path,
+            unique_id,
+            brand,
+            log_path,
         )
     except OSError:
         logger.warning(
             "Unmatched advert %s / %s (could not write log)",
-            unique_id, brand,
+            unique_id,
+            brand,
         )
 
 
