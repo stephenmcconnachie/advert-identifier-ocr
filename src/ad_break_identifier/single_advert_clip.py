@@ -16,6 +16,8 @@ from xml.etree import ElementTree
 
 logger = logging.getLogger(__name__)
 
+SOURCE_FPS = 25  # source video frame rate for offset calculation
+
 
 def sanitize_filename(text: str) -> str:
     """Remove unsafe characters and replace spaces with hyphens for filenames."""
@@ -487,15 +489,10 @@ def main() -> int:
                 duration = advert["duration_seconds"]
                 time_source_desc = ""
 
-                start_tc = advert.get("start_timecode")
-                last_tc = advert.get("last_timecode")
-                if start_tc and last_tc:
-                    start_secs = timecode_to_seconds(start_tc) + args.clip_offset
-                    last_secs = timecode_to_seconds(last_tc)
-                    duration = last_secs - timecode_to_seconds(start_tc)
-                    time_source_desc = f"start_timecode={start_tc} + clip_offset={args.clip_offset:.3f}s"
-
-                if start_secs is None and args.state_file:
+                # Path 1: pipeline state adjusted_start_broadcast (most
+                # reliable — includes overlap correction against previous
+                # advert's end, which XML start_timecode may not).
+                if args.state_file:
                     try:
                         from ad_break_identifier.pipeline_state import (
                             read_state,
@@ -513,6 +510,14 @@ def main() -> int:
                     except Exception as e:
                         logger.warning(f"Could not read pipeline state: {e}")
 
+                # Path 2: XML start_timecode from format_xml
+                if start_secs is None:
+                    start_tc = advert.get("start_timecode")
+                    if start_tc:
+                        start_secs = timecode_to_seconds(start_tc) + args.clip_offset
+                        time_source_desc = f"start_timecode={start_tc} + clip_offset={args.clip_offset:.3f}s"
+
+                # Path 3: clip-relative timecode + clip_offset (last resort)
                 if start_secs is None:
                     time_source = (
                         advert.get("refined_timecode") or advert["last_timecode"]

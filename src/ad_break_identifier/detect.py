@@ -1756,6 +1756,10 @@ def format_xml(
                     f"        <duration_seconds>{adv.duration_seconds}</duration_seconds>"
                 )
             lines.append(f"        <last_timecode></last_timecode>")
+            # Track estimated end for unmatched adverts so the next
+            # advert's overlap check has a correct reference point.
+            if adv.duration_seconds is not None and prev_effective_end is not None:
+                prev_effective_end += adv.duration_seconds
 
         if scan and not scan.matched:
             lines.append(f"        <ocr_match_fallback>true</ocr_match_fallback>")
