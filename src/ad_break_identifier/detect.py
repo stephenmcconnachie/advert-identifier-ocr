@@ -197,7 +197,6 @@ _BRAND_STOP_WORDS: frozenset = frozenset(
         "relief",  # Voltarol pain relief (also: voltarol)
         "research",  # Cancer research race for life (also: race, life)
         "reveal",  # Loreal bright reveal serum (also: bright, serum)
-        "richmond",  # Pilgrims richmond sausages (also: sausages)
         "sausages",  # Pilgrims richmond sausages (also: richmond)
         "serum",  # Boots/Clarins/Nivea serum (also: boots, clarins, nivea)
         "shampoo",  # Herbal essences shampoo (also: herbal, essences)
