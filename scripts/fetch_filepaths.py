@@ -143,10 +143,10 @@ def parse_media(response_data: dict) -> dict | None:
     return None
 
 
-def build_filepath(media_record: dict) -> str:
+def build_filepath(media_record: dict, filepath_prefix: str) -> str:
     """Construct the filepath from a media record.
 
-    Format: [CID_FILEPATH_PREFIX]/{yyyymm}/{rendition}.mp4
+    Format: {prefix}/{yyyymm}/{rendition}
     """
     try:
         rendition = media_record["access_rendition.mp4"][0]
@@ -159,7 +159,7 @@ def build_filepath(media_record: dict) -> str:
         return NO_CID_INPUT_DATE
 
     folder = date_str.replace("-", "")[:6]  # yyyymm
-    return f"[CID_FILEPATH_PREFIX]/{folder}/{rendition}"
+    return f"{filepath_prefix.rstrip('/')}/{folder}/{rendition}"
 
 
 def find_matching_record(
@@ -200,9 +200,9 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--api-base",
         type=str,
-        default="http://[CID_API_HOST]/CIDDataSandbox/wwwopac.ashx",
-        help="Base URL for the CID API (default: "
-        "http://[CID_API_HOST]/CIDDataSandbox/wwwopac.ashx)",
+        default=None,
+        help="Base URL for the CID API. If omitted, falls back to "
+        "CID_API_BASE env var (required).",
     )
     parser.add_argument(
         "--rate-limit",
@@ -236,7 +236,22 @@ def main() -> int:
         logger.error("Input JSON not found: %s", json_path)
         return 1
 
-    api_base = args.api_base.rstrip("/")
+    api_base = args.api_base or os.environ.get("CID_API_BASE")
+    if not api_base:
+        logger.error(
+            "CID API base URL not set. Pass --api-base or set CID_API_BASE env var."
+        )
+        return 1
+    api_base = api_base.rstrip("/")
+
+    filepath_prefix = os.environ.get("CID_FILEPATH_PREFIX")
+    if not filepath_prefix:
+        logger.error(
+            "CID filepath prefix not set. Set CID_FILEPATH_PREFIX env var "
+            "(e.g. /mnt/bp_nas/access_renditions/bfi)."
+        )
+        return 1
+
     rate_limit = args.rate_limit
     resume = args.resume
     last_api_time = 0.0
@@ -393,7 +408,7 @@ def main() -> int:
                     if media_rec is None:
                         fp = NO_CID_MEDIA_RECORD
                     else:
-                        fp = build_filepath(media_rec)
+                        fp = build_filepath(media_rec, filepath_prefix)
             except requests.RequestException as e:
                 logger.warning(
                     "  Phase 2 [%s] → request failed: %s", object_number, e
