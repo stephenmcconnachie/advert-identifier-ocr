@@ -159,7 +159,7 @@ def build_filepath(media_record: dict) -> str:
         return NO_CID_INPUT_DATE
 
     folder = date_str.replace("-", "")[:6]  # yyyymm
-    return f"[CID_FILEPATH_PREFIX]/{folder}/{rendition}.mp4"
+    return f"[CID_FILEPATH_PREFIX]/{folder}/{rendition}"
 
 
 def find_matching_record(
