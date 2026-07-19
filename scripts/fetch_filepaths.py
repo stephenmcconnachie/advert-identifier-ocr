@@ -274,19 +274,34 @@ def main() -> int:
     # Sort by date descending (newest first)
     rows.sort(key=lambda r: r["date"], reverse=True)
 
-    # Load existing output if resuming
-    existing_filepaths: dict[int, str] = {}
-    if resume and out_csv.is_file():
+    # ── Open output CSV for incremental writing ──
+    out_csv.parent.mkdir(parents=True, exist_ok=True)
+    csv_fieldnames = list(rows[0].keys()) if rows else []
+    for col in ("object_number", "filepath"):
+        if col not in csv_fieldnames:
+            csv_fieldnames.append(col)
+    csv_fh = open(out_csv, "w", newline="", encoding="utf-8")
+    csv_writer = csv.DictWriter(csv_fh, fieldnames=csv_fieldnames)
+    csv_writer.writeheader()
+    csv_fh.flush()
+    logger.info("Opened CSV for incremental writing: %s", out_csv)
+
+    # Load existing `rank_to_result` for resume
+    rank_to_result: dict[int, dict[str, str]] = {}
+    if resume and out_csv.stat().st_size > csv_fh.tell():
         with open(out_csv, newline="", encoding="utf-8") as f:
             for existing in csv.DictReader(f):
                 try:
-                    idx = int(existing.get("rank", 0))
+                    r = int(existing.get("rank", 0))
                     fp = existing.get("filepath", "")
                     if fp:
-                        existing_filepaths[idx] = fp
+                        rank_to_result[r] = {
+                            "object_number": existing.get("object_number", ""),
+                            "filepath": fp,
+                        }
                 except (ValueError, KeyError):
                     pass
-        logger.info("Resume mode: %d existing filepaths loaded", len(existing_filepaths))
+        logger.info("Resume mode: %d existing filepaths loaded", len(rank_to_result))
 
     # ── Group rows by (channel, date) for Phase 1 ──
     groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
@@ -297,13 +312,10 @@ def main() -> int:
     logger.info("Grouped into %d unique (channel, date) pairs", len(groups))
 
     # ── Caches ──
-    # (channel, date) -> list of sorted programme records (or None if failed)
     programme_cache: dict[tuple[str, str], list[dict] | None] = {}
-    # object_number -> filepath string
     filepath_cache: dict[str, str] = {}
 
     # ── Process each group ──
-    results: list[dict] = []
     processed = 0
     total = len(rows)
     phase1_errors = 0
@@ -314,33 +326,31 @@ def main() -> int:
     for key, group_rows in sorted(groups.items(), key=lambda x: x[0][1], reverse=True):
         channel, date_csv = key
         date_iso = date_csv_to_iso(date_csv)
-
-        # Build Phase 1 URL
         prog_url = build_manifestations_url(api_base, channel, date_iso)
-        rate_limit_wait()
 
-        # Check cache first
-        programmes: list[dict] | None = programme_cache.get(key)
+        programmes = programme_cache.get(key)
         if programmes is None and key not in programme_cache:
-            # Not cached — fetch
+            rate_limit_wait()
             try:
                 resp = requests.get(prog_url, timeout=30)
                 if resp.status_code == 200:
                     data = resp.json()
                     programmes = parse_manifestations(data)
-                    logger.info(
-                        "  Phase 1 [%s %s] → %d programmes",
-                        channel, date_iso,
-                        len(programmes) if programmes else 0,
-                    )
+                    if not programmes:
+                        logger.info(
+                            "  Phase 1 [%s %s] → 0 records", channel, date_iso
+                        )
                 else:
                     logger.warning(
-                        "  Phase 1 [%s %s] → HTTP %d",
-                        channel, date_iso, resp.status_code,
+                        "  Phase 1 [%s %s] → HTTP %d\n    %s",
+                        channel, date_iso, resp.status_code, prog_url,
                     )
                     programmes = None
             except requests.RequestException as e:
-                logger.warning("  Phase 1 [%s %s] → request failed: %s", channel, date_iso, e)
+                logger.warning(
+                    "  Phase 1 [%s %s] → request failed: %s\n    %s",
+                    channel, date_iso, e, prog_url,
+                )
                 programmes = None
             programme_cache[key] = programmes
         elif key in programme_cache:
@@ -350,82 +360,81 @@ def main() -> int:
             rank = int(row["rank"])
             processed += 1
 
-            # Resume: skip if already has a filepath
-            if resume and rank in existing_filepaths:
-                row["object_number"] = existing_filepaths.get(rank, "")
-                row["filepath"] = existing_filepaths[rank]
-                results.append(row)
+            if resume and rank in rank_to_result:
                 continue
 
-            # Phase 1 failed (no API response)
+            obj_nr = ""
+            fp = ""
+
             if programmes is None:
-                row["object_number"] = NO_CID_RESPONSE
-                row["filepath"] = NO_CID_RESPONSE
-                results.append(row)
-                phase1_errors += 1
-                continue
-
-            # Match programme
-            csv_seconds = time_to_seconds(row["start_time"])
-            matched = find_matching_record(csv_seconds, programmes)
-
-            if matched is None:
-                row["object_number"] = NO_CID_PROG_MATCH
-                row["filepath"] = NO_CID_PROG_MATCH
-                results.append(row)
-                phase1_errors += 1
-                continue
-
-            object_number = get_object_number(matched)
-            if object_number is None:
-                row["object_number"] = NO_CID_PROG_MATCH
-                row["filepath"] = NO_CID_PROG_MATCH
-                results.append(row)
-                phase1_errors += 1
-                continue
-
-            row["object_number"] = object_number
-
-            # Phase 2 — fetch media by object_number (cached)
-            if object_number in filepath_cache:
-                row["filepath"] = filepath_cache[object_number]
-                results.append(row)
-                if "NO_CID" not in filepath_cache[object_number]:
-                    success_count += 1
-                else:
-                    phase2_errors += 1
-                continue
-
-            med_url = build_media_url(api_base, object_number)
-            rate_limit_wait()
-
-            try:
-                resp = requests.get(med_url, timeout=30)
-                if resp.status_code != 200:
-                    fp = NO_CID_RESPONSE
-                else:
-                    media_rec = parse_media(resp.json())
-                    if media_rec is None:
-                        fp = NO_CID_MEDIA_RECORD
-                    else:
-                        fp = build_filepath(media_rec, filepath_prefix)
-            except requests.RequestException as e:
-                logger.warning(
-                    "  Phase 2 [%s] → request failed: %s", object_number, e
-                )
+                obj_nr = NO_CID_RESPONSE
                 fp = NO_CID_RESPONSE
+                phase1_errors += 1
+            else:
+                csv_seconds = time_to_seconds(row["start_time"])
+                matched = find_matching_record(csv_seconds, programmes)
+                if matched is None:
+                    obj_nr = NO_CID_PROG_MATCH
+                    fp = NO_CID_PROG_MATCH
+                    phase1_errors += 1
+                else:
+                    object_number = get_object_number(matched)
+                    if object_number is None:
+                        obj_nr = NO_CID_PROG_MATCH
+                        fp = NO_CID_PROG_MATCH
+                        phase1_errors += 1
+                    else:
+                        obj_nr = object_number
+                        if object_number in filepath_cache:
+                            fp = filepath_cache[object_number]
+                        else:
+                            med_url = build_media_url(api_base, object_number)
+                            rate_limit_wait()
+                            try:
+                                resp = requests.get(med_url, timeout=30)
+                                if resp.status_code != 200:
+                                    logger.warning(
+                                        "  Phase 2 [%s] → HTTP %d\n    %s",
+                                        object_number, resp.status_code, med_url,
+                                    )
+                                    fp = NO_CID_RESPONSE
+                                else:
+                                    media_rec = parse_media(resp.json())
+                                    if media_rec is None:
+                                        logger.warning(
+                                            "  Phase 2 [%s] → no media record\n    %s",
+                                            object_number, med_url,
+                                        )
+                                        fp = NO_CID_MEDIA_RECORD
+                                    else:
+                                        fp = build_filepath(media_rec, filepath_prefix)
+                                        if "NO_CID" in fp:
+                                            logger.warning(
+                                                "  Phase 2 [%s] → %s\n    %s",
+                                                object_number, fp, med_url,
+                                            )
+                            except requests.RequestException as e:
+                                logger.warning(
+                                    "  Phase 2 [%s] → request failed: %s\n    %s",
+                                    object_number, e, med_url,
+                                )
+                                fp = NO_CID_RESPONSE
+                            filepath_cache[object_number] = fp
 
-            filepath_cache[object_number] = fp
+            # Write row incrementally
+            row["object_number"] = obj_nr
             row["filepath"] = fp
+            csv_writer.writerow(row)
+            csv_fh.flush()
+            rank_to_result[rank] = {"object_number": obj_nr, "filepath": fp}
 
             if "NO_CID" not in fp:
                 success_count += 1
+            elif fp in (NO_CID_RESPONSE, NO_CID_PROG_MATCH):
+                phase1_errors += 1
             else:
                 phase2_errors += 1
 
-            results.append(row)
-
-        # Progress
         if processed % 100 == 0 or processed == total:
             elapsed = time.time() - start_time
             rate = processed / elapsed if elapsed > 0 else 0
@@ -439,32 +448,17 @@ def main() -> int:
                 rate, eta / 60,
             )
 
-    # ── Write enriched CSV ──
-    if results:
-        fieldnames = list(results[0].keys())
-        if "object_number" not in fieldnames:
-            fieldnames.append("object_number")
-        if "filepath" not in fieldnames:
-            fieldnames.append("filepath")
-
-        out_csv.parent.mkdir(parents=True, exist_ok=True)
-        with open(out_csv, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(results)
-        logger.info("Enriched CSV written: %s (%d rows)", out_csv, len(results))
+    csv_fh.close()
+    logger.info("Enriched CSV written: %s (%d rows)", out_csv, processed)
 
     # ── Write enriched JSON ──
     logger.info("Reading JSON for structure: %s", json_path)
     with open(json_path, encoding="utf-8") as f:
         json_data: dict = json.load(f)
 
-    # Build lookup by rank for fast access
-    results_by_rank = {int(r["rank"]): r for r in results}
-
     for brk in json_data.get("selected_breaks", []):
-        rank = brk.get("rank", 0)
-        enriched = results_by_rank.get(rank, {})
+        r = brk.get("rank", 0)
+        enriched = rank_to_result.get(r, {})
         brk["object_number"] = enriched.get("object_number", NO_CID_PROG_MATCH)
         brk["filepath"] = enriched.get("filepath", NO_CID_PROG_MATCH)
 
