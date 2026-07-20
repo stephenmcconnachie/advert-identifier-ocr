@@ -211,6 +211,13 @@ def create_parser() -> argparse.ArgumentParser:
         help="Minimum seconds between API calls (default: 1.0)",
     )
     parser.add_argument(
+        "--log-file",
+        type=str,
+        default=None,
+        help="Path to log file. All output is written here in addition "
+        "to stdout (default: input-dir/fetch_filepaths_TIMESTAMP.log)",
+    )
+    parser.add_argument(
         "--resume",
         action="store_true",
         default=False,
@@ -228,6 +235,21 @@ def main() -> int:
     json_path = input_dir / "minimum_cover_result.json"
     out_csv = input_dir / "minimum_cover_result_filepath.csv"
     out_json = input_dir / "minimum_cover_result_filepath.json"
+
+    # Configure log file
+    log_file = args.log_file
+    if not log_file:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_file = str(input_dir / f"fetch_filepaths_{timestamp}.log")
+    log_path = Path(log_file)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    # Add file handler to the root logger
+    file_handler = logging.FileHandler(log_path, encoding="utf-8")
+    file_handler.setFormatter(logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(message)s"
+    ))
+    logging.getLogger().addHandler(file_handler)
+    logger.info("Logging to: %s", log_path)"
 
     if not csv_path.is_file():
         logger.error("Input CSV not found: %s", csv_path)
