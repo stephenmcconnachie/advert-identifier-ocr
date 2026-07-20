@@ -249,7 +249,7 @@ def main() -> int:
         "%(asctime)s [%(levelname)s] %(message)s"
     ))
     logging.getLogger().addHandler(file_handler)
-    logger.info("Logging to: %s", log_path)"
+    logger.info("Logging to: %s", log_path)
 
     if not csv_path.is_file():
         logger.error("Input CSV not found: %s", csv_path)
