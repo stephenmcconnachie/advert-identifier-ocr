@@ -360,7 +360,8 @@ def main() -> int:
                     programmes = parse_manifestations(data)
                     if not programmes:
                         logger.info(
-                            "  Phase 1 [%s %s] → 0 records", channel, date_iso
+                            "  Phase 1 [%s %s] → 0 records\n    %s",
+                            channel, date_iso, prog_url,
                         )
                 else:
                     logger.warning(
