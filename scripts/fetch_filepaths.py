@@ -299,7 +299,7 @@ def main() -> int:
     # ── Open output CSV for incremental writing ──
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     csv_fieldnames = list(rows[0].keys()) if rows else []
-    for col in ("object_number", "filepath"):
+    for col in ("object_number", "filepath", "prog_url", "med_url"):
         if col not in csv_fieldnames:
             csv_fieldnames.append(col)
     csv_fh = open(out_csv, "w", newline="", encoding="utf-8")
@@ -388,6 +388,7 @@ def main() -> int:
 
             obj_nr = ""
             fp = ""
+            med_url = ""
 
             if programmes is None:
                 obj_nr = NO_CID_RESPONSE
@@ -447,6 +448,8 @@ def main() -> int:
             # Write row incrementally
             row["object_number"] = obj_nr
             row["filepath"] = fp
+            row["prog_url"] = prog_url
+            row["med_url"] = med_url if med_url else ""
             csv_writer.writerow(row)
             csv_fh.flush()
             rank_to_result[rank] = {"object_number": obj_nr, "filepath": fp}
