@@ -14,7 +14,7 @@ Output: enriched copies of the input CSV and JSON with ``object_number`` and
 Usage:
     python3 scripts/fetch_filepaths.py \\
         --input-dir advert_min_cover_output \\
-        --api-base "http://[CID_API_HOST]/CIDDataSandbox/wwwopac.ashx" \\
+        --api-base "http://[CID_API_HOST]/path" \\
         [--rate-limit 1.0] [--resume]
 """
 
@@ -46,6 +46,7 @@ NO_CID_PROG_MATCH = "NO_CID_PROG_MATCH"
 NO_CID_MEDIA_RECORD = "NO_CID_MEDIA_RECORD"
 NO_CID_ACCESS_RENDITION = "NO_CID_ACCESS_RENDITION"
 NO_CID_INPUT_DATE = "NO_CID_INPUT_DATE"
+NO_CID_PARTS_REFERENCE = "NO_CID_PARTS_REFERENCE"
 
 # ── Channel lookup ──────────────────────────────────────────────────────────
 # Maps CSV channel names to their form in the CID database so the wildcard
@@ -87,8 +88,7 @@ def build_manifestations_url(api_base: str, channel: str, date_iso: str) -> str:
     """Build the Phase 1 URL to query manifestations by channel + date."""
     db_channel = _CHANNEL_LOOKUP.get(channel, channel)
     search = (
-        f"broadcast_channel='*{db_channel}*' "
-        f"AND transmission_date='{date_iso}'"
+        f"broadcast_channel='*{db_channel}*' " f"AND transmission_date='{date_iso}'"
     )
     params = (
         f"database=manifestations"
@@ -162,9 +162,7 @@ def build_filepath(media_record: dict, filepath_prefix: str) -> str:
     return f"{filepath_prefix.rstrip('/')}/{folder}/{rendition}"
 
 
-def find_matching_record(
-    csv_seconds: int, records: list[dict]
-) -> dict | None:
+def find_matching_record(csv_seconds: int, records: list[dict]) -> dict | None:
     """Find the programme record that was airing at *csv_seconds*.
 
     The ad break's start time falls within a programme's slot:
@@ -245,9 +243,9 @@ def main() -> int:
     log_path.parent.mkdir(parents=True, exist_ok=True)
     # Add file handler to the root logger
     file_handler = logging.FileHandler(log_path, encoding="utf-8")
-    file_handler.setFormatter(logging.Formatter(
-        "%(asctime)s [%(levelname)s] %(message)s"
-    ))
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+    )
     logging.getLogger().addHandler(file_handler)
     logger.info("Logging to: %s", log_path)
 
@@ -270,7 +268,7 @@ def main() -> int:
     if not filepath_prefix:
         logger.error(
             "CID filepath prefix not set. Set CID_FILEPATH_PREFIX env var "
-            "(e.g. /mnt/bp_nas/access_renditions/bfi)."
+            "(e.g. /mnt/nas/access_renditions)."
         )
         return 1
 
@@ -361,18 +359,26 @@ def main() -> int:
                     if not programmes:
                         logger.info(
                             "  Phase 1 [%s %s] → 0 records\n    %s",
-                            channel, date_iso, prog_url,
+                            channel,
+                            date_iso,
+                            prog_url,
                         )
                 else:
                     logger.warning(
                         "  Phase 1 [%s %s] → HTTP %d\n    %s",
-                        channel, date_iso, resp.status_code, prog_url,
+                        channel,
+                        date_iso,
+                        resp.status_code,
+                        prog_url,
                     )
                     programmes = None
             except requests.RequestException as e:
                 logger.warning(
                     "  Phase 1 [%s %s] → request failed: %s\n    %s",
-                    channel, date_iso, e, prog_url,
+                    channel,
+                    date_iso,
+                    e,
+                    prog_url,
                 )
                 programmes = None
             programme_cache[key] = programmes
@@ -404,9 +410,9 @@ def main() -> int:
                 else:
                     object_number = get_object_number(matched)
                     if object_number is None:
-                        obj_nr = NO_CID_PROG_MATCH
-                        fp = NO_CID_PROG_MATCH
-                        phase1_errors += 1
+                        obj_nr = NO_CID_PARTS_REFERENCE
+                        fp = NO_CID_PARTS_REFERENCE
+                        phase2_errors += 1
                     else:
                         obj_nr = object_number
                         if object_number in filepath_cache:
@@ -419,7 +425,9 @@ def main() -> int:
                                 if resp.status_code != 200:
                                     logger.warning(
                                         "  Phase 2 [%s] → HTTP %d\n    %s",
-                                        object_number, resp.status_code, med_url,
+                                        object_number,
+                                        resp.status_code,
+                                        med_url,
                                     )
                                     fp = NO_CID_RESPONSE
                                 else:
@@ -427,7 +435,8 @@ def main() -> int:
                                     if media_rec is None:
                                         logger.warning(
                                             "  Phase 2 [%s] → no media record\n    %s",
-                                            object_number, med_url,
+                                            object_number,
+                                            med_url,
                                         )
                                         fp = NO_CID_MEDIA_RECORD
                                     else:
@@ -435,12 +444,16 @@ def main() -> int:
                                         if "NO_CID" in fp:
                                             logger.warning(
                                                 "  Phase 2 [%s] → %s\n    %s",
-                                                object_number, fp, med_url,
+                                                object_number,
+                                                fp,
+                                                med_url,
                                             )
                             except requests.RequestException as e:
                                 logger.warning(
                                     "  Phase 2 [%s] → request failed: %s\n    %s",
-                                    object_number, e, med_url,
+                                    object_number,
+                                    e,
+                                    med_url,
                                 )
                                 fp = NO_CID_RESPONSE
                             filepath_cache[object_number] = fp
@@ -468,10 +481,14 @@ def main() -> int:
             logger.info(
                 "Progress: %d/%d rows (%.1f%%)  |  %d OK, %d P1 err, %d P2 err  "
                 "|  %.1f rows/s  |  ETA: %.0f min",
-                processed, total,
+                processed,
+                total,
                 processed / total * 100,
-                success_count, phase1_errors, phase2_errors,
-                rate, eta / 60,
+                success_count,
+                phase1_errors,
+                phase2_errors,
+                rate,
+                eta / 60,
             )
 
     csv_fh.close()
