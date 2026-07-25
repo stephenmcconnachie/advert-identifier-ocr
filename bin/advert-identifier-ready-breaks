@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+"""List ready-to-clip ad breaks and mark breaks as clipped.
+
+Used by the CPU worker cron to discover OCR'd breaks that are ready
+for clip extraction, and to record when clipping is done.
+
+Subcommands:
+  list          — scan a ready_for_clipping/ directory for ready breaks
+  mark-clipped  — record that a break has been clipped in the pipeline state
+
+Usage:
+  advert-identifier-ready-breaks list --ready-dir <path> [--video-dir <path>]
+      [--format {pipe|json}]
+
+  advert-identifier-ready-breaks mark-clipped --state-file <path>
+      --break-index <N> [--clip-count <N>]
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+
+def list_ready_breaks(
+    ready_dir: Path,
+    video_dir: Path | None,
+    fmt: str,
+) -> None:
+    """Scan *ready_dir* for videos whose ad breaks are ready to clip.
+
+    A break is "ready" when all of:
+      - Its ``_break<N>.xml`` file exists
+      - Every advert in the break has ``status == "detected"`` and
+        non-null ``detection`` data
+      - ``clip_count`` has NOT already been set on the break (would
+        mean it was already processed)
+      - The source video file exists (checked in *video_dir* first,
+        then *ready_dir*)
+
+    Outputs one line per ready break and exits 0.  Exits 1 when nothing
+    is ready.
+    """
+    ready_dir = ready_dir.resolve()
+    fmt = fmt or "pipe"
+
+    lines: list[str] = []
+
+    for state_path in sorted(ready_dir.glob("*_pipeline_state.json")):
+        stem = state_path.stem.replace("_pipeline_state", "")
+        state = json.loads(state_path.read_text())
+
+        # Locate the source video file
+        video_path: Path | None = None
+        if video_dir:
+            candidate = video_dir / f"{stem}.mp4"
+            if candidate.is_file():
+                video_path = candidate
+        if video_path is None:
+            candidate = ready_dir / f"{stem}.mp4"
+            if candidate.is_file():
+                video_path = candidate
+        if video_path is None:
+            continue
+
+        metadata_path = ready_dir / f"{stem}_metadata.json"
+
+        for break_data in state.get("ad_breaks", []):
+            break_idx_1: int = break_data.get("index", 1)
+            break_idx_0: int = break_idx_1 - 1
+            xml_path = ready_dir / f"{stem}_break{break_idx_1:02d}.xml"
+
+            # Must have an XML output from OCR
+            if not xml_path.is_file():
+                continue
+
+            # Must not already be clipped
+            if break_data.get("clip_count", 0) > 0:
+                continue
+
+            # Every advert must be in "detected" state with detection data
+            adverts = break_data.get("adverts", [])
+            all_detected = all(
+                adv.get("status") == "detected" and adv.get("detection") is not None
+                for adv in adverts
+            )
+            if not all_detected:
+                continue
+
+            if fmt == "pipe":
+                lines.append(
+                    f"{stem}|{break_idx_0}|{xml_path}|"
+                    f"{state_path}|{metadata_path}|{video_path}"
+                )
+            else:
+                lines.append(
+                    json.dumps(
+                        {
+                            "stem": stem,
+                            "break_index": break_idx_0,
+                            "xml_path": str(xml_path),
+                            "state_path": str(state_path),
+                            "metadata_path": str(metadata_path),
+                            "video_path": str(video_path),
+                        }
+                    )
+                )
+
+    if lines:
+        sys.stdout.write("\n".join(lines) + "\n")
+    sys.exit(0)
+
+
+def mark_clipped(args: argparse.Namespace) -> None:
+    """Set ``clip_count`` on a break in the pipeline state file."""
+    state_path = Path(args.state_file).resolve()
+    state = json.loads(state_path.read_text())
+    idx = args.break_index
+    if idx < 0 or idx >= len(state.get("ad_breaks", [])):
+        print(
+            f"Error: break index {idx} out of range "
+            f"(0-{len(state.get('ad_breaks', [])) - 1})",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    state["ad_breaks"][idx]["clip_count"] = args.clip_count
+    state_path.write_text(json.dumps(state, indent=2) + "\n")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Query and update clipping readiness in pipeline state",
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    list_p = sub.add_parser("list", help="List ready-to-clip breaks")
+    list_p.add_argument(
+        "--ready-dir",
+        required=True,
+        type=Path,
+        help="Path to ready_for_clipping/ directory",
+    )
+    list_p.add_argument(
+        "--video-dir",
+        type=Path,
+        default=None,
+        help="Source video directory (default: same as --ready-dir)",
+    )
+    list_p.add_argument(
+        "--format",
+        choices=["json", "pipe"],
+        default="pipe",
+        help="Output format (default: pipe — pipe-delimited for bash)",
+    )
+
+    mark_p = sub.add_parser("mark-clipped", help="Mark a break as clipped")
+    mark_p.add_argument(
+        "--state-file",
+        required=True,
+        type=Path,
+        help="Path to _pipeline_state.json",
+    )
+    mark_p.add_argument(
+        "--break-index",
+        required=True,
+        type=int,
+        help="0-based break index",
+    )
+    mark_p.add_argument(
+        "--clip-count",
+        type=int,
+        default=0,
+        help="Number of clips extracted (default: 0)",
+    )
+
+    parsed = parser.parse_args()
+
+    if parsed.command == "list":
+        list_ready_breaks(parsed.ready_dir, parsed.video_dir, parsed.format)
+    elif parsed.command == "mark-clipped":
+        mark_clipped(parsed)
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
