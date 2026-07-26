@@ -13,7 +13,7 @@ export CID_API_BASE="http://your-cid-server/wwwopac.ashx"
 export CID_FILEPATH_PREFIX="/mnt/bp_nas/access_renditions/bfi"
 
 python3 scripts/fetch_filepaths.py \
-    --input-dir advert_min_cover_output
+    --input-dir outputs/advert_min_cover
 ```
 
 ## Two-Phase Lookup
@@ -95,7 +95,7 @@ Same as input with `object_number` and `filepath` fields added to each `selected
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--input-dir` | `advert_min_cover_output` | Directory containing `minimum_cover_result.csv` and `minimum_cover_result.json` |
+| `--input-dir` | `outputs/advert_min_cover` | Directory containing `minimum_cover_result.csv` and `minimum_cover_result.json` |
 | `--api-base` | `CID_API_BASE` env var | CID API endpoint URL |
 | `--rate-limit` | `1.0` | Minimum seconds between API calls |
 | `--resume` | *(off)* | Skip rows that already have a filepath in the output files |

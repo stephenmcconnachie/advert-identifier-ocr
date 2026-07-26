@@ -102,19 +102,19 @@ If you need more control, run steps individually.
 ```bash
 advert-identifier-metadata-extract \
   --video video/2024-03-26_ITV1HD_13:30:00.mp4 \
-  --output-dir metadata/ \
+  --output-dir data/metadata/ \
   --before-secs 10
 ```
 
-Creates: `metadata/2024-03-26_ITV1HD_13:30:00_metadata.json`
-Also creates: `metadata/2024-03-26_ITV1HD_13:30:00_pipeline_state.json`
+Creates: `data/metadata/2024-03-26_ITV1HD_13:30:00_metadata.json`
+Also creates: `data/metadata/2024-03-26_ITV1HD_13:30:00_pipeline_state.json`
 
 #### OCR Detection
 
 ```bash
 advert-identifier \
   -v "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
-  --metadata-file metadata/2024-03-26_ITV1HD_13:30:00_metadata.json \
+  --metadata-file data/metadata/2024-03-26_ITV1HD_13:30:00_metadata.json \
   --ad-break-index 1 \
   --before-secs 10 \
   --after-secs 360 \
@@ -122,8 +122,8 @@ advert-identifier \
   --ocr-model PaddlePaddle/PaddleOCR-VL
 ```
 
-Creates: `metadata/2024-03-26_ITV1HD_13:30:00.xml`
-Also creates: `metadata/2024-03-26_ITV1HD_13:30:00_ocr.json` (per-frame OCR results)
+Creates: `data/metadata/2024-03-26_ITV1HD_13:30:00.xml`
+Also creates: `data/metadata/2024-03-26_ITV1HD_13:30:00_ocr.json` (per-frame OCR results)
 Also updates: pipeline state with `detection` data (status → `detected`)
 
 Use `--dry-run` to test frame extraction without making OCR API calls.
@@ -132,8 +132,8 @@ Use `--dry-run` to test frame extraction without making OCR API calls.
 
 ```bash
 advert-identifier-single-advert-clip \
-  --xml-file metadata/2024-03-26_ITV1HD_13:30:00.xml \
-  --json-file metadata/2024-03-26_ITV1HD_13:30:00_metadata.json \
+  --xml-file data/metadata/2024-03-26_ITV1HD_13:30:00.xml \
+  --json-file data/metadata/2024-03-26_ITV1HD_13:30:00_metadata.json \
   --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir clips/
 ```
@@ -142,11 +142,11 @@ advert-identifier-single-advert-clip \
 
 ```bash
 advert-identifier-single-advert-clip \
-  --xml-file metadata/2024-03-26_ITV1HD_13:30:00.xml \
-  --json-file metadata/2024-03-26_ITV1HD_13:30:00_metadata.json \
+  --xml-file data/metadata/2024-03-26_ITV1HD_13:30:00.xml \
+  --json-file data/metadata/2024-03-26_ITV1HD_13:30:00_metadata.json \
   --video-url "http://your-server:8000/video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir clips/ \
-  --state-file metadata/2024-03-26_ITV1HD_13:30:00_pipeline_state.json
+  --state-file data/metadata/2024-03-26_ITV1HD_13:30:00_pipeline_state.json
 ```
 
 Reads `adjusted_start_broadcast` from the pipeline state file — no manual
@@ -155,8 +155,8 @@ Reads `adjusted_start_broadcast` from the pipeline state file — no manual
 **With trimming (remove seconds from clip start/end):**
 ```bash
 advert-identifier-single-advert-clip \
-  --xml-file metadata/video.xml \
-  --json-file metadata/video_metadata.json \
+  --xml-file data/metadata/video.xml \
+  --json-file data/metadata/video_metadata.json \
   --video-url "http://your-server:8000/video/video.mp4" \
   --output-dir clips/ \
   --trim 0.5

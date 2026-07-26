@@ -15,9 +15,9 @@ python scripts/advert-minimum-set-cover.py --csv-folder /path/to/csvs
 ```bash
 python scripts/advert-minimum-set-cover.py \
     --csv-folder /mnt/qnap_04/Admin/datasets/adverts_techedge \
-    --output-dir advert_min_cover_output \
+    --output-dir outputs/advert_min_cover \
     --hd-channels-file scripts/hd_channels.txt \
-    | tee advert_min_cover_output/run.log
+    | tee outputs/advert_min_cover/run.log
 ```
 
 ### Re-run (skip slow CSV parsing)
@@ -92,7 +92,7 @@ One row per selected break, same fields as JSON.
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--csv-folder` | *(required)* | Path to folder containing BFI CSV exports |
-| `--output-dir` | `advert_min_cover_output` | Directory for output files |
+| `--output-dir` | `outputs/advert_min_cover` | Directory for output files |
 | `--db-path` | `advert_cover_cache.db` | SQLite cache file (reused with `--skip-parsing`) |
 | `--skip-parsing` | *(off)* | Skip CSV parsing; reuse existing SQLite cache |
 | `--hd-channels-file` | `scripts/hd_channels.txt` | Path to HD channels list file |

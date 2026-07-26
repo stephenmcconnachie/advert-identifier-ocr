@@ -67,7 +67,7 @@ from clip-relative to broadcast-absolute timecodes.
 
 **Single-advert breaks** (only 1 advert in a break) are detected from the metadata JSON
 and skipped entirely — no OCR, no clipping. A row is appended to
-`single_advert_breaks.csv` in the repo root.
+`outputs/single_advert_breaks.csv\`.
 
 ## vLLM Server Setup
 

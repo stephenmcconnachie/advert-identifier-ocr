@@ -187,7 +187,7 @@ advert-identifier-metadata-extract \
 advert-identifier-metadata-extract \
   --video video/2024-03-26_ITV1HD_13:30:00.mp4 \
   --csv-folder /custom/path/to/csv \
-  --output-dir metadata/
+  --output-dir data/metadata/
 
 # Custom before-secs for pipeline state clip_offset
 advert-identifier-metadata-extract \
@@ -237,7 +237,7 @@ The tool selects the most precise timecode available using this priority:
 # Basic usage with clip offset
 advert-identifier-single-advert-clip \
   --xml-file results/video.xml \
-  --json-file metadata/video_metadata.json \
+  --json-file data/metadata/video_metadata.json \
   --video-url "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir clips/ \
   --clip-offset 200.0
@@ -245,15 +245,15 @@ advert-identifier-single-advert-clip \
 # Using pipeline state file (auto-computes seek offset)
 advert-identifier-single-advert-clip \
   --xml-file results/video.xml \
-  --json-file metadata/video_metadata.json \
+  --json-file data/metadata/video_metadata.json \
   --video-url "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir clips/ \
-  --state-file metadata/video_pipeline_state.json
+  --state-file data/metadata/video_pipeline_state.json
 
 # Extract a single advert by index
 advert-identifier-single-advert-clip \
   --xml-file results/video.xml \
-  --json-file metadata/video_metadata.json \
+  --json-file data/metadata/video_metadata.json \
   --video-url "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir clips/ \
   --index 1
@@ -261,7 +261,7 @@ advert-identifier-single-advert-clip \
 # With trimming (remove 0.5s from start and end)
 advert-identifier-single-advert-clip \
   --xml-file results/video.xml \
-  --json-file metadata/video_metadata.json \
+  --json-file data/metadata/video_metadata.json \
   --video-url "video/2024-03-26_ITV1HD_13:30:00.mp4" \
   --output-dir clips/ \
   --trim 0.5

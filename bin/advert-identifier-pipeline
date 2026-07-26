@@ -143,7 +143,7 @@ def create_parser() -> argparse.ArgumentParser:
         default=0.0,
         help="Skip clip extraction for breaks with confidence below this "
         "threshold (0.0–1.0, default: 0.0 = always extract). Low-confidence "
-        "breaks are logged to low_confidence_breaks.csv.",
+        "breaks are logged to outputs/low_confidence_breaks.csv.",
     )
     parser.add_argument(
         "--anchor-threshold",
@@ -321,9 +321,9 @@ def log_single_advert_break(
     video_path: Path,
     logger: logging.Logger,
 ) -> None:
-    """Append a row to single_advert_breaks.csv in the repo root."""
+    """Append a row to outputs/single_advert_breaks.csv."""
     repo_root = Path(__file__).resolve().parent.parent
-    log_path = repo_root / "single_advert_breaks.csv"
+    log_path = repo_root / "outputs" / "single_advert_breaks.csv"
 
     with open(json_path) as f:
         data = json.load(f)
@@ -396,9 +396,9 @@ def log_low_confidence_break(
     confidence: dict,
     logger: logging.Logger,
 ) -> None:
-    """Append a row to low_confidence_breaks.csv in the repo root."""
+    """Append a row to outputs/low_confidence_breaks.csv."""
     repo_root = Path(__file__).resolve().parent.parent
-    log_path = repo_root / "low_confidence_breaks.csv"
+    log_path = repo_root / "outputs" / "low_confidence_breaks.csv"
 
     try:
         with open(state_path) as f:

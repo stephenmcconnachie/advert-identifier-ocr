@@ -566,14 +566,14 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--db-path",
         type=str,
-        default="advert_cover_cache.db",
-        help="SQLite cache file path (default: advert_cover_cache.db)",
+        default="outputs/advert_cover_cache.db",
+        help="SQLite cache file path (default: outputs/advert_cover_cache.db)",
     )
     parser.add_argument(
         "--output-dir",
         type=str,
-        default="advert_min_cover_output",
-        help="Directory for output files (default: advert_min_cover_output)",
+        default="outputs/advert_min_cover",
+        help="Directory for output files (default: outputs/advert_min_cover)",
     )
     parser.add_argument(
         "--skip-parsing",

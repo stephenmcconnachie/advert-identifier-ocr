@@ -13,7 +13,7 @@ Output: enriched copies of the input CSV and JSON with ``object_number`` and
 
 Usage:
     python3 scripts/fetch_filepaths.py \\
-        --input-dir advert_min_cover_output \\
+        --input-dir outputs/advert_min_cover \\
         --api-base "http://[CID_API_HOST]/path" \\
         [--rate-limit 1.0] [--resume]
 """
@@ -191,9 +191,9 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--input-dir",
         type=str,
-        default="advert_min_cover_output",
+        default="outputs/advert_min_cover",
         help="Directory containing minimum_cover_result.csv/json (default: "
-        "advert_min_cover_output)",
+        "outputs/advert_min_cover)",
     )
     parser.add_argument(
         "--api-base",

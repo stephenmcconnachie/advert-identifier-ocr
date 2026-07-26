@@ -21,17 +21,18 @@ from ad_break_identifier.models import (
 
 class TestBuildExactPatterns:
     def test_simple_brand(self):
-        patterns = build_exact_patterns("Galaxy", "", "")
+        patterns = build_exact_patterns("Galaxy")
         assert len(patterns) == 1
         assert patterns[0].pattern == r"\bGalaxy\b"
 
     def test_multi_word_brand(self):
-        patterns = build_exact_patterns("Tesco Easter", "", "")
-        # Full term + individual words (both >= 3 chars)
-        assert len(patterns) == 3
+        patterns = build_exact_patterns("Tesco Easter")
+        # Full phrase + individual word "Tesco" (>=4 chars and not a stop word)
+        # "Easter" is in _BRAND_STOP_WORDS, so excluded as individual word
+        assert len(patterns) == 2
 
     def test_apostrophe_stripped(self):
-        patterns = build_exact_patterns("McDonald's", "", "")
+        patterns = build_exact_patterns("McDonald's")
         # Original + apostrophe-stripped
         assert len(patterns) == 2
         texts = [p.pattern for p in patterns]
@@ -39,28 +40,28 @@ class TestBuildExactPatterns:
         assert r"\bMcDonalds\b" in texts
 
     def test_deduplication(self):
-        patterns = build_exact_patterns("Galaxy", "Galaxy", "")
+        patterns = build_exact_patterns("Galaxy")
         # Should deduplicate
         assert len(patterns) == 1
 
     def test_short_words_excluded(self):
-        patterns = build_exact_patterns("AB CD", "", "")
+        patterns = build_exact_patterns("AB CD")
         # Both "AB" (2 chars) and "CD" (2 chars) are < 3 chars, so only full term
         assert len(patterns) == 1
 
     def test_empty_terms(self):
-        patterns = build_exact_patterns("", "", "")
+        patterns = build_exact_patterns("")
         assert len(patterns) == 0
 
 
 class TestBuildSubstringPatterns:
     def test_simple_brand(self):
-        patterns = build_substring_patterns("Galaxy", "", "")
+        patterns = build_substring_patterns("Galaxy")
         assert len(patterns) == 1
         assert patterns[0].pattern == "Galaxy"
 
     def test_no_word_boundaries(self):
-        patterns = build_substring_patterns("galaxy", "", "")
+        patterns = build_substring_patterns("galaxy")
         # Should match "galaxychocolate.com"
         m, _ = match_ocr_text("galaxychocolate.com", patterns)
         assert m is True
@@ -68,41 +69,41 @@ class TestBuildSubstringPatterns:
 
 class TestMatchOcrText:
     def test_exact_match(self):
-        patterns = build_exact_patterns("Tesco", "", "")
+        patterns = build_exact_patterns("Tesco")
         m, terms = match_ocr_text("Welcome to Tesco today", patterns)
         assert m is True
         assert "Tesco" in terms
 
     def test_no_match_empty_text(self):
-        patterns = build_exact_patterns("Tesco", "", "")
+        patterns = build_exact_patterns("Tesco")
         m, terms = match_ocr_text("", patterns)
         assert m is False
         assert terms == []
 
     def test_no_match_no_text(self):
-        patterns = build_exact_patterns("Tesco", "", "")
+        patterns = build_exact_patterns("Tesco")
         m, terms = match_ocr_text("Sainsbury's is better", patterns)
         assert m is False
 
     def test_word_boundary_prevents_concatenated_match(self):
-        patterns = build_exact_patterns("galaxy", "", "")
+        patterns = build_exact_patterns("galaxy")
         m, _ = match_ocr_text("galaxychocolate.com", patterns)
         assert m is False
 
     def test_substring_catches_concatenated(self):
-        patterns = build_substring_patterns("galaxy", "", "")
+        patterns = build_substring_patterns("galaxy")
         m, terms = match_ocr_text("galaxychocolate.com", patterns)
         assert m is True
         assert "galaxy" in terms
 
     def test_case_insensitive(self):
-        patterns = build_exact_patterns("TESCO", "", "")
+        patterns = build_exact_patterns("TESCO")
         m, terms = match_ocr_text("welcome to tesco", patterns)
         assert m is True
         assert "tesco" in terms
 
     def test_deduplication_of_terms(self):
-        patterns = build_exact_patterns("Galaxy", "Galaxy", "")
+        patterns = build_exact_patterns("Galaxy")
         m, terms = match_ocr_text("Galaxy Galaxy galaxy", patterns)
         assert m is True
         # Should deduplicate case-insensitively
@@ -147,18 +148,18 @@ class TestSearchWithOrdering:
 
         # Galaxy: last exact match at frame 10
         assert results[0].matched is True
-        assert results[0].match_tier == "exact"
+        assert "exact" in results[0].match_tier
         assert results[0].last_match_frame == 10
         assert results[0].last_match_seconds == 10 / 5.0
 
         # Mars: last exact match at frame 20 (after Galaxy's frame 10)
         assert results[1].matched is True
-        assert results[1].match_tier == "exact"
+        assert "exact" in results[1].match_tier
         assert results[1].last_match_frame == 20
 
         # Tesco: last exact match at frame 30 (after Mars's frame 20)
         assert results[2].matched is True
-        assert results[2].match_tier == "exact"
+        assert "exact" in results[2].match_tier
         assert results[2].last_match_frame == 30
 
     def test_ordering_enforced(self, adverts, ocr_results):
@@ -188,11 +189,11 @@ class TestSearchWithOrdering:
         ]
         results = search_with_ordering(ocr_results, adverts, fps=5.0)
         assert len(results) == 3
-        assert results[0].match_tier == "substring"
+        assert "substr" in results[0].match_tier
         assert results[0].last_match_frame == 0
-        assert results[1].match_tier == "substring"
+        assert "substr" in results[1].match_tier
         assert results[1].last_match_frame == 5
-        assert results[2].match_tier == "substring"
+        assert "substr" in results[2].match_tier
         assert results[2].last_match_frame == 10
 
     def test_first_advert_fallback_doesnt_block_others(self, adverts):

@@ -39,10 +39,7 @@ venv/
 *_reference.html
 
 # Generated output directories
-advert_min_cover_output/
-
-# Single-advert breaks log
-single_advert_breaks.csv
+outputs/
 
 # Pipeline run output directories
 video/pipeline_*/
