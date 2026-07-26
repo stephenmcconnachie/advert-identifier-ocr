@@ -419,9 +419,9 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--start-offset-frames",
         type=int,
-        default=0,
+        default=2,
         help="Shift clip start N frames later (25fps), keep end frame "
-        "unchanged. Appends _{N}frameslater to filename (default: 0)",
+        "unchanged. Appends _{N}frameslater to filename (default: 2)",
     )
     parser.add_argument(
         "--log-level",
