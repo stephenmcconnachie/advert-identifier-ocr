@@ -17,7 +17,7 @@
 #
 # Optional:
 #   READY_DIR     — where OCR outputs land (=VIDEO_DIR/ready_for_clipping)
-#   CLIPPED_DIR   — output for final advert clips (=sibling of VIDEO_DIR)
+#   CLIPPED_DIR   — output for final advert clips (=VIDEO_DIR/clipped_adverts)
 #   BEFORE_SECS   — extraction window before break start (default: 10.0)
 #   MAX_WORKERS   — parallel FFmpeg processes for clipping (default: 10)
 #   LOG_DIR       — daily log files (=VIDEO_DIR/logs)
@@ -31,7 +31,7 @@ set -euo pipefail
 
 # ── Configuration ─────────────────────────────────────────────────────────
 READY_DIR="${READY_DIR:-$VIDEO_DIR/ready_for_clipping}"
-CLIPPED_DIR="${CLIPPED_DIR:-$(dirname "$VIDEO_DIR")/clipped_adverts}"
+CLIPPED_DIR="${CLIPPED_DIR:-$VIDEO_DIR/clipped_adverts}"
 BEFORE_SECS="${BEFORE_SECS:-10.0}"
 MAX_WORKERS="${MAX_WORKERS:-10}"
 LOG_DIR="${LOG_DIR:-$VIDEO_DIR/logs}"
@@ -108,7 +108,11 @@ done
         --max-workers "$MAX_WORKERS" \
         >> "$LOGFILE" 2>&1; then
 
-        clip_count=$(find "$CLIPPED_DIR" -maxdepth 1 -name "${stem}_*.mp4" 2>/dev/null | wc -l)
+        clip_count=$(python3 -c "
+import json
+s = json.load(open('$state_file'))
+print(len(s['ad_breaks'][$bidx]['adverts']))
+")
 
         if "$HELPER" mark-clipped \
             --state-file "$state_file" \

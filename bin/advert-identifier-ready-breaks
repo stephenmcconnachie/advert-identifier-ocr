@@ -70,7 +70,7 @@ def list_ready_breaks(
         for break_data in state.get("ad_breaks", []):
             break_idx_1: int = break_data.get("index", 1)
             break_idx_0: int = break_idx_1 - 1
-            xml_path = ready_dir / f"{stem}_break{break_idx_1:02d}.xml"
+            xml_path = ready_dir / f"{stem}_break{break_idx_1}.xml"
 
             # Must have an XML output from OCR
             if not xml_path.is_file():
