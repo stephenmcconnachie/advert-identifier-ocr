@@ -19,7 +19,7 @@
 #   READY_DIR     — where OCR outputs land (=VIDEO_DIR/ready_for_clipping)
 #   CLIPPED_DIR   — output for final advert clips (=VIDEO_DIR/clipped_adverts)
 #   BEFORE_SECS   — extraction window before break start (default: 10.0)
-#   MAX_WORKERS   — parallel FFmpeg processes for clipping (default: 10)
+#   MAX_WORKERS   — parallel FFmpeg processes for clipping (default: 1)
 #   LOG_DIR       — daily log files (=VIDEO_DIR/logs)
 
 set -euo pipefail
@@ -33,7 +33,7 @@ set -euo pipefail
 READY_DIR="${READY_DIR:-$VIDEO_DIR/ready_for_clipping}"
 CLIPPED_DIR="${CLIPPED_DIR:-$VIDEO_DIR/clipped_adverts}"
 BEFORE_SECS="${BEFORE_SECS:-10.0}"
-MAX_WORKERS="${MAX_WORKERS:-10}"
+MAX_WORKERS="${MAX_WORKERS:-1}"
 LOG_DIR="${LOG_DIR:-$VIDEO_DIR/logs}"
 
 # ── Paths ─────────────────────────────────────────────────────────────────
